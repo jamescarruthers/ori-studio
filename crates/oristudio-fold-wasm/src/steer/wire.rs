@@ -173,9 +173,10 @@ pub fn relations_of(flat: &[u32]) -> Result<Vec<HierarchyRelation>, LayerCallErr
 }
 
 /// How far a solution count goes before it reads "at least" (E6's
-/// `SolutionCaps`). Every field may be left out, for E6's defaults
-/// (100,000 orders per component, 1,000,000 combinations per look group,
-/// 4 MiB of stored orders); every cap is a count, never a time.
+/// `SolutionCaps`), and whether a step counts on (E9). Every field may be
+/// left out, for the defaults (100,000 orders per component, 1,000,000
+/// combinations per look group, 4 MiB of stored orders, steps that count);
+/// every cap is a count, never a time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LayerSolutionCaps {
@@ -185,11 +186,17 @@ pub struct LayerSolutionCaps {
     pub combinations_per_group: Option<u64>,
     #[serde(default)]
     pub stored_bits: Option<u64>,
+    #[serde(default)]
+    pub count_in_steps: Option<bool>,
 }
 
 /// [`LayerSolutionCaps`]' fields as the web app spells them.
-pub const LAYER_SOLUTION_CAPS_FIELDS: [&str; 3] =
-    ["ordersPerComponent", "combinationsPerGroup", "storedBits"];
+pub const LAYER_SOLUTION_CAPS_FIELDS: [&str; 4] = [
+    "ordersPerComponent",
+    "combinationsPerGroup",
+    "storedBits",
+    "countInSteps",
+];
 
 impl LayerSolutionCaps {
     pub fn caps(&self) -> SolutionCaps {
@@ -202,6 +209,7 @@ impl LayerSolutionCaps {
                 .combinations_per_group
                 .unwrap_or(defaults.combinations_per_group),
             stored_bits: self.stored_bits.unwrap_or(defaults.stored_bits),
+            count_in_steps: self.count_in_steps.unwrap_or(defaults.count_in_steps),
         }
     }
 }
@@ -1102,6 +1110,15 @@ mod tests {
             caps.caps(),
             SolutionCaps {
                 stored_bits: 64,
+                ..defaults
+            }
+        );
+        let quiet: LayerSolutionCaps =
+            serde_json::from_value(json!({ "countInSteps": false })).unwrap_or_default();
+        assert_eq!(
+            quiet.caps(),
+            SolutionCaps {
+                count_in_steps: false,
                 ..defaults
             }
         );

@@ -384,48 +384,57 @@ fn a_capped_count_still_steps() {
     }
 }
 
-/// Stepping while the count is still running (a node of counting per step):
-/// each step goes to a later picture in the fixed order, so none is visited
-/// twice, and every picture the walk reaches is one that fits.
+/// Stepping while the count is still running, a node of counting between
+/// steps as the dialog's worker slices it: each step, from limits of a node
+/// and four times as many after each time it runs out (a Keep trying), lands
+/// on the very next picture in the fixed order, before and after the count
+/// has them all, and ends only on the last, by picture and with X-ray.
 #[test]
 fn a_step_before_the_count_is_done_still_moves_forward() {
-    let tiny = Limits {
+    let slice = Limits {
         max_nodes: Some(1),
         ..Limits::default()
     };
     for &(name, relative) in FIXTURES {
-        let mut whole_session = open(relative);
-        let mut whole = whole_session.solutions().expect("count");
-        let order: Vec<Vec<u32>> = walk(&mut whole_session, &mut whole, BY[0]);
-        let mut session = open(relative);
-        let mut solutions = session.solutions().expect("count");
-        let mut at = order
-            .iter()
-            .position(|k| *k == key(&session, BY[0]))
-            .expect("a picture");
-        let mut calls = 0;
-        loop {
-            calls += 1;
-            assert!(calls < 10_000);
-            match session
-                .step(&mut solutions, BY[0], StepDirection::Next, &tiny)
-                .expect("step")
-            {
-                Stepped::Moved(_) => {
-                    let now = order
-                        .iter()
-                        .position(|k| *k == key(&session, BY[0]))
-                        .expect("a picture that fits");
-                    assert!(now > at, "{name}: stepped back from {at} to {now}");
-                    at = now;
+        for by in BY {
+            let mut whole_session = open(relative);
+            let mut whole = whole_session.solutions().expect("count");
+            let order: Vec<Vec<u32>> = walk(&mut whole_session, &mut whole, by);
+            let mut session = open(relative);
+            let mut solutions = session.solutions().expect("count");
+            let mut at = order
+                .iter()
+                .position(|k| *k == key(&session, by))
+                .expect("a picture");
+            let mut nodes = 1;
+            let mut calls = 0;
+            loop {
+                calls += 1;
+                assert!(calls < 10_000, "{name} {by:?}");
+                solutions.advance(&session, &slice).expect("a slice");
+                let limits = Limits {
+                    max_nodes: Some(nodes),
+                    ..Limits::default()
+                };
+                match session
+                    .step(&mut solutions, by, StepDirection::Next, &limits)
+                    .expect("step")
+                {
+                    Stepped::Moved(_) => {
+                        let now = order
+                            .iter()
+                            .position(|k| *k == key(&session, by))
+                            .expect("a picture that fits");
+                        assert_eq!(now, at + 1, "{name} {by:?}: from {at}");
+                        at = now;
+                        nodes = 1;
+                    }
+                    Stepped::End => break,
+                    Stepped::TimedOut(_) => nodes *= 4,
                 }
-                // Final once the count is done.
-                Stepped::End if solutions.is_done() => break,
-                Stepped::End | Stepped::TimedOut(_) => {}
             }
+            assert_eq!(at, order.len() - 1, "{name} {by:?}");
         }
-        // Once the count is done, the last step reaches the last picture.
-        assert_eq!(at, order.len() - 1, "{name}");
     }
 }
 
@@ -486,8 +495,11 @@ fn a_step_before_any_count_lands_where_the_count_would() {
 ///
 /// On a cursor no slice ever advances, as the dialog's on this figure, each
 /// step is asked with the dialog's limits (3 s, 200,000 nodes) and, while it
-/// ends unmoved, again with Keep trying's (×4, then ×16). Prints how long
-/// each took and where it landed.
+/// runs out, again with Keep trying's (×4, then ×16): by picture both ways
+/// from each side, then with X-ray ten steps on, ten back over what they
+/// found, and one past where it started. Prints how long each took and
+/// where it landed; `LAYER_ORDER_IGUANA_QUIET=1` starts the cursor with
+/// counting off, as a host that chose not to count would.
 #[test]
 fn the_iguana_steps_without_its_count() {
     if std::env::var("LAYER_ORDER_IGUANA").is_err() {
@@ -517,22 +529,22 @@ fn the_iguana_steps_without_its_count() {
         session.open_pairs().len(),
         t.elapsed().as_secs_f64() * 1e3
     );
-    let mut solutions = session.solutions().expect("a cursor");
+    let caps = SolutionCaps {
+        count_in_steps: std::env::var("LAYER_ORDER_IGUANA_QUIET").is_err(),
+        ..SolutionCaps::default()
+    };
+    let mut solutions = session.solutions_with(caps).expect("a cursor");
     let front = StepBy::Picture(ViewSide::Front);
     let back = StepBy::Picture(ViewSide::Back);
-    let plan = [
+    let x = StepBy::LayerOrder;
+    let mut plan = vec![
         (front, StepDirection::Next),
         (front, StepDirection::Previous),
         (back, StepDirection::Next),
         (back, StepDirection::Previous),
-        (StepBy::LayerOrder, StepDirection::Next),
-        (StepBy::LayerOrder, StepDirection::Next),
-        (StepBy::LayerOrder, StepDirection::Next),
-        (StepBy::LayerOrder, StepDirection::Previous),
-        (StepBy::LayerOrder, StepDirection::Previous),
-        (StepBy::LayerOrder, StepDirection::Previous),
-        (StepBy::LayerOrder, StepDirection::Previous),
     ];
+    plan.extend([(x, StepDirection::Next); 10]);
+    plan.extend([(x, StepDirection::Previous); 11]);
     for (by, direction) in plan {
         for factor in [1.0, 4.0, 16.0] {
             let t = std::time::Instant::now();
@@ -542,8 +554,7 @@ fn the_iguana_steps_without_its_count() {
             let ms = t.elapsed().as_secs_f64() * 1e3;
             let landed = match &stepped {
                 Stepped::Moved(moved) => format!(
-                    "moved to {} ({} of {}{})",
-                    moved.position.index,
+                    "moved to {} of {}{}",
                     moved.position.index,
                     moved.position.total.n,
                     if moved.position.total.exact { "" } else { "+" }
@@ -552,9 +563,92 @@ fn the_iguana_steps_without_its_count() {
                 Stepped::TimedOut(out) => format!("timed out {out:?}"),
             };
             println!("{by:?} {direction:?} at ×{factor}: {landed} in {ms:.0} ms");
-            if !matches!(stepped, Stepped::End) {
+            if !matches!(stepped, Stepped::TimedOut(_)) {
                 break;
             }
+        }
+    }
+    println!(
+        "the count: {:?}, {} nodes",
+        solutions.count(),
+        solutions.nodes()
+    );
+}
+
+/// Row E9: a step that runs out of its limits says so (`TimedOut`), never
+/// `End`, which is always a proof; asked again with longer limits it lands
+/// where it would have, as a Keep trying does.
+#[test]
+fn a_step_that_runs_out_times_out_and_asked_again_goes_on() {
+    let past = Limits {
+        max_nodes: None,
+        fast_nodes: 128,
+        deadline: Some(Deadline {
+            now_ms: late,
+            at_ms: 0.0,
+        }),
+    };
+    let mut timed_out = 0;
+    for &(name, relative) in FIXTURES {
+        for by in BY {
+            for direction in [StepDirection::Next, StepDirection::Previous] {
+                let mut reference = open(relative);
+                let mut fresh = reference.solutions().expect("a cursor");
+                let expected = reference
+                    .step(&mut fresh, by, direction, &unlimited())
+                    .expect("a step");
+                let mut session = open(relative);
+                let mut solutions = session.solutions().expect("a cursor");
+                let hurried = session
+                    .step(&mut solutions, by, direction, &past)
+                    .expect("a step out of time");
+                match (&hurried, &expected) {
+                    (Stepped::TimedOut(_), _) => timed_out += 1,
+                    (Stepped::End, Stepped::End) => {}
+                    other => panic!("{name} {by:?} {direction:?}: {other:?}"),
+                }
+                let again = session
+                    .step(&mut solutions, by, direction, &unlimited())
+                    .expect("asked again");
+                assert_eq!(
+                    session.shown_order(),
+                    reference.shown_order(),
+                    "{name} {by:?}"
+                );
+                assert_eq!(
+                    std::mem::discriminant(&again),
+                    std::mem::discriminant(&expected)
+                );
+            }
+        }
+    }
+    assert!(timed_out > 0);
+}
+
+/// Row E9: a cursor started with counting off (a host that counts
+/// elsewhere, or chose not to) never counts in a step, and steps through
+/// exactly what a counted one does, its total exact once every solution is
+/// found.
+#[test]
+fn a_cursor_with_counting_off_never_counts_in_a_step() {
+    let quiet = SolutionCaps {
+        count_in_steps: false,
+        ..SolutionCaps::default()
+    };
+    for &(name, relative) in FIXTURES {
+        for by in BY {
+            let mut counted = open(relative);
+            let mut whole = counted.solutions().expect("a cursor");
+            whole.advance(&counted, &unlimited()).expect("count");
+            let expected = walk(&mut counted, &mut whole, by);
+            let mut session = open(relative);
+            let mut solutions = session.solutions_with(quiet).expect("a cursor");
+            assert_eq!(
+                walk(&mut session, &mut solutions, by),
+                expected,
+                "{name} {by:?}"
+            );
+            assert_eq!(solutions.nodes(), 0, "{name} {by:?}: a step counted");
         }
     }
 }

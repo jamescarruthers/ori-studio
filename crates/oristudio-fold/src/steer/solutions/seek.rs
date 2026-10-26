@@ -43,13 +43,20 @@
 //! already seen asks one check (by picture) or none (X-ray), and an index
 //! counts the solutions found ([`super::Position`]): "Solution 3" once two
 //! found lie before it. Once every one has been found, from a first with
-//! nothing before it to a last with nothing after, the total is exact.
+//! nothing before it to a last with nothing after, the total is exact. What
+//! is kept is held within the count's stored bits, counted apart from the
+//! count's own so the count never depends on what was stepped: past them a
+//! solution keeps its key and not its order, or is not kept, and a step
+//! searches again where it would have looked. Once the count has every
+//! solution for a way of stepping, what was kept for it goes.
 //!
-//! **Every check shares the step's limits.** One that runs out of them
-//! leaves the step undecided. What was proved stays: each check's answer is
-//! kept by the tops it asked about, and an X-ray search that stopped
-//! resumes where it stopped, so the same step asked again with longer
-//! limits ("Keep trying") goes on from there.
+//! **Every check shares the step's limits.** Each check's and each
+//! search's nodes come out of one budget, and every guess that places a
+//! lexical walk is a node of it, so the limits alone bound a step. One that
+//! runs out leaves the step undecided ([`Sought::Undecided`]). What was
+//! proved stays: each check's answer is kept by the tops it asked about, and
+//! an X-ray search that stopped resumes where it stopped, so the same step
+//! asked again with longer limits ("Keep trying") goes on from there.
 //!
 //! Ori Studio original work, not a port.
 
@@ -60,13 +67,13 @@ use std::ops::Bound;
 use treemaker_flatfold::{self as flatfold, Deduction, EnumerationStep, PairOrder};
 
 use super::super::session::{
-    ConstraintSession, Limits, Seed, SessionRefusal, Solved, Steer, internal_search,
+    ConstraintSession, Limits, Seed, SessionRefusal, Solved, Steer, TimedOut, internal_search,
 };
 use super::{
     FRONT, NO_TOP, OpenSpot, Position, Solutions, StepBy, StepDirection, Tally, get_bit,
     order_of_bit, set_bit, side_index, top_of,
 };
-use crate::complete;
+use crate::complete::{self, BudgetLimit, Deadline};
 
 /// What the session's check answered.
 pub(crate) enum Fits {
@@ -74,29 +81,31 @@ pub(crate) enum Fits {
     Fit(Vec<PairOrder>),
     /// A proof that none does.
     No,
-    /// Neither, within the limits.
-    Unknown,
+    /// Neither, within the limits: the one that ran out.
+    Unknown(BudgetLimit),
 }
 
-/// A search that ran out of its limits first.
-struct OutOfTime;
+/// A search that ran out of its limits first: the one that ran out.
+struct OutOfTime(BudgetLimit);
 
 /// What a step asks: whether the committed constraints and `extra` leave an
-/// order, and one that does, steered by the order on screen. The session's
-/// own check (a preview's) answers it.
+/// order, and one that does, steered by the order on screen, with the
+/// search nodes the answer took. The session's own check (a preview's)
+/// answers it.
 pub(crate) trait Check {
-    fn fits(&self, extra: &[Seed], limits: &Limits) -> Result<Fits, SessionRefusal>;
+    fn fits(&self, extra: &[Seed], limits: &Limits) -> Result<(Fits, u64), SessionRefusal>;
 }
 
 impl Check for ConstraintSession {
-    fn fits(&self, extra: &[Seed], limits: &Limits) -> Result<Fits, SessionRefusal> {
-        Ok(
-            match self.solve(self.constraints(), extra, Steer::Shown, limits)? {
-                Solved::Fit(fit) => Fits::Fit(fit.into_values()),
-                Solved::CantFit(_) => Fits::No,
-                Solved::TimedOut(_) => Fits::Unknown,
-            },
-        )
+    fn fits(&self, extra: &[Seed], limits: &Limits) -> Result<(Fits, u64), SessionRefusal> {
+        let (solved, nodes) =
+            self.solve_counted(self.constraints(), extra, Steer::Shown, limits)?;
+        let fits = match solved {
+            Solved::Fit(fit) => Fits::Fit(fit.into_values()),
+            Solved::CantFit(_) => Fits::No,
+            Solved::TimedOut(out) => Fits::Unknown(out.limit),
+        };
+        Ok((fits, nodes))
     }
 }
 
@@ -106,8 +115,73 @@ pub(crate) enum Sought {
     Found(Vec<PairOrder>),
     /// None lies that way: proved.
     End,
-    /// The limits ran out first.
-    Undecided,
+    /// The limits ran out first: the one that did, and the nodes spent.
+    Undecided(TimedOut),
+}
+
+/// What [`Solutions::seek`] answered, and whether it searched for it: an
+/// answer what earlier steps proved gave did not.
+pub(crate) struct Answer {
+    pub(crate) sought: Sought,
+    pub(crate) searched: bool,
+}
+
+/// What one step may still spend: nodes, shared by every check and search
+/// it makes, and its deadline.
+struct Budget {
+    left: Option<u64>,
+    spent: u64,
+    fast_nodes: u64,
+    deadline: Option<Deadline>,
+}
+
+impl Budget {
+    fn of(limits: &Limits) -> Budget {
+        Budget {
+            left: limits.max_nodes,
+            spent: 0,
+            fast_nodes: limits.fast_nodes,
+            deadline: limits.deadline,
+        }
+    }
+
+    /// The limits of the next check: what is left.
+    fn limits(&self) -> Limits {
+        Limits {
+            max_nodes: self.left,
+            fast_nodes: self.fast_nodes,
+            deadline: self.deadline,
+        }
+    }
+
+    fn search(&self) -> flatfold::SearchBudget {
+        complete::search_budget(self.left, self.deadline)
+    }
+
+    fn charge(&mut self, nodes: u64) {
+        self.spent += nodes;
+        if let Some(left) = self.left.as_mut() {
+            *left = left.saturating_sub(nodes);
+        }
+    }
+
+    /// The limit already reached, if one is: nothing more may be asked.
+    fn reached(&self) -> Option<BudgetLimit> {
+        if self.left == Some(0) {
+            Some(BudgetLimit::Nodes)
+        } else if self.deadline.is_some_and(|d| d.passed()) {
+            Some(BudgetLimit::Deadline)
+        } else {
+            None
+        }
+    }
+
+    fn timed_out(&self, limit: BudgetLimit) -> TimedOut {
+        TimedOut {
+            limit,
+            nodes: self.spent,
+        }
+    }
 }
 
 /// A complete order as bits, one per variable, set where the larger face
@@ -130,6 +204,15 @@ impl Packed {
     fn values(&self, n: usize) -> Vec<PairOrder> {
         (0..n).map(|v| order_of_bit(get_bit(&self.0, v))).collect()
     }
+
+    fn bits(&self) -> u64 {
+        64 * self.0.len() as u64
+    }
+}
+
+/// What keeping a key costs: its own bits, and an entry's bookkeeping.
+fn key_bits(len: usize, per: u64) -> u64 {
+    64 + per * len as u64
 }
 
 /// The solutions a stepper has stood on, for one way of stepping, by key
@@ -141,6 +224,8 @@ struct Found<K> {
     first: bool,
     /// Nothing lies after the largest.
     last: bool,
+    /// What its entries cost.
+    bits: u64,
 }
 
 impl<K> Default for Found<K> {
@@ -149,13 +234,15 @@ impl<K> Default for Found<K> {
             entries: BTreeMap::new(),
             first: false,
             last: false,
+            bits: 0,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct Entry {
-    /// The order last shown for it, where the key is not the order.
+    /// The order last shown for it, where the key is not the order and
+    /// there was room to keep it.
     order: Option<Packed>,
     /// Nothing lies between it and the next one up.
     next: bool,
@@ -163,7 +250,7 @@ struct Entry {
 
 /// What is known of the solution beside one, one way.
 enum Known<K> {
-    /// The very next that way, and the order last shown for it.
+    /// The very next that way, and the order last shown for it, if kept.
     Neighbour(K, Option<Packed>),
     /// None lies that way.
     End,
@@ -171,22 +258,43 @@ enum Known<K> {
 }
 
 impl<K: Ord + Clone> Found<K> {
-    /// `key` is a solution; `order` the order shown for it now, if kept.
-    fn note(&mut self, key: &K, order: Option<Packed>) {
+    /// `key` (costing `cost`) is a solution; `order` the order shown for it
+    /// now, kept if there is room. Within `room` bits; past it, a new key is
+    /// not kept, and an old one keeps no order.
+    fn note(&mut self, key: &K, cost: u64, order: Option<Packed>, room: u64) {
+        let wanted = order.as_ref().map_or(0, Packed::bits);
         match self.entries.get_mut(key) {
             Some(entry) => {
-                if order.is_some() {
+                if order.is_none() {
+                    return;
+                }
+                let held = entry.order.as_ref().map_or(0, Packed::bits);
+                self.bits -= held;
+                if wanted <= room + held {
                     entry.order = order;
+                    self.bits += wanted;
+                } else {
+                    entry.order = None;
                 }
             }
+            None if cost > room => {}
             None => {
+                let (order, spent) = if cost + wanted <= room {
+                    (order, cost + wanted)
+                } else {
+                    (None, cost)
+                };
                 self.entries
                     .insert(key.clone(), Entry { order, next: false });
+                self.bits += spent;
             }
         }
     }
 
     fn known(&self, key: &K, direction: StepDirection) -> Known<K> {
+        if !self.entries.contains_key(key) {
+            return Known::Unknown;
+        }
         match direction {
             StepDirection::Next => {
                 if self.entries.get(key).is_some_and(|e| e.next)
@@ -215,15 +323,22 @@ impl<K: Ord + Clone> Found<K> {
         Known::Unknown
     }
 
-    /// `a` and `b`, both noted, are neighbours: nothing lies between.
+    /// `a` and `b` are neighbours: nothing lies between. Kept only when
+    /// both are, so a link never skips a solution that was not kept.
     fn link(&mut self, a: &K, b: &K) {
-        if let Some(entry) = self.entries.get_mut(a.min(b)) {
+        if self.entries.contains_key(a.max(b))
+            && let Some(entry) = self.entries.get_mut(a.min(b))
+        {
             entry.next = true;
         }
     }
 
-    /// Nothing lies past `key` that way, so nothing noted may.
+    /// Nothing lies past `key` that way, so nothing kept may; kept only
+    /// when `key` is.
     fn end(&mut self, key: &K, direction: StepDirection) -> Result<(), SessionRefusal> {
+        if !self.entries.contains_key(key) {
+            return Ok(());
+        }
         let extreme = match direction {
             StepDirection::Next => self.entries.keys().next_back(),
             StepDirection::Previous => self.entries.keys().next(),
@@ -252,6 +367,25 @@ impl<K: Ord + Clone> Found<K> {
     }
 }
 
+/// Every check's answer for one side, by the tops it asked of the open
+/// spots from the first: an order that fits them, or `None` when none does.
+#[derive(Debug, Clone, Default)]
+struct Asked {
+    answers: HashMap<Vec<u32>, Option<Packed>>,
+    bits: u64,
+}
+
+impl Asked {
+    /// Keep an answer, within `room` bits.
+    fn keep(&mut self, prefix: &[u32], order: Option<Packed>, room: u64) {
+        let cost = key_bits(prefix.len(), 32) + order.as_ref().map_or(0, Packed::bits);
+        if cost <= room && !self.answers.contains_key(prefix) {
+            self.answers.insert(prefix.to_vec(), order);
+            self.bits += cost;
+        }
+    }
+}
+
 /// One component's next (or previous) order, kept beside the order it was
 /// found from.
 #[derive(Debug, Clone)]
@@ -265,10 +399,20 @@ struct Beside {
 /// A lexical search of one component, standing on `at` (its values, by its
 /// variables ascending) or stopped on its way from there.
 #[derive(Debug, Clone)]
-struct Placed {
+struct Standing {
     component: usize,
     at: Vec<PairOrder>,
     cursor: flatfold::Enumeration,
+}
+
+/// The ways of stepping, as [`Seek`] keeps them apart.
+const XRAY: usize = 2;
+
+fn way_of(by: StepBy) -> usize {
+    match by {
+        StepBy::Picture(side) => side_index(side),
+        StepBy::LayerOrder => XRAY,
+    }
 }
 
 /// What the stepper found by searching (see the module docs), beside the
@@ -277,21 +421,42 @@ struct Placed {
 pub(crate) struct Seek {
     /// Per side, the pictures stood on, by their tops.
     pictures: [Found<Vec<u32>>; 2],
-    /// Per side, every check's answer, by the tops it asked of the open
-    /// spots from the first: an order that fits them, or `None` when none
-    /// does.
-    asked: [HashMap<Vec<u32>, Option<Packed>>; 2],
+    /// Per side, every check's answer.
+    asked: [Asked; 2],
     /// Per side and open spot, whether an order that fits can leave it with
     /// no top, once asked.
     no_top: [Vec<Option<bool>>; 2],
     /// The layer orders stood on.
     orders: Found<Packed>,
     /// Per direction (next, previous) and component, what came after its
-    /// values on screen, once found.
+    /// values on screen, once found: one component's worth each, never more.
     beside: [Vec<Option<Beside>>; 2],
     /// Per direction, the search of the component that moved last, or that
     /// ran out of time, kept to go on from.
-    placed: [Option<Placed>; 2],
+    standing: [Option<Standing>; 2],
+}
+
+impl Seek {
+    /// The bits of what is kept, past which nothing more is.
+    pub(crate) fn held(&self) -> u64 {
+        self.pictures.iter().map(|f| f.bits).sum::<u64>()
+            + self.asked.iter().map(|a| a.bits).sum::<u64>()
+            + self.orders.bits
+    }
+
+    /// What is kept for stepping `way`, gone: the count has every solution
+    /// it goes through.
+    fn release(&mut self, way: usize) {
+        if way == XRAY {
+            self.orders = Found::default();
+            self.beside = Default::default();
+            self.standing = Default::default();
+        } else {
+            self.pictures[way] = Found::default();
+            self.asked[way] = Asked::default();
+            self.no_top[way] = Vec::new();
+        }
+    }
 }
 
 /// What a search beside one solution found.
@@ -299,7 +464,7 @@ enum Neighbour<K> {
     /// The key of the solution, and an order that shows it.
     Found(K, Vec<PairOrder>),
     End,
-    Undecided,
+    Undecided(BudgetLimit),
 }
 
 /// Every seed of `base` and `extra`, or `None` when they ask a pair both
@@ -328,6 +493,25 @@ impl Solutions {
         }
     }
 
+    /// Let go of what a search kept for each way of stepping the count now
+    /// has every solution of.
+    pub(crate) fn release_counted(&mut self) {
+        for by in [
+            StepBy::Picture(super::ViewSide::Front),
+            StepBy::Picture(super::ViewSide::Back),
+            StepBy::LayerOrder,
+        ] {
+            if self.counted(by) {
+                self.seek.release(way_of(by));
+            }
+        }
+    }
+
+    /// The bits a search may still keep.
+    fn room(&self) -> u64 {
+        self.caps.stored_bits.saturating_sub(self.seek.held())
+    }
+
     /// The tops of side `s`'s open spots for `values`, spot by spot: what
     /// the count's order compares pictures by.
     pub(crate) fn picture_key(&self, s: usize, values: &[PairOrder]) -> Vec<u32> {
@@ -347,7 +531,8 @@ impl Solutions {
     }
 
     /// The solution after (before) `values` in the count's order, by search
-    /// (see the module docs), and what it proved kept.
+    /// (see the module docs), within `limits` all told, and what it proved
+    /// kept.
     pub(crate) fn seek(
         &mut self,
         search: &flatfold::CompletionSession,
@@ -356,15 +541,21 @@ impl Solutions {
         values: &[PairOrder],
         direction: StepDirection,
         limits: &Limits,
-    ) -> Result<Sought, SessionRefusal> {
+    ) -> Result<Answer, SessionRefusal> {
         if values.len() != self.variables.len() {
             return Err(SessionRefusal::internal("an order of the wrong length"));
         }
+        let mut budget = Budget::of(limits);
         match by {
-            StepBy::Picture(side) => {
-                self.seek_picture(search, check, side_index(side), values, direction, limits)
-            }
-            StepBy::LayerOrder => self.seek_order(search, values, direction, limits),
+            StepBy::Picture(side) => self.seek_picture(
+                search,
+                check,
+                side_index(side),
+                values,
+                direction,
+                &mut budget,
+            ),
+            StepBy::LayerOrder => self.seek_order(search, values, direction, &mut budget),
         }
     }
 
@@ -400,15 +591,25 @@ impl Solutions {
         s: usize,
         values: &[PairOrder],
         direction: StepDirection,
-        limits: &Limits,
-    ) -> Result<Sought, SessionRefusal> {
+        budget: &mut Budget,
+    ) -> Result<Answer, SessionRefusal> {
         let n = values.len();
         let key = self.picture_key(s, values);
-        self.seek.pictures[s].note(&key, Some(Packed::of(values)));
-        let (target, standby) = match self.seek.pictures[s].known(&key, direction) {
-            Known::Neighbour(target, order) => (target, order.map(|o| o.values(n))),
-            Known::End => return Ok(Sought::End),
-            Known::Unknown => {
+        let cost = key_bits(key.len(), 32);
+        let room = self.room();
+        self.seek.pictures[s].note(&key, cost, Some(Packed::of(values)), room);
+        // What the side's answers may grow to: what they hold, and the room.
+        let answers = self.room() + self.seek.asked[s].bits;
+        let (target, standby, searched) = match self.seek.pictures[s].known(&key, direction) {
+            Known::End => {
+                return Ok(Answer {
+                    sought: Sought::End,
+                    searched: false,
+                });
+            }
+            Known::Neighbour(target, Some(order)) => (target, order.values(n), false),
+            // A neighbour kept with no order searches again for one.
+            Known::Neighbour(_, None) | Known::Unknown => {
                 let Solutions {
                     sides, seek, seeds, ..
                 } = &mut *self;
@@ -422,40 +623,60 @@ impl Solutions {
                     search,
                     seeds,
                     check,
-                    limits,
+                    budget,
                     asked: &mut seek.asked[s],
+                    answers,
                     no_top: &mut seek.no_top[s],
                     n,
                 };
-                match tops.neighbour(&key, direction)? {
+                let found = tops.neighbour(&key, direction)?;
+                match found {
                     Neighbour::Found(target, order) => {
+                        let room = self.room();
                         let found = &mut self.seek.pictures[s];
-                        found.note(&target, Some(Packed::of(&order)));
+                        found.note(&target, cost, Some(Packed::of(&order)), room);
                         found.link(&key, &target);
-                        (target, Some(order))
+                        (target, order, true)
                     }
                     Neighbour::End => {
                         self.seek.pictures[s].end(&key, direction)?;
-                        return Ok(Sought::End);
+                        return Ok(Answer {
+                            sought: Sought::End,
+                            searched: true,
+                        });
                     }
-                    Neighbour::Undecided => return Ok(Sought::Undecided),
+                    Neighbour::Undecided(limit) => {
+                        return Ok(Answer {
+                            sought: Sought::Undecided(budget.timed_out(limit)),
+                            searched: true,
+                        });
+                    }
                 }
             }
         };
         // Within that picture, the layer order closest to the one on screen,
-        // as a counted step finds it; the order found stands in for it.
-        let mut seeds = Vec::new();
-        let side = &self.sides[s];
-        for (spot, &top) in side.spots.iter().zip(&target) {
-            top_seeds(spot, s, top, &mut seeds);
+        // as a counted step finds it, if the limits leave room to ask; the
+        // order found stands in for it.
+        let mut shown = standby;
+        if budget.reached().is_none() {
+            let mut seeds = Vec::new();
+            for (spot, &top) in self.sides[s].spots.iter().zip(&target) {
+                top_seeds(spot, s, top, &mut seeds);
+            }
+            let (fits, nodes) = check.fits(&seeds, &budget.limits())?;
+            budget.charge(nodes);
+            if let Fits::Fit(order) = fits
+                && self.picture_key(s, &order) == target
+            {
+                shown = order;
+            }
         }
-        let shown = match check.fits(&seeds, limits)? {
-            Fits::Fit(order) if self.picture_key(s, &order) == target => order,
-            _ => standby
-                .ok_or_else(|| SessionRefusal::internal("a picture found with no order kept"))?,
-        };
-        self.seek.pictures[s].note(&target, Some(Packed::of(&shown)));
-        Ok(Sought::Found(shown))
+        let room = self.room();
+        self.seek.pictures[s].note(&target, cost, Some(Packed::of(&shown)), room);
+        Ok(Answer {
+            sought: Sought::Found(shown),
+            searched,
+        })
     }
 
     fn seek_order(
@@ -463,28 +684,45 @@ impl Solutions {
         search: &flatfold::CompletionSession,
         values: &[PairOrder],
         direction: StepDirection,
-        limits: &Limits,
-    ) -> Result<Sought, SessionRefusal> {
+        budget: &mut Budget,
+    ) -> Result<Answer, SessionRefusal> {
         let n = values.len();
         let key = Packed::of(values);
-        self.seek.orders.note(&key, None);
+        let cost = key_bits(0, 0) + key.bits();
+        let room = self.room();
+        self.seek.orders.note(&key, cost, None, room);
         match self.seek.orders.known(&key, direction) {
-            Known::Neighbour(target, _) => return Ok(Sought::Found(target.values(n))),
-            Known::End => return Ok(Sought::End),
+            Known::Neighbour(target, _) => {
+                return Ok(Answer {
+                    sought: Sought::Found(target.values(n)),
+                    searched: false,
+                });
+            }
+            Known::End => {
+                return Ok(Answer {
+                    sought: Sought::End,
+                    searched: false,
+                });
+            }
             Known::Unknown => {}
         }
-        match self.order_neighbour(search, values, direction, limits)? {
+        let sought = match self.order_neighbour(search, values, direction, budget)? {
             Neighbour::Found(target, order) => {
-                self.seek.orders.note(&target, None);
+                let room = self.room();
+                self.seek.orders.note(&target, cost, None, room);
                 self.seek.orders.link(&key, &target);
-                Ok(Sought::Found(order))
+                Sought::Found(order)
             }
             Neighbour::End => {
                 self.seek.orders.end(&key, direction)?;
-                Ok(Sought::End)
+                Sought::End
             }
-            Neighbour::Undecided => Ok(Sought::Undecided),
-        }
+            Neighbour::Undecided(limit) => Sought::Undecided(budget.timed_out(limit)),
+        };
+        Ok(Answer {
+            sought,
+            searched: true,
+        })
     }
 
     /// The layer order after (before) `values`, by variable: the product
@@ -494,10 +732,9 @@ impl Solutions {
         search: &flatfold::CompletionSession,
         values: &[PairOrder],
         direction: StepDirection,
-        limits: &Limits,
+        budget: &mut Budget,
     ) -> Result<Neighbour<Packed>, SessionRefusal> {
         let way = usize::from(direction == StepDirection::Previous);
-        let mut left = limits.max_nodes;
         for beside in &mut self.seek.beside {
             beside.resize(self.components.len(), None);
         }
@@ -514,8 +751,9 @@ impl Solutions {
             if best.as_ref().is_some_and(|b| last < b.0) {
                 break;
             }
-            let Ok(next) = self.component_beside(search, k, values, way, &mut left, limits)? else {
-                return Ok(Neighbour::Undecided);
+            let next = match self.component_beside(search, k, values, way, budget)? {
+                Ok(next) => next,
+                Err(OutOfTime(limit)) => return Ok(Neighbour::Undecided(limit)),
             };
             let Some(own) = next else {
                 continue;
@@ -548,8 +786,9 @@ impl Solutions {
             if h == moved || !tail {
                 continue;
             }
-            let Ok(own) = self.extreme_after(search, h, &order, at, way, &mut left, limits)? else {
-                return Ok(Neighbour::Undecided);
+            let own = match self.extreme_after(search, h, &order, at, way, budget)? {
+                Ok(own) => own,
+                Err(OutOfTime(limit)) => return Ok(Neighbour::Undecided(limit)),
             };
             let variables = &self.components[h].variables;
             if variables
@@ -570,10 +809,10 @@ impl Solutions {
             for beside in &mut self.seek.beside {
                 beside[k] = None;
             }
-            for (w, placed) in self.seek.placed.iter_mut().enumerate() {
-                let stands = w == way && placed.as_ref().is_some_and(|p| p.at == own);
-                if placed.as_ref().is_some_and(|p| p.component == k) && !(k == moved && stands) {
-                    *placed = None;
+            for (w, standing) in self.seek.standing.iter_mut().enumerate() {
+                let stands = w == way && standing.as_ref().is_some_and(|p| p.at == own);
+                if standing.as_ref().is_some_and(|p| p.component == k) && !(k == moved && stands) {
+                    *standing = None;
                 }
             }
         }
@@ -581,16 +820,14 @@ impl Solutions {
     }
 
     /// Component `k`'s order after (before, `way` 1) its values in `values`,
-    /// by its variables ascending: `None` when it has none that way; an
-    /// error value when the limits ran out first.
+    /// by its variables ascending: `None` when it has none that way.
     fn component_beside(
         &mut self,
         search: &flatfold::CompletionSession,
         k: usize,
         values: &[PairOrder],
         way: usize,
-        left: &mut Option<u64>,
-        limits: &Limits,
+        budget: &mut Budget,
     ) -> Result<Result<Option<Vec<PairOrder>>, OutOfTime>, SessionRefusal> {
         let from: Vec<PairOrder> = self.components[k]
             .variables
@@ -602,52 +839,66 @@ impl Solutions {
         {
             return Ok(Ok(beside.next.clone()));
         }
-        let placed = &mut self.seek.placed[way];
-        if !placed
+        if !self.seek.standing[way]
             .as_ref()
             .is_some_and(|p| p.component == k && p.at == from)
         {
-            let cursor = self
+            if let Some(limit) = budget.reached() {
+                return Ok(Err(OutOfTime(limit)));
+            }
+            let walk = self
                 .base
                 .clone()
                 .lexical(&[k], values, way == 1)
-                .and_then(|cursor| cursor.after(search, values))
+                .map_err(internal_search)?;
+            let cursor = match walk
+                .after(search, values, budget.search())
                 .map_err(internal_search)?
-                .ok_or_else(|| {
-                    SessionRefusal::internal("the order on screen is none of its component's")
-                })?;
-            *placed = Some(Placed {
+            {
+                flatfold::Placed::On(cursor) => {
+                    budget.charge(cursor.nodes());
+                    *cursor
+                }
+                flatfold::Placed::Stopped { limit, nodes } => {
+                    budget.charge(nodes);
+                    return Ok(Err(OutOfTime(complete::budget_limit(limit))));
+                }
+                flatfold::Placed::NotListed => {
+                    return Err(SessionRefusal::internal(
+                        "the order on screen is none of its component's",
+                    ));
+                }
+            };
+            self.seek.standing[way] = Some(Standing {
                 component: k,
                 at: from.clone(),
                 cursor,
             });
         }
-        let Some(placed) = placed.as_mut() else {
+        let Some(standing) = self.seek.standing[way].as_mut() else {
             return Err(SessionRefusal::internal("a search placed nowhere"));
         };
-        let budget = complete::search_budget(*left, limits.deadline);
-        let before = placed.cursor.nodes();
-        let step = placed
+        let before = standing.cursor.nodes();
+        let step = standing
             .cursor
-            .next(search, budget)
+            .next(search, budget.search())
             .map_err(internal_search)?;
-        let used = placed.cursor.nodes() - before;
-        if let Some(left) = left.as_mut() {
-            *left = left.saturating_sub(used);
-        }
+        budget.charge(standing.cursor.nodes() - before);
         let next = match step {
             EnumerationStep::Order => {
-                let own = placed
+                let own = standing
                     .cursor
                     .component_order(k)
                     .ok_or_else(|| SessionRefusal::internal("an order step with no order"))?;
                 // It stands on what it just found.
-                placed.at = own.clone();
+                standing.at = own.clone();
                 Some(own)
             }
             EnumerationStep::Exhausted => None,
             // Kept, to go on from here.
-            EnumerationStep::Stopped(_) => return Ok(Err(OutOfTime)),
+            EnumerationStep::Stopped(limit) => {
+                return Ok(Err(OutOfTime(complete::budget_limit(limit))));
+            }
             EnumerationStep::Unsatisfied(_) => {
                 return Err(SessionRefusal::internal(
                     "a component placed on an order has none",
@@ -655,7 +906,7 @@ impl Solutions {
             }
         };
         if next.is_none() {
-            self.seek.placed[way] = None;
+            self.seek.standing[way] = None;
         }
         self.seek.beside[way][k] = Some(Beside {
             from,
@@ -667,7 +918,6 @@ impl Solutions {
     /// Component `h`'s smallest order (largest, `way` 1) that keeps its
     /// values in `order` on its variables before `at`, by its variables
     /// ascending.
-    #[allow(clippy::too_many_arguments)]
     fn extreme_after(
         &self,
         search: &flatfold::CompletionSession,
@@ -675,9 +925,11 @@ impl Solutions {
         order: &[PairOrder],
         at: u32,
         way: usize,
-        left: &mut Option<u64>,
-        limits: &Limits,
+        budget: &mut Budget,
     ) -> Result<Result<Vec<PairOrder>, OutOfTime>, SessionRefusal> {
+        if let Some(limit) = budget.reached() {
+            return Ok(Err(OutOfTime(limit)));
+        }
         let variables = &self.components[h].variables;
         let kept: Vec<Seed> = variables
             .iter()
@@ -686,10 +938,14 @@ impl Solutions {
             .collect();
         let seeds = merged(&self.seeds, &kept)
             .ok_or_else(|| SessionRefusal::internal("the order on screen opposes a constraint"))?;
-        let deadline = complete::search_budget(None, limits.deadline).deadline;
-        let deduced = match search.deduce(&seeds, deadline).map_err(internal_search)? {
+        let deduced = match search
+            .deduce(&seeds, budget.search().deadline)
+            .map_err(internal_search)?
+        {
             Deduction::Deduced(deduced) => deduced,
-            Deduction::Undecided { .. } => return Ok(Err(OutOfTime)),
+            Deduction::Undecided { limit } => {
+                return Ok(Err(OutOfTime(complete::budget_limit(limit))));
+            }
             other => {
                 return Err(SessionRefusal::internal(format!(
                     "the order on screen does not deduce: {other:?}"
@@ -710,13 +966,10 @@ impl Solutions {
         let mut cursor = cursor
             .lexical(&vary, order, way == 1)
             .map_err(internal_search)?;
-        let budget = complete::search_budget(*left, limits.deadline);
-        let before = cursor.nodes();
-        let step = cursor.next(search, budget).map_err(internal_search)?;
-        let used = cursor.nodes() - before;
-        if let Some(left) = left.as_mut() {
-            *left = left.saturating_sub(used);
-        }
+        let step = cursor
+            .next(search, budget.search())
+            .map_err(internal_search)?;
+        budget.charge(cursor.nodes());
         match step {
             EnumerationStep::Order => {
                 let whole = cursor
@@ -724,7 +977,7 @@ impl Solutions {
                     .ok_or_else(|| SessionRefusal::internal("an order step with no order"))?;
                 Ok(Ok(variables.iter().map(|&v| whole[v as usize]).collect()))
             }
-            EnumerationStep::Stopped(_) => Ok(Err(OutOfTime)),
+            EnumerationStep::Stopped(limit) => Ok(Err(OutOfTime(complete::budget_limit(limit)))),
             EnumerationStep::Exhausted | EnumerationStep::Unsatisfied(_) => Err(
                 SessionRefusal::internal("the order on screen's own part has no order"),
             ),
@@ -769,8 +1022,10 @@ struct Tops<'a> {
     search: &'a flatfold::CompletionSession,
     seeds: &'a [Seed],
     check: &'a dyn Check,
-    limits: &'a Limits,
-    asked: &'a mut HashMap<Vec<u32>, Option<Packed>>,
+    budget: &'a mut Budget,
+    asked: &'a mut Asked,
+    /// The bits the side's answers may hold in all.
+    answers: u64,
     no_top: &'a mut Vec<Option<bool>>,
     /// Variables.
     n: usize,
@@ -804,7 +1059,7 @@ impl Tops<'_> {
                     match self.can_show_no_top(x)? {
                         Ok(true) => {}
                         Ok(false) => continue,
-                        Err(OutOfTime) => return Ok(Neighbour::Undecided),
+                        Err(OutOfTime(limit)) => return Ok(Neighbour::Undecided(limit)),
                     }
                 }
                 prefix.push(top);
@@ -813,7 +1068,7 @@ impl Tops<'_> {
                     Fits::No => {
                         prefix.pop();
                     }
-                    Fits::Unknown => return Ok(Neighbour::Undecided),
+                    Fits::Unknown(limit) => return Ok(Neighbour::Undecided(limit)),
                 }
             }
         }
@@ -853,7 +1108,7 @@ impl Tops<'_> {
                     match self.can_show_no_top(y)? {
                         Ok(false) => continue,
                         Ok(true) => {}
-                        Err(OutOfTime) => return Ok(Neighbour::Undecided),
+                        Err(OutOfTime(limit)) => return Ok(Neighbour::Undecided(limit)),
                     }
                 }
                 prefix.push(top);
@@ -866,7 +1121,7 @@ impl Tops<'_> {
                         break;
                     }
                     Fits::No => {}
-                    Fits::Unknown => return Ok(Neighbour::Undecided),
+                    Fits::Unknown(limit) => return Ok(Neighbour::Undecided(limit)),
                 }
             }
             let Some(top) = chosen else {
@@ -886,11 +1141,22 @@ impl Tops<'_> {
         faces
     }
 
+    /// One check of `extra`, out of the step's budget: none once it is
+    /// spent.
+    fn ask(&mut self, extra: &[Seed]) -> Result<Fits, SessionRefusal> {
+        if let Some(limit) = self.budget.reached() {
+            return Ok(Fits::Unknown(limit));
+        }
+        let (fits, nodes) = self.check.fits(extra, &self.budget.limits())?;
+        self.budget.charge(nodes);
+        Ok(fits)
+    }
+
     /// Whether the tops `prefix`, of the open spots from the first, fit
     /// with the committed constraints, and an order that shows them.
     /// Remembered.
     fn fits(&mut self, prefix: &[u32]) -> Result<Fits, SessionRefusal> {
-        if let Some(known) = self.asked.get(prefix) {
+        if let Some(known) = self.asked.answers.get(prefix) {
             return Ok(match known {
                 Some(order) => Fits::Fit(order.values(self.n)),
                 None => Fits::No,
@@ -906,10 +1172,11 @@ impl Tops<'_> {
             }
         }
         let answer = if none.is_empty() {
-            self.check.fits(&seeds, self.limits)?
+            self.ask(&seeds)?
         } else {
             self.fits_with_no_top(&seeds, &none)?
         };
+        let room = self.answers.saturating_sub(self.asked.bits);
         match &answer {
             Fits::Fit(order) => {
                 let mut wins = Vec::new();
@@ -926,12 +1193,10 @@ impl Tops<'_> {
                         "a check's order does not show the tops it was asked",
                     ));
                 }
-                self.asked.insert(prefix.to_vec(), Some(Packed::of(order)));
+                self.asked.keep(prefix, Some(Packed::of(order)), room);
             }
-            Fits::No => {
-                self.asked.insert(prefix.to_vec(), None);
-            }
-            Fits::Unknown => {}
+            Fits::No => self.asked.keep(prefix, None, room),
+            Fits::Unknown(_) => {}
         }
         Ok(answer)
     }
@@ -939,31 +1204,31 @@ impl Tops<'_> {
     /// [`Self::fits`] where the spots `none` show no top: each combination
     /// of their tournaments with no top, asked in turn. Too many to ask is
     /// no answer.
-    fn fits_with_no_top(&self, seeds: &[Seed], none: &[usize]) -> Result<Fits, SessionRefusal> {
+    fn fits_with_no_top(&mut self, seeds: &[Seed], none: &[usize]) -> Result<Fits, SessionRefusal> {
         let Some(lists) = none
             .iter()
             .map(|&i| self.tournaments(i))
             .collect::<Option<Vec<_>>>()
         else {
-            return Ok(Fits::Unknown);
+            return Ok(Fits::Unknown(BudgetLimit::Nodes));
         };
         let combinations = lists
             .iter()
             .try_fold(1usize, |n, list| n.checked_mul(list.len()));
         if combinations.is_none_or(|n| n > TOURNAMENT_COMBINATIONS) {
-            return Ok(Fits::Unknown);
+            return Ok(Fits::Unknown(BudgetLimit::Nodes));
         }
         let mut digits = vec![0usize; lists.len()];
-        let mut unknown = false;
+        let mut unknown = None;
         'combinations: loop {
             let mut asked = seeds.to_vec();
             for (list, &d) in lists.iter().zip(&digits) {
                 asked.extend_from_slice(&list[d]);
             }
-            match self.check.fits(&asked, self.limits)? {
+            match self.ask(&asked)? {
                 Fits::Fit(order) => return Ok(Fits::Fit(order)),
                 Fits::No => {}
-                Fits::Unknown => unknown = true,
+                Fits::Unknown(limit) => unknown = Some(limit),
             }
             for i in (0..digits.len()).rev() {
                 digits[i] += 1;
@@ -974,7 +1239,7 @@ impl Tops<'_> {
             }
             break;
         }
-        Ok(if unknown { Fits::Unknown } else { Fits::No })
+        Ok(unknown.map_or(Fits::No, Fits::Unknown))
     }
 
     /// Spot `i`'s tournaments that leave it no top from this side, each as
@@ -1017,7 +1282,7 @@ impl Tops<'_> {
         }
         let spot = &self.spots[i];
         let k = spot.candidates.len() as u32;
-        let deadline = complete::search_budget(None, self.limits.deadline).deadline;
+        let deadline = self.budget.search().deadline;
         let mut can = false;
         'cycles: for a in 0..k {
             for b in a + 1..k {
@@ -1042,7 +1307,9 @@ impl Tops<'_> {
                                 can = true;
                                 break 'cycles;
                             }
-                            Deduction::Undecided { .. } => return Ok(Err(OutOfTime)),
+                            Deduction::Undecided { limit } => {
+                                return Ok(Err(OutOfTime(complete::budget_limit(limit))));
+                            }
                             Deduction::Forced { .. } | Deduction::Conflict(_) => {}
                         }
                     }

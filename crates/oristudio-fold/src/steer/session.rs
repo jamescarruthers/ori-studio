@@ -1037,9 +1037,22 @@ impl ConstraintSession {
         steer: Steer<'_>,
         limits: &Limits,
     ) -> Result<Solved, SessionRefusal> {
+        Ok(self.solve_counted(list, extra, steer, limits)?.0)
+    }
+
+    /// [`Self::solve`], and the search nodes it spent (none for an answer
+    /// propagation alone gave), so a caller asking many can take each one's
+    /// out of one budget.
+    pub(crate) fn solve_counted(
+        &self,
+        list: &[Constraint],
+        extra: &[Seed],
+        steer: Steer<'_>,
+        limits: &Limits,
+    ) -> Result<(Solved, u64), SessionRefusal> {
         let mut seeds = match self.seeds_of(list)? {
             Ok(seeds) => seeds,
-            Err(cant) => return Ok(Solved::CantFit(cant)),
+            Err(cant) => return Ok((Solved::CantFit(cant), 0)),
         };
         let asked = seeds.len();
         // An extra seed against a constraint, or against another extra, on
@@ -1057,11 +1070,12 @@ impl ConstraintSession {
                         .variables
                         .get(v)
                         .map_or_else(Vec::new, |pair| pair.faces().to_vec());
-                    return Ok(Solved::CantFit(CantFit {
+                    let opposed = CantFit {
                         proof: CantFitProof::Opposed,
                         faces,
                         constraints: by.into_iter().collect(),
-                    }));
+                    };
+                    return Ok((Solved::CantFit(opposed), 0));
                 }
                 Some(_) => {}
                 None => {
@@ -1081,7 +1095,7 @@ impl ConstraintSession {
                 .search()
                 .deduce(&seeds, limits.flatfold_deadline())
                 .map_err(internal_search)?;
-            return Ok(match deduced {
+            let solved = match deduced {
                 Deduction::Deduced(deduced) => Solved::Fit(Fit {
                     arrangement: self.shown.clone(),
                     forced: deduced.forced(),
@@ -1108,7 +1122,8 @@ impl ConstraintSession {
                     limit: complete::budget_limit(limit),
                     nodes: 0,
                 }),
-            });
+            };
+            return Ok((solved, 0));
         }
         let (prefer, prefer_fits) = match steer {
             Steer::Shown => (self.shown.values.as_slice(), true),
@@ -1125,7 +1140,13 @@ impl ConstraintSession {
             .search()
             .check(&seeds, &options)
             .map_err(internal_search)?;
-        Ok(match outcome {
+        let nodes = match &outcome {
+            CheckOutcome::Fits(fit) => fit.nodes,
+            CheckOutcome::NoOrder(none) => none.nodes,
+            CheckOutcome::Undecided { nodes, .. } => *nodes,
+            CheckOutcome::Forced { .. } | CheckOutcome::Conflict(_) => 0,
+        };
+        let solved = match outcome {
             CheckOutcome::Fits(fit) => {
                 let stacks = if fit.order == self.shown.values {
                     self.shown.stacks.clone()
@@ -1166,7 +1187,8 @@ impl ConstraintSession {
                 limit: complete::budget_limit(limit),
                 nodes,
             }),
-        })
+        };
+        Ok((solved, nodes))
     }
 
     /// A seed against what the letters force: the constraints on that pair.
