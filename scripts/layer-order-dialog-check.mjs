@@ -1130,7 +1130,9 @@ function diagramStepOfflineCases(theme) {
     await record(`diagram-${tag}-offline-refresh-all`, { page: await pageShot(page) });
     await page.context().setOffline(false);
     console.log(`[${tag}] offline Refresh All: ${JSON.stringify(result)}`);
-    const said = 'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.';
+    // Offline, with Reload: only a reload retries a load that failed.
+    const said =
+      'Layer order couldn’t load while offline, so 5 steps weren’t changed. Reconnect, then reload Ori Studio to try again.';
     if (result.refreshed !== 1) throw new Error('offline Refresh All did not refresh the unconstrained step alone');
     if (result.layerOrderWorkers > 1) throw new Error(`offline Refresh All spawned ${result.layerOrderWorkers} workers`);
     if (!result.toasts.some((toast) => toast?.includes(said))) throw new Error('offline Refresh All did not count its steps');
@@ -1370,8 +1372,8 @@ async function poseNow(page) {
  * and Edit order… after them; each held at its end; Edit order… opening the
  * dialog on the fold Pose holds — at the step's own layer order, past the
  * first — with Pose's keys standing down while it is open, and Cancel
- * writing nothing; then the same step constrained: ‹ › held (D9), and Edit
- * order… opening on its record.
+ * writing nothing; then the same step constrained: ‹ › offered at rest (H9),
+ * and Edit order… opening on its record.
  */
 function poseToolbarCases(theme) {
   const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
@@ -1510,13 +1512,14 @@ function poseToolbarCases(theme) {
     console.log(`[${tag}] Apply, Turn Over, undo after ${raced.map((round) => `${round.delay}ms`).join(', ')}: ${JSON.stringify(raced.flatMap((round) => round.errors))}`);
     if (raced.some((round) => round.errors.length > 0 || round.record)) throw new Error('an undo under a turn failed it');
 
-    // Constrained: D9's hold on ‹ ›, and Edit order… opening on the record.
+    // Constrained: ‹ › offered at rest, from saved data (H9 lifted D9's hold; `diagramSolutionCases` steps
+    // them), and Edit order… opening on the record.
     const applied = await applyConstraintToStep(page);
     await captured(page);
     if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
     const constrained = await poseToolbarState(page);
     console.log(`[${tag}] constrained toolbar: ${JSON.stringify({ previous: constrained.previous, next: constrained.next, edit: constrained.edit })}`);
-    if (!constrained.previous || !constrained.next || constrained.edit) throw new Error('constrained: ‹ › held, Edit order… free');
+    if (constrained.previous || constrained.next || constrained.edit) throw new Error('constrained: ‹ › offered at rest, Edit order… free');
     await record(`pose-${tag}-toolbar-constrained`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
     const constrainedBefore = await poseNow(page);
     await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
@@ -1536,6 +1539,305 @@ function poseToolbarCases(theme) {
     }
     console.log(`[${tag}] constrained: Cancel wrote nothing`);
     await record(`pose-${tag}-constrained`, { page: await pageShot(page) });
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The Diagram's ‹ › within constraints (H9)
+
+/**
+ * A constraint on kabuto's step that leaves several pictures from its side,
+ * worked out on the host engine as the dialog would (open on the order shown,
+ * each open pair either way, counted to the end), and applied as the
+ * dialog's Apply is: through the Diagram's capture, as one undo step. How
+ * many pictures it leaves, and how the capture went.
+ */
+async function severalSolutionsStepOrder(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const stepId = window.__layerOrderStep;
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { chooseStepCreases, knownCreasesOf } = await import('/src/diagram/capture/captureCreases.ts');
+    const { resolveFoldRoute } = await import('/src/cp-workspace/folded/foldRoute.ts');
+    const { peekCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { captureModel } = await import('/src/diagram/capture/captureFolded.ts');
+    const { stepFoldSource } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const { createCpCaptureRuntime } = await import('/src/store/workspaceStore/cpFoldRuntimeBindings.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS, constraintSeen } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+    const state = store.getState();
+    const source = stepById(state.diagram, stepId).source;
+    const document = state.oristudioCpDocument.document;
+    const side = source.render.side;
+    const choice = chooseStepCreases(document, source.scope, peekCpSheetIndex(document), knownCreasesOf(source));
+    const route = resolveFoldRoute(document, choice.creases.foldLineIds);
+    const folded = await stepFoldSource(createCpCaptureRuntime(0, null), route.lineIds, captureModel(document, side));
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    try {
+      const { engine } = runtime;
+      const opened = await engine.openShowing(folded.source, layerOrderSceneRelations(folded.scene), LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`open: ${JSON.stringify(opened)}`);
+      let best = null;
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        const [lo, hi] = [opened.open_pairs[i], opened.open_pairs[i + 1]];
+        for (const verb of ['in_front_of', 'behind']) {
+          const constraint = constraintSeen(lo, verb, hi, side, opened.front_up[hi] === 1);
+          const committed = await engine.commit([constraint], LAYER_ORDER_LIMITS.commit);
+          if (committed.verdict !== 'committed') continue;
+          const counted = await engine.countSlice(LAYER_ORDER_LIMITS.restore);
+          const n = counted.count[side].n;
+          // The fewest of three or more: enough to step on and back, few enough to walk end to end.
+          if (counted.count.done && n >= 3 && n < (best?.pictures ?? Infinity)) best = { constraint, pictures: n };
+        }
+      }
+      if (!best) throw new Error('no one constraint on kabuto’s step leaves three pictures or more');
+      const committed = await engine.commit([best.constraint], LAYER_ORDER_LIMITS.commit);
+      if (committed.verdict !== 'committed') throw new Error('the best constraint no longer commits');
+      const saved = await engine.save();
+      if (saved.status !== 'ok') throw new Error(`save: ${JSON.stringify(saved)}`);
+      const relations = await engine.relations();
+      const applied = { record: saved.record, relations, source: folded.source };
+      const outcome = await store.getState().captureDiagramStep(stepId, {
+        scope: source.scope,
+        known: knownCreasesOf(source),
+        render: source.render,
+        kind: 'diagram-capture',
+        label: 'Change layer order',
+        layerOrderApplied: { applied, frame: folded.frame },
+      });
+      return { outcome: outcome.status, pictures: best.pictures };
+    } finally {
+      runtime.dispose();
+    }
+  });
+}
+
+/** The Step pane's Layer order row on the step open in Pose: its readout, its ‹ and ›. */
+function stepPanePager(page) {
+  const row = page.locator('[data-field-row]', { hasText: 'Layer order' });
+  const group = row.getByRole('group', { name: 'Layer order' });
+  return {
+    row,
+    // A record's place is kept hidden at rest (`visibility: hidden`), which innerText leaves out.
+    readout: async () => (await group.locator('[aria-live="polite"]').innerText()).trim(),
+    next: group.getByRole('button', { name: 'Next Layer Order' }),
+    previous: group.getByRole('button', { name: 'Previous Layer Order' }),
+  };
+}
+
+/** Press a pager's verb and let what it starts land: the step done capturing. */
+async function pressPager(page, verb) {
+  await verb.click();
+  await page.waitForTimeout(200);
+  await captured(page);
+}
+
+/** The step's record, read: its text, its order and how many constraints it keeps. */
+async function stepRecord(page) {
+  return page.evaluate(async () => {
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { stepLayerOrderOf } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const source = stepById(window.__treemakerWorkspaceStore.getState().diagram, window.__layerOrderStep).source;
+    const read = stepLayerOrderOf(source.layerOrder);
+    return {
+      json: source.layerOrder ?? null,
+      order: read ? JSON.stringify(read.record.order) : null,
+      constraints: read ? read.record.constraints.length : null,
+      side: source.render.side,
+    };
+  });
+}
+
+/** How many undo steps the Diagram holds, and their labels from `from`. */
+function diagramHistory(page, from = 0) {
+  return page.evaluate((from) => {
+    const past = window.__treemakerWorkspaceStore.getState().diagramHistory.past;
+    return { depth: past.length, labels: past.slice(from).map((entry) => entry.label) };
+  }, from);
+}
+
+/**
+ * H9 on kabuto's step, in one theme: a constraint that leaves several
+ * pictures, applied; reopening the step and drawing its Step pane starts no
+ * worker, and the pager reads nothing; the first ‹ makes the host engine's
+ * cursor (one worker), and ‹ › then step through the solutions that fit,
+ * one undo step each, the readout counting them, each end waiting once
+ * reached — Pose's toolbar's too, which steps on the same worker; an undo
+ * shows the order before and lets the cursor (and its worker) go; a
+ * Refresh after a press keeps the order and lets it go too; and a reload
+ * keeps the order the step was left on, with no worker until the next press.
+ */
+function diagramSolutionCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    await linkKabutoStep(page);
+    await captured(page);
+    await reopenDetail(page);
+    const applied = await severalSolutionsStepOrder(page);
+    await captured(page);
+    if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
+    const { pictures } = applied;
+    console.log(`[${tag}] applied one constraint that leaves ${pictures} pictures from the step's side`);
+
+    // The step opened again (as another step and back would) and its pane drawn, from saved data: no worker.
+    const watch = watchLayerOrderLoads(page);
+    const closed = [];
+    page.on('worker', (worker) => worker.on('close', () => closed.push(worker.url())));
+    await reopenDetail(page);
+    const pane = stepPanePager(page);
+    await pane.row.waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(1000);
+    if (watch.workers().length > 0) throw new Error(`opening the step spawned ${watch.workers().join(', ')}`);
+    if ((await pane.readout()) !== '' || (await waits(pane.next)) || (await waits(pane.previous))) {
+      throw new Error(`at rest the pager reads "${await pane.readout()}", or a verb waits`);
+    }
+    await record(`diagram-solutions-${tag}-at-rest`, { page: await pageShot(page) });
+    console.log(`[${tag}] opened, its pane drawn: no worker; ‹ › live, no readout`);
+
+    // Back to the first, from the Step pane: the first press makes the cursor, one worker.
+    const { depth } = await diagramHistory(page);
+    const back = [];
+    for (let guard = 0; guard < 8 && !(await waits(pane.previous)); guard += 1) {
+      await pressPager(page, pane.previous);
+      back.push(await pane.readout());
+    }
+    if (watch.workers().length !== 1) throw new Error(`the presses spawned ${watch.workers().length} workers, not one`);
+    if (!/^1 of \d+\+?$/.test(await pane.readout())) throw new Error(`at the first it reads "${await pane.readout()}"`);
+    console.log(`[${tag}] ‹ to the first: ${back.join(' → ') || '(already there)'}, on one worker; ‹ waits`);
+    const firstStage = await stageShot(page);
+    await record(`diagram-solutions-${tag}-first`, { page: await pageShot(page), stage: firstStage });
+
+    // On to the last: each press a new record and an undo step; the readout counts on; › waits there.
+    const onward = [];
+    for (let guard = 0; guard < 8 && !(await waits(pane.next)); guard += 1) {
+      const before = await stepRecord(page);
+      await pressPager(page, pane.next);
+      const after = await stepRecord(page);
+      if (after.json === before.json || after.constraints !== before.constraints) {
+        throw new Error('› wrote no new order, or changed the constraints');
+      }
+      onward.push(await pane.readout());
+    }
+    const expected = Array.from({ length: pictures - 1 }, (_, i) => `${i + 2} of ${pictures}`);
+    if (onward.join() !== expected.join()) throw new Error(`› read ${onward.join(', ')}, not ${expected.join(', ')}`);
+    if (!(await waits(pane.next))) throw new Error('› never waited at the last solution');
+    // Pose's toolbar's › waits there too: the stepper has ends, and neither wraps.
+    if (!(await waits(poseToolbar(page).getByRole('button', { name: 'Next Layer Order' })))) {
+      throw new Error('the toolbar’s › does not wait at the last solution');
+    }
+    const lastStage = await stageShot(page);
+    const moved = await pixelDiff(page, firstStage, lastStage);
+    console.log(`[${tag}] › to the last: ${onward.join(' → ')}; both › wait; ${moved.differing} of ${moved.pixels} pixels from the first`);
+    if (moved.differing === 0) throw new Error('the first and the last solutions draw alike');
+    await record(`diagram-solutions-${tag}-last`, { page: await pageShot(page), stage: lastStage });
+    await record(`diagram-solutions-${tag}-last-toolbar`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
+
+    // ‹ back one from Pose's toolbar: one session, the same worker; the pane reads where it went.
+    await toolbarVerb(page, 'Previous Layer Order');
+    const backOne = await pane.readout();
+    if (backOne !== `${pictures - 1} of ${pictures}` || watch.workers().length !== 1) {
+      throw new Error(`the toolbar's ‹ read "${backOne}" on ${watch.workers().length} workers`);
+    }
+    const history = await diagramHistory(page, depth);
+    const want = [...back.map(() => 'Show previous solution'), ...onward.map(() => 'Show another solution'), 'Show previous solution'];
+    if (history.labels.join() !== want.join()) throw new Error(`undo steps: ${history.labels.join(', ')}`);
+    const leftOn = await stepRecord(page);
+    console.log(`[${tag}] toolbar ‹ back one: ${backOne}; ${history.labels.length} undo steps, one a press`);
+
+    // Undo: the order before; the cursor goes with its worker; nothing reads out.
+    const beforeUndo = closed.length;
+    await page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.undo');
+    });
+    await captured(page);
+    const undone = await stepRecord(page);
+    if (undone.json === leftOn.json) throw new Error('undo did not put the order before back');
+    for (let waited = 0; closed.length === beforeUndo && waited < 5000; waited += 100) await page.waitForTimeout(100);
+    if (closed.length === beforeUndo) throw new Error('the cursor’s worker outlived the undo');
+    if ((await pane.readout()) !== '') throw new Error(`after undo it reads "${await pane.readout()}"`);
+    await record(`diagram-solutions-${tag}-undone`, { page: await pageShot(page) });
+    await page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.redo');
+    });
+    await captured(page);
+    if ((await stepRecord(page)).json !== leftOn.json) throw new Error('redo did not bring the step back');
+    console.log(`[${tag}] undo: the order before; the cursor's worker closed; no readout; redo brought the step back`);
+
+    // A press, then Refresh: the order stepped to is kept, and the cursor goes with its worker.
+    await pressPager(page, pane.previous);
+    const stepped = await stepRecord(page);
+    const workersBefore = watch.workers().length;
+    const closedBefore = closed.length;
+    // The step is current, so its Picture section offers no Refresh: the verb its card's menu and Refresh All run.
+    const didRefresh = await page.evaluate(async () => {
+      const { refreshDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      return refreshDiagramStep(window.__layerOrderStep);
+    });
+    if (!didRefresh) throw new Error('Refresh did not capture');
+    await captured(page);
+    const refreshed = await stepRecord(page);
+    for (let waited = 0; closed.length === closedBefore && waited < 5000; waited += 100) await page.waitForTimeout(100);
+    console.log(
+      `[${tag}] a press (worker ${workersBefore}), then Refresh: order ${refreshed.order === stepped.order ? 'kept' : 'changed'}, ` +
+        `constraints ${refreshed.constraints}, readout "${await pane.readout()}", ${closed.length - closedBefore} worker closed`
+    );
+    if (refreshed.order !== stepped.order || refreshed.constraints !== stepped.constraints) throw new Error('Refresh lost the stepped order');
+    if (closed.length === closedBefore || (await pane.readout()) !== '') throw new Error('Refresh kept the cursor');
+    watch.stop();
+
+    // Saved, and opened again in a fresh page: the order it was left on, no worker until a press.
+    const saved = await page.evaluate(async () => {
+      let text = null;
+      const files = {
+        saveTextFile: async (options) => {
+          text = options.contents;
+          return { name: 'kabuto-diagram.osf', path: null };
+        },
+      };
+      if (!(await window.__treemakerWorkspaceStore.getState().saveProjectAs(files))) throw new Error('save failed');
+      return { text, stepId: window.__layerOrderStep };
+    });
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    const reopenWatch = watchLayerOrderLoads(page);
+    await page.evaluate(
+      async ({ osf, stepId, theme }) => {
+        const store = window.__treemakerWorkspaceStore;
+        const files = { openTextFile: async () => ({ text: osf, name: 'kabuto-diagram.osf', path: null }) };
+        if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error('the diagram did not open');
+        if (theme) {
+          const { useThemeStore } = await import('/src/store/themeStore.ts');
+          useThemeStore.getState().setThemeByName(theme);
+        }
+        const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+        useLayoutStore.getState().activateWorkspace('diagram');
+        store.getState().selectDiagramStep(stepId);
+        store.getState().openDiagramStep(stepId);
+        window.__layerOrderStep = stepId;
+      },
+      { osf: saved.text, stepId: saved.stepId, theme }
+    );
+    await reopenDetail(page);
+    const reopenedPane = stepPanePager(page);
+    await reopenedPane.row.waitFor({ state: 'visible', timeout: 60000 });
+    await page.waitForTimeout(1000);
+    const reopened = await stepRecord(page);
+    if (reopened.order !== refreshed.order) throw new Error('the file did not keep the order the step was left on');
+    if (reopenWatch.workers().length > 0) throw new Error(`opening the diagram spawned ${reopenWatch.workers().join(', ')}`);
+    if ((await reopenedPane.readout()) !== '') throw new Error(`reopened, it reads "${await reopenedPane.readout()}"`);
+    await record(`diagram-solutions-${tag}-reopened`, { page: await pageShot(page) });
+    await pressPager(page, reopenedPane.next);
+    const afterReload = await reopenedPane.readout();
+    if (!/^\d+ of \d+\+?$/.test(afterReload) || reopenWatch.workers().length !== 1) {
+      throw new Error(`after the reload › read "${afterReload}" on ${reopenWatch.workers().length} workers`);
+    }
+    reopenWatch.stop();
+    console.log(`[${tag}] reloaded: left on its order, no readout, no worker; › makes one cursor and reads ${afterReload}`);
+    await record(`diagram-solutions-${tag}-reopened-stepped`, { page: await pageShot(page) });
   };
 }
 
@@ -4919,6 +5221,8 @@ const CASES = [
   { name: 'edit-figure-solutions-horizon', run: editFigureSolutionCases('Horizon') },
   { name: 'pose-toolbar', run: poseToolbarCases(null) },
   { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
+  { name: 'diagram-solutions', run: diagramSolutionCases(null) },
+  { name: 'diagram-solutions-horizon', run: diagramSolutionCases('Horizon') },
   { name: 'many-patterns', run: manyPatternCases(null) },
   { name: 'many-patterns-horizon', run: manyPatternCases('Horizon') },
   { name: 'unordered-toast', run: unorderedCreasesToast },

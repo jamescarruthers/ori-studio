@@ -7,6 +7,7 @@ import {
   isDefaultRender,
   type DiagramLinkedPoseState,
   layerOrderLabel,
+  solutionPlaceLabel,
 } from './diagramLinkedPoseActions';
 import type { DiagramLayerSpread } from '../document/diagramDocument';
 
@@ -173,24 +174,109 @@ describe('the linked pose verbs', () => {
   });
 
   // D9's stop-gap until H9: a record's order is no place in the kernel's enumeration.
-  it('holds ‹ › on a step whose order is a layer order record’s, pointing to the dialog', () => {
+  it('offers ‹ › on a step whose order is a layer order record’s, whatever the kernel found (H9)', () => {
     const pose = vi.fn();
+    // At rest, from saved data alone: the kernel's facts of its held fold (one of one) say nothing of what fits.
     const actions = build(
       {
-        render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 3 },
-        solutions: { discovered: 5, hasNext: true },
+        render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 },
+        solutions: { discovered: 1, hasNext: false },
         constrained: true,
+        place: null,
       },
       pose
     );
     for (const id of ['previous-solution', 'next-solution'] as const) {
       const action = actions.find((candidate) => candidate.id === id)!;
-      expect(action).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
+      expect(action.disabled).toBe(false);
       action.run();
     }
-    expect(pose).not.toHaveBeenCalled();
+    expect(pose.mock.calls).toEqual([['previous-solution'], ['next-solution']]);
     // The rest of its pose is as any flat fold's.
     expect(actions.find((action) => action.id === 'turn-over')?.disabled).toBe(false);
+  });
+
+  it('holds a constrained step’s ‹ › at the ends its solutions cursor found, on every pager, in its words (H9)', () => {
+    const constrained = (
+      index: number,
+      n: number,
+      exact: boolean,
+      {
+        stopsAtLast = false,
+        record = null,
+        stale = false,
+        ended,
+      }: {
+        stopsAtLast?: boolean;
+        record?: DiagramLinkedPoseState['record'];
+        stale?: boolean;
+        ended?: 'next' | 'previous';
+      } = {}
+    ) => {
+      const actions = buildDiagramLinkedPoseActions(
+        {
+          render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 },
+          readOnly: false,
+          busy: false,
+          solutions: { discovered: 1, hasNext: false },
+          constrained: true,
+          place: { position: { index, total: { n, exact } }, counted: true, ...(ended ? { ended } : {}) },
+          record,
+          stale,
+        },
+        { t, pose: vi.fn() },
+        { stopsAtLast }
+      );
+      const verb = (id: string) => actions.find((action) => action.id === id)!;
+      return { previous: verb('previous-solution'), next: verb('next-solution') };
+    };
+    // The solutions that fit, counted by the pictures of a side: never the fold's layer orders.
+    expect(constrained(1, 3, false).previous).toMatchObject({ disabled: true, hint: 'This is its first solution' });
+    expect(constrained(1, 3, false).next.disabled).toBe(false);
+    // Not final: the count may find more, so › goes on looking.
+    expect(constrained(3, 3, false).next.disabled).toBe(false);
+    // The Step pane's never wraps on a constrained step (its unconstrained one does, D23): final, it waits.
+    for (const stopsAtLast of [false, true]) {
+      expect(constrained(3, 3, true, { stopsAtLast }).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+      expect(constrained(3, 3, true, { stopsAtLast }).previous.disabled).toBe(false);
+    }
+    // One picture from this side is not one layer order: no "This fold has one layer order".
+    expect(constrained(1, 1, true).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+    // A way a step proved to end (E9) waits there, whatever the count says.
+    expect(constrained(3, 3, false, { ended: 'next' }).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+    expect(constrained(2, 3, false, { ended: 'previous' }).previous).toMatchObject({
+      disabled: true,
+      hint: 'This is its first solution',
+    });
+    // Its record needs a look since an edit (D14), clashing or any other summary: both wait for Review…,
+    // wherever a press last stood, in Edit's words.
+    for (const reason of ['conflict', 'timeout', 'unresolved'] as const) {
+      for (const verb of Object.values(constrained(2, 3, false, { record: { constraints: 2, attention: { reason, count: 1 } } }))) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Review the layer constraints that need attention first' });
+      }
+    }
+    // An order chosen with no constraint has none to review: the order itself (D16).
+    expect(constrained(2, 3, false, { record: { constraints: 0, attention: { reason: 'timeout', count: 0 } } }).next).toMatchObject({
+      disabled: true,
+      hint: 'Review the chosen layer order first',
+    });
+    // Its pattern changed since it was captured: both wait for a Refresh.
+    for (const verb of Object.values(constrained(2, 3, false, { stale: true }))) {
+      expect(verb).toMatchObject({ disabled: true, hint: 'Its pattern changed since it was captured' });
+    }
+    // A record that needs nothing, on creases as captured, steps.
+    expect(constrained(2, 3, false, { record: { constraints: 2, attention: null } }).next.disabled).toBe(false);
+  });
+
+  it('reads out where a constrained step stands once a press asked, and nothing at rest (H9, D11)', () => {
+    const flat = { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 } as const;
+    const at = (index: number, n: number, exact: boolean, counted = true) => ({ position: { index, total: { n, exact } }, counted });
+    expect(solutionPlaceLabel(flat, null, t)).toBeNull();
+    expect(solutionPlaceLabel(flat, at(2, 3, false), t)).toEqual({ count: '2 of 3+' });
+    expect(solutionPlaceLabel(flat, at(2, 3, true), t)).toEqual({ count: '2 of 3' });
+    // Too large to count (D7): the stepper steps with no total.
+    expect(solutionPlaceLabel(flat, at(3, 3, false, false), t)).toEqual({ count: 'Solution 3' });
+    expect(solutionPlaceLabel({ mode: 'crease-pattern', rotationDeg: 0 }, at(2, 3, true), t)).toBeNull();
   });
 
   it('says where a flat fold stands among the layer orders found', () => {

@@ -7,7 +7,7 @@ import type {
   OristudioCpFoldedFigureState,
 } from '../../engine/oristudioCpTypes';
 import { FOLDED_FIGURE_SIDES } from '../../lib/foldedFigureSides';
-import { frontierSolutions, layerOrderCount } from '../../lib/layerOrderPlace';
+import { frontierSolutions, layerOrderCount, solutionPlaceCount } from '../../lib/layerOrderPlace';
 import type {
   PaperStyle,
   PaperStyleField,
@@ -599,20 +599,14 @@ function layerOrderField(
 
 /**
  * Where a constrained figure stands among the solutions that fit its record,
- * as its cursor last answered (`foldedSolutionCursor.ts`), in the frontier's
- * words: "2 of 3+" while the count may find more, "2 of 3" once it is final,
- * and "Solution 3" on a figure too large to count (D7). Nothing before a
+ * as its cursor last answered (`foldedSolutionCursor.ts`), in the words the
+ * Diagram's Step pane reads too (`solutionPlaceCount`). Nothing before a
  * press has made the cursor, or once it is gone: the host never counts at
  * rest (D11).
  */
 function constrainedSolutionReadout(figure: OristudioCpFoldedFigureEntry, t: TFunction): string {
   const place = foldedSolutionPlace(figure);
-  if (!place) return '';
-  const { index, total } = place.position;
-  if (!place.counted) {
-    return t('panels:cpProperties.folded.layerOrderSolution', 'Solution {{number}}', { number: index });
-  }
-  return layerOrderCount(index, { discovered: total.n, hasNext: !total.exact }, t);
+  return place ? solutionPlaceCount(place, t) : '';
 }
 
 /**
