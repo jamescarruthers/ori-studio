@@ -4465,7 +4465,8 @@ async function landedOrder(page, file, expect) {
  * Fold's Import CP choosing its order in the Layer order dialog (H10), in one
  * theme: kabuto dropped on Import CP opens the dialog on its default order,
  * the import's own dialog stepped aside; Cancel leaves the sequence as it
- * was; a constraint added and Applied lands one step, one undo entry, whose
+ * was; the browser's Back with the dialog open closes it with Import CP, and
+ * Forward finds no dialog and no step; a constraint added and Applied lands one step, one undo entry, whose
  * order (found among the import's own by Fold's chooser) is the order the
  * dialog's engine lands on for that constraint, relation for relation; and
  * a pattern with one order imports straight through, no dialog.
@@ -4482,6 +4483,26 @@ function foldImportCases(theme) {
       }, theme);
     }
     const before = await foldSequenceState(page);
+
+    // Import CP opened with no file yet loads none of the dialog's code: that waits for an
+    // import with several orders.
+    const dialogCode = /components\/layer-order\/LayerOrderDialog\.tsx|layerOrderWorker/;
+    const loaded = [];
+    const onRequest = (request) => {
+      if (dialogCode.test(request.url())) loaded.push(request.url());
+    };
+    page.context().on('request', onRequest);
+    await page.evaluate(async () => {
+      const { useFoldImportUiStore } = await import('/src/fold/io/foldImportUiStore.ts');
+      useFoldImportUiStore.getState().open();
+    });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(2000);
+    page.context().off('request', onRequest);
+    if (loaded.length > 0) throw new Error(`Import CP's open loaded the dialog's code: ${loaded.join(', ')}`);
+    await page.keyboard.press('Escape');
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    console.log(`[${tag}] Import CP opened with no file: none of the dialog's code loaded`);
 
     // Kabuto, dropped on Import CP: the Layer order dialog opens on it, alone.
     await importIntoFold(page, kabuto);
@@ -4503,6 +4524,35 @@ function foldImportCases(theme) {
     const cancelled = await foldSequenceState(page);
     if (JSON.stringify(cancelled) !== JSON.stringify(before)) throw new Error(`Cancel changed the sequence: ${JSON.stringify(cancelled)}`);
     console.log(`[${tag}] Cancel: no step, no undo entry, Import CP closed`);
+
+    // The browser's Back while the dialog is open: the dialog goes with Import CP, and nothing
+    // lands, there or after Forward. An in-app visit to Edit first gives Back somewhere to go.
+    const go = (to) =>
+      page.evaluate(async (to) => {
+        const { navigateTo } = await import('/src/routing/appRouter.tsx');
+        navigateTo(to);
+      }, to);
+    await go('/edit');
+    await page.waitForFunction(() => location.pathname === '/edit', null, { timeout: 30000 });
+    await go('/fold');
+    await page.locator(FOLDED).waitFor({ state: 'visible', timeout: 120000 });
+    await importIntoFold(page, kabuto);
+    dialog = await readyDialog(page);
+    await page.goBack();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    const backed = await page.evaluate(() => location.pathname);
+    if (backed !== '/edit') throw new Error(`Back went to ${backed}`);
+    if (await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).isVisible()) throw new Error('Import CP outlived Back');
+    if (JSON.stringify(await foldSequenceState(page)) !== JSON.stringify(before)) throw new Error('Back left a step');
+    await page.goForward();
+    await page.locator(FOLDED).waitFor({ state: 'visible', timeout: 120000 });
+    await settle(page);
+    for (const name of [DIALOG.name, IMPORT_DIALOG.name]) {
+      if (await page.getByRole('dialog', { name }).isVisible()) throw new Error(`${name} came back with Forward`);
+    }
+    const forward = await foldSequenceState(page);
+    if (JSON.stringify(forward) !== JSON.stringify(before)) throw new Error(`Forward found a step: ${JSON.stringify(forward)}`);
+    console.log(`[${tag}] Back with the dialog open: it closed with Import CP on Edit; Forward: no dialog, no step`);
 
     // A constraint added through the inspector, then Apply.
     await importIntoFold(page, kabuto);

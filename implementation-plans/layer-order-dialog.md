@@ -940,6 +940,22 @@ Settled while building H10 (Fold's Import CP):
   can't match the faces — an unassigned crease Fold folds and Edit doesn't),
   the canvas chooser asks, as before H10; `busy` says so in a toast, and the
   gateway already says why for `unavailable`.
+- **From the review (#541):**
+  - *A host can withdraw its ask:* `openLayerOrderDialog(request, { signal })`
+    closes the dialog when the signal aborts, answering `cancelled`. Import
+    CP's flow aborts it when it lets the import go: a reset, a dispose (Back
+    or a workspace switch unmounts Import CP), a newer request, or the step it
+    goes after moving under the dialog (an undo).
+  - *The mount closes the dialog when the route or the workspace changes
+    under it,* for every host: an Apply never lands in a place the user left.
+  - *A refusal of the dialog's order* (`import_order_open`,
+    `import_budget_exceeded`, any) says "Fold couldn't land this layer order.
+    Nothing was imported.", with no Search longer; the pick spends the limits
+    the import was opened with.
+  - *The dialog's code is fetched only once an import reports several
+    orders,* never on Import CP's open.
+  - *The face match is checked both ways:* each import face's witness lies in
+    the Oriedita face it was matched to (`face_at_paper`), as a restore checks.
 
 ### Risks
 
