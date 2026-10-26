@@ -8,7 +8,10 @@ import type { DiagramLinkedPose } from './useDiagramLinkedPose';
 
 const pose = (): DiagramLinkedPose => ({
   actions: [],
+  toolbar: [],
   layerOrder: null,
+  layerOrderEdit: null,
+  editLayerOrder: async () => false,
   spatial: null,
   onCamera: () => {},
   registerLiveView: () => () => {},

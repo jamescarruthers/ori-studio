@@ -13,8 +13,14 @@ import {
   SHOW_AS_ACTION,
   type DiagramLinkedPoseAction,
   type DiagramLinkedPoseState,
+  type DiagramLinkedPoseVerb,
   type DiagramSpreadControls,
 } from '../actions/diagramLinkedPoseActions';
+import {
+  buildDiagramPoseLayerOrderEntry,
+  type DiagramStepLayerOrderEntry,
+} from '../actions/diagramStepLayerOrderActions';
+import { layerOrderSummaryOf } from './captureLayerOrder';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import {
   clampSpreadAmount,
@@ -27,11 +33,13 @@ import {
 } from '../document/diagramDocument';
 import { creasePatternPaperShows, type CreasePatternPaperRequest } from './creasePatternSide';
 import { publishOpenLinkedPose } from './openLinkedPose';
+import type { DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 import {
   createPoseController,
   linkedFoldKey,
   withSlide,
   type DiagramPoseSpatialView,
+  type PoseLayerOrderSurface,
   type SimulatedRest,
   type SpreadPreview,
   type SpreadSlider,
@@ -56,11 +64,26 @@ export interface DiagramLinkedSpread extends DiagramSpreadControls {
 export interface DiagramLinkedPose {
   actions: DiagramLinkedPoseAction[];
   /**
-   * A flat fold's place among its layer orders ("2 of 5+"), for the pager
-   * between its verbs; null otherwise, and for a step whose order is a
-   * record's (H7), which has no place among them.
+   * The step detail's toolbar's verbs: {@link DiagramLinkedPose.actions}, but
+   * with no readout between its ‹ and ›, Next Layer Order holds at the last
+   * order rather than wrapping round (Round 4, H8).
    */
-  layerOrder: { count: string; label: string } | null;
+  toolbar: DiagramLinkedPoseAction[];
+  /**
+   * A flat fold's place among its layer orders ("2 of 5+"), for the Step
+   * pane's pager between its verbs; null otherwise, and for a step whose
+   * order is a record's (H7), which has no place among them.
+   */
+  layerOrder: { count: string } | null;
+  /** The toolbar's Edit order… (H8): the Layer order dialog on the fold Pose holds; null for a step not folded. */
+  layerOrderEdit: DiagramStepLayerOrderEntry | null;
+  /**
+   * Open the Layer order dialog on the fold Pose holds, and commit an Apply
+   * (`PoseController.editLayerOrder`): Edit order…'s, and the Step pane's
+   * Edit… and Review… while the step is open here, each saying which it is
+   * (`surface`). Whether it applied one.
+   */
+  editLayerOrder: (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) => Promise<boolean>;
   /** The live 3D fold, for a step shown in 3D once it is folded; null otherwise. */
   spatial: DiagramPoseSpatialView | null;
   /** The 3D view moved: captured once it rests. */
@@ -198,22 +221,41 @@ export function useDiagramLinkedPose(
         : null,
     [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained]
   );
-  const actions = useMemo(
+  const [actions, toolbar] = useMemo(() => {
+    if (!poseState || !controller) return [[], []];
+    const deps = {
+      t,
+      pose: (verb: DiagramLinkedPoseVerb) => void controller.run({ verb }),
+      // The picture does not move: the view's next rest captures the camera with its new up, as a drag's does.
+      setUpright: liveView
+        ? () => {
+            liveView.setUpright();
+            announceUprightSet(t);
+          }
+        : undefined,
+    };
+    return [
+      buildDiagramLinkedPoseActions(poseState, deps),
+      buildDiagramLinkedPoseActions(poseState, deps, { stopsAtLast: true }),
+    ];
+  }, [poseState, t, controller, liveView]);
+
+  // The toolbar's Edit order…, from the saved source as the Step pane's Edit… is (H7, H8).
+  const record = layerOrderSummaryOf(source);
+  const editLayerOrder = useCallback(
+    async (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) =>
+      controller !== null && !readOnly ? controller.editLayerOrder(via, surface) : false,
+    [controller, readOnly]
+  );
+  const layerOrderEdit = useMemo(
     () =>
-      poseState && controller
-        ? buildDiagramLinkedPoseActions(poseState, {
-            t,
-            pose: (verb) => void controller.run({ verb }),
-            // The picture does not move: the view's next rest captures the camera with its new up, as a drag's does.
-            setUpright: liveView
-              ? () => {
-                  liveView.setUpright();
-                  announceUprightSet(t);
-                }
-              : undefined,
-          })
-        : [],
-    [poseState, t, controller, liveView]
+      render
+        ? buildDiagramPoseLayerOrderEntry(
+            { render, record, readOnly, busy, seeThrough },
+            { t, open: () => void editLayerOrder() }
+          )
+        : null,
+    [render, record, readOnly, busy, seeThrough, t, editLayerOrder]
   );
 
   // A drag of a spread's slider, previewed: shown only while the step links to the creases it was drawn from.
@@ -304,7 +346,10 @@ export function useDiagramLinkedPose(
       source
         ? {
             actions,
+            toolbar,
             layerOrder,
+            layerOrderEdit,
+            editLayerOrder,
             spatial: view,
             onCamera,
             registerLiveView,
@@ -321,7 +366,10 @@ export function useDiagramLinkedPose(
     [
       source,
       actions,
+      toolbar,
       layerOrder,
+      layerOrderEdit,
+      editLayerOrder,
       view,
       onCamera,
       registerLiveView,
