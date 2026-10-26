@@ -6520,7 +6520,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -13043,7 +13045,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19568,7 +19572,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25730,7 +25736,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31892,7 +31900,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38415,7 +38425,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44938,7 +44950,9 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -51100,6 +51114,8 @@
     "panels:foldedFigureActions.layerOrderReviewChosenFirst": "47f15c474ffd",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:foldedFigureActions.dismissDetachedLayerOrder": "48845bff334a",
+    "panels:foldedFigureActions.dismissDetachedLayerOrderAction": "dd08623c3475"
   }
 }

@@ -2739,6 +2739,8 @@
   "foldedFigureActions": {
     "anotherSolution": "다른 해",
     "delete": "삭제",
+    "dismissDetachedLayerOrder": "버리기",
+    "dismissDetachedLayerOrderAction": "겹침 제약 버리기",
     "duplicate": "복제",
     "export": "내보내기…",
     "firstSolution": "첫 번째 해로 돌아가기",

@@ -3315,6 +3315,8 @@
   "foldedFigureActions": {
     "anotherSolution": "Autre solution",
     "delete": "Supprimer",
+    "dismissDetachedLayerOrder": "Ignorer",
+    "dismissDetachedLayerOrderAction": "Ignorer les contraintes de couches",
     "duplicate": "Dupliquer",
     "export": "Exporter…",
     "firstSolution": "Revenir à la première solution",

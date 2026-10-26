@@ -3025,6 +3025,8 @@
   "foldedFigureActions": {
     "anotherSolution": "Another solution",
     "delete": "Delete",
+    "dismissDetachedLayerOrder": "Dismiss",
+    "dismissDetachedLayerOrderAction": "Dismiss layer constraints",
     "duplicate": "Duplicate",
     "export": "Export…",
     "firstSolution": "Back to first solution",

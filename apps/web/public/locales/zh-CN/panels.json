@@ -2739,6 +2739,8 @@
   "foldedFigureActions": {
     "anotherSolution": "另一个解",
     "delete": "删除",
+    "dismissDetachedLayerOrder": "舍弃",
+    "dismissDetachedLayerOrderAction": "舍弃层叠约束",
     "duplicate": "复制",
     "export": "导出…",
     "firstSolution": "返回第一个解",

@@ -3605,6 +3605,8 @@
   "foldedFigureActions": {
     "anotherSolution": "Другое решение",
     "delete": "Удалить",
+    "dismissDetachedLayerOrder": "Отбросить",
+    "dismissDetachedLayerOrderAction": "Отбросить ограничения слоёв",
     "duplicate": "Дублировать",
     "export": "Экспорт…",
     "firstSolution": "Вернуться к первому решению",

@@ -2739,6 +2739,8 @@
   "foldedFigureActions": {
     "anotherSolution": "別の解",
     "delete": "削除",
+    "dismissDetachedLayerOrder": "破棄",
+    "dismissDetachedLayerOrderAction": "重なり順の制約を破棄",
     "duplicate": "複製",
     "export": "エクスポート…",
     "firstSolution": "最初の解に戻る",
