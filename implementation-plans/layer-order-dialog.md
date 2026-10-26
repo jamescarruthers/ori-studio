@@ -1065,6 +1065,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
 - [ ] H10: Fold's Import CP chooses its order in the dialog
+- [ ] Deeper stacks: measure the too-deep designs through the dialog's engine and raise the dialog's own cap as far as they stay usable (your ask, 2026-10-26)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
