@@ -2737,6 +2737,7 @@
     "lastSolutionShown": "这是最后一个解",
     "layerOrder": "层叠顺序…",
     "layerOrder3d": "层叠顺序适用于平面模型",
+    "layerOrderConflict": "层叠约束相互冲突。请先通过“检查…”处理",
     "layerOrderCreasesChanged": "折叠后它的折痕已更改",
     "layerOrderNewer": "由更新版本的 Ori Studio 制作：无法在此修改其层叠约束。",
     "layerOrderNoSource": "此折叠模型没有可用的源折痕",

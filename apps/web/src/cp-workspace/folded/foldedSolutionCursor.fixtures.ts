@@ -22,6 +22,8 @@ import { beginFoldedSolutionStep, dropFoldedSolutionCursor } from './foldedSolut
 /** A cursor that answers `steps` in turn, and `place` from `places` (or null), with a log of what it was asked. */
 export interface ScriptedSolutionCursor extends LayerOrderSolutionCursor {
   readonly asked: { direction: 'next' | 'previous'; by: LayerStepBy }[];
+  /** Each step's `tries`: how many times the user had asked to keep trying. */
+  readonly triesAsked: number[];
   readonly placesAsked: LayerStepBy[];
   closed: boolean;
 }
@@ -39,10 +41,12 @@ export function scriptedSolutionCursor(
   const placeQueue = [...places];
   const cursor: ScriptedSolutionCursor = {
     asked: [],
+    triesAsked: [],
     placesAsked: [],
     closed: false,
     async step(direction, by, options = {}) {
       cursor.asked.push({ direction, by });
+      cursor.triesAsked.push(options.tries ?? 0);
       const answer = queue.shift();
       if (!answer) throw new Error('the script has no more steps');
       return typeof answer === 'function' ? answer(options) : answer;

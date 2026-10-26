@@ -6495,9 +6495,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12995,9 +12996,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19497,9 +19499,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25641,9 +25644,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31785,9 +31789,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38285,9 +38290,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44785,9 +44791,10 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50929,8 +50936,9 @@
     "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
     "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
     "toasts:layerOrder.stepLostLoad": "88eb497a5545",
-    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
-    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
-    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
+    "panels:foldedFigureActions.layerOrderConflict": "65e68631d145",
+    "toasts:layerOrder.stepCheckTimedOut": "bbae6ef47491",
+    "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61"
   }
 }

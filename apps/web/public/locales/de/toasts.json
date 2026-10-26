@@ -151,10 +151,10 @@
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
   "layerOrder": {
+    "stepCheckTimedOut": "Die Lagenvorgaben dieses Modells konnten nicht rechtzeitig geprüft werden, daher wurde es nicht geändert.",
     "stepLost": "Die Lagenreihenfolge wurde unerwartet beendet, daher wurde das Modell nicht geändert.",
     "stepLostLoad": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde das Modell nicht geändert. Prüfe deine Verbindung und versuche es dann erneut.",
-    "stepNotFoundYet": "Noch keine weitere Lösung gefunden. Versuche es erneut, um weiterzusuchen.",
-    "stepTimedOut": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde das Modell nicht geändert.",
+    "stepNotFoundInTime": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde das Modell nicht geändert.",
     "stepUnrestored": "Die Lagenvorgaben dieses Modells müssen geprüft werden, daher kann es keine Lösungen durchgehen. Öffne „Lagenreihenfolge…“, um sie zu prüfen.",
     "unavailable": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
   },

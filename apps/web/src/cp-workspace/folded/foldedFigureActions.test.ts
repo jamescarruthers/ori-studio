@@ -676,6 +676,19 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
       expect(command(newer, withLayerOrder(), 'another')).toMatchObject({ disabled: true, hint: why });
       expect(previousSolutionCommand(newer, { t, foldPrevious: vi.fn() })).toMatchObject({ disabled: true, hint: why });
     });
+
+    it('waits on a figure whose saved constraints clash since an edit, pointing at Review… (D10)', () => {
+      const clashing = foldedFigureLayerOrder(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } }));
+      if (!clashing.ok) throw new Error('the fixture record encodes');
+      const figure = solved({ layerOrder: clashing.layerOrder });
+      const why = 'Its layer constraints clash. Review… them first';
+      expect(command(figure, withLayerOrder(), 'another')).toMatchObject({ disabled: true, hint: why });
+      expect(previousSolutionCommand(figure, { t, foldPrevious: vi.fn() })).toMatchObject({ disabled: true, hint: why });
+      // Any other summary still steps: the intact constraints are applied, and the rest carried.
+      const unresolved = foldedFigureLayerOrder(twoConstraintRecord({ attention: { reason: 'unresolved', count: 1 } }));
+      if (!unresolved.ok) throw new Error('the fixture record encodes');
+      expect(command(solved({ layerOrder: unresolved.layerOrder }), withLayerOrder(), 'another').disabled).toBe(false);
+    });
   });
 
   it('leaves Another solution and ‹ exactly as they were on an unconstrained figure', () => {

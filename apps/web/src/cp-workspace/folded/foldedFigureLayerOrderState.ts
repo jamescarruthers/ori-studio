@@ -66,6 +66,16 @@ export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntr
 }
 
 /**
+ * Whether a constrained figure's saved constraints clash, as its record says
+ * since an edit (D10, `attention.reason === 'conflict'`): no order fits them
+ * all, so there is no solution to step to until they are reviewed, and its
+ * ‹ › wait. Read from saved data alone.
+ */
+export function foldedFigureSolutionsHeldByConflict(figure: OristudioCpFoldedFigureEntry): boolean {
+  return foldedFigureLayerOrderRecord(figure)?.attention?.reason === 'conflict';
+}
+
+/**
  * Whether Refold is held on `figure` until a refold can keep a chosen layer
  * order (H4). A refold folds Oriedita's search again: it would draw the
  * searched order on a figure that still carries its record, and a reload would

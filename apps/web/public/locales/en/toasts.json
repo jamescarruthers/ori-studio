@@ -151,10 +151,10 @@
     "solvingLong": "Still solving — this can take a while"
   },
   "layerOrder": {
+    "stepCheckTimedOut": "Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.",
     "stepLost": "Layer order stopped unexpectedly, so the figure wasn’t changed.",
     "stepLostLoad": "Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.",
-    "stepNotFoundYet": "No other solution found yet. Try again to keep looking.",
-    "stepTimedOut": "Another solution couldn’t be found in time, so the figure wasn’t changed.",
+    "stepNotFoundInTime": "Couldn’t find another solution in time, so the figure wasn’t changed.",
     "stepUnrestored": "This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.",
     "unavailable": "Layer order didn’t load. Check your connection and try again."
   },

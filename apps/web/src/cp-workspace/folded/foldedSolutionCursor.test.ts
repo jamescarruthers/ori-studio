@@ -17,6 +17,7 @@ import {
   subscribeFoldedSolutionCursor,
 } from './foldedSolutionCursor';
 import { scriptedSolutionCursor, solutionPosition } from './foldedSolutionCursor.fixtures';
+import type { LayerOrderSolutionCursor, LayerOrderSolutionPlace } from '../../layer-order/host/hostEngineGateway';
 
 /**
  * Edit's one solutions cursor (row H6) on its own: the rules a press and the
@@ -154,6 +155,41 @@ describe('the store’s subscription', () => {
     expect(cursor.closed).toBe(false);
     settleFoldedSolutionCursor([{ ...FIGURE_HELD, sourceBounds: null }], { ...before });
     expect(cursor.closed).toBe(true);
+  });
+
+  it('lets it go when the selection moves off its figure', async () => {
+    const cursor = await seated();
+    settleFoldedSolutionCursor([FIGURE_HELD], null, FIGURE_HELD.id);
+    expect(cursor.closed).toBe(false);
+    settleFoldedSolutionCursor([FIGURE_HELD], null, null);
+    expect(cursor.closed).toBe(true);
+  });
+
+  it('keeps the readout of the side shown when the figure turns over and straight back', async () => {
+    const answers: ((place: LayerOrderSolutionPlace | null) => void)[] = [];
+    const cursor: LayerOrderSolutionCursor = {
+      step: async () => ({ outcome: 'end', position: solutionPosition(2, 3), counted: true }),
+      place: () => new Promise((resolve) => answers.push(resolve)),
+      alive: () => true,
+      close: () => {},
+    };
+    gateway.open.mockReturnValue(cursor);
+    const turn = beginFoldedSolutionStep(FIGURE_HELD, null);
+    await turn.step(ask);
+    turn.end([FIGURE_HELD], null);
+    const withSide = (state: 'Front0' | 'Back1') =>
+      ({ ...FIGURE_HELD, snapshot: { model: { state }, shown_order: 'given' } }) as unknown as OristudioCpFoldedFigureEntry;
+    expect(foldedSolutionPlace(FIGURE_HELD)).toEqual({ position: solutionPosition(2, 3), counted: true });
+
+    // Turned over: asked for the back. Then back again before the back's answer came.
+    settleFoldedSolutionCursor([withSide('Back1')], null);
+    expect(answers).toHaveLength(1);
+    settleFoldedSolutionCursor([withSide('Front0')], null);
+    expect(foldedSolutionPlace(withSide('Front0'))).toEqual({ position: solutionPosition(2, 3), counted: true });
+    // The back's answer arrives late, for a side no longer shown: the front's readout stays.
+    answers[0]!({ position: solutionPosition(1, 1), counted: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(foldedSolutionPlace(withSide('Front0'))).toEqual({ position: solutionPosition(2, 3), counted: true });
   });
 
   it('tells its subscribers whenever what it reads may have changed', async () => {

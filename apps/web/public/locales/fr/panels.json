@@ -3305,6 +3305,7 @@
     "lastSolutionShown": "C’est sa dernière solution",
     "layerOrder": "Ordre des couches…",
     "layerOrder3d": "L’ordre des couches fonctionne sur les modèles plats",
+    "layerOrderConflict": "Ses contraintes de couches se contredisent. Vérifiez-les d’abord avec « Vérifier… »",
     "layerOrderCreasesChanged": "Ses plis ont changé depuis qu’il a été plié",
     "layerOrderNewer": "Créé avec une version plus récente d’Ori Studio : ses contraintes de couches ne peuvent pas être modifiées ici.",
     "layerOrderNoSource": "Ce modèle plié n’a pas de plis d’origine sur lesquels travailler",

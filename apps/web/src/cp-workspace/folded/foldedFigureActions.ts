@@ -21,6 +21,7 @@ import { foldedFigureNotice, type FoldedFigureNotice } from './foldedFigureNotic
 import {
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderHold,
+  foldedFigureSolutionsHeldByConflict,
   refoldHeldByLayerOrder,
   refoldHeldByLayerOrderReason,
   type FoldedFigureLayerOrderBlock,
@@ -781,6 +782,14 @@ function constrainedSolutionCommand(
   if (block !== null) {
     const hint = layerOrderBlockHint(block, t);
     return { ...verb, disabled: true, ...(hint ? { hint } : {}) };
+  }
+  // Saved as clashing since an edit (D10): no solution fits them all until they are reviewed.
+  if (foldedFigureSolutionsHeldByConflict(figure)) {
+    return {
+      ...verb,
+      disabled: true,
+      hint: t('panels:foldedFigureActions.layerOrderConflict', 'Its layer constraints clash. Review… them first'),
+    };
   }
   const place = foldedSolutionPlace(figure);
   if (!place) return verb;

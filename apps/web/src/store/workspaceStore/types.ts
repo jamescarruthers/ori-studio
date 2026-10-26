@@ -875,22 +875,28 @@ export type OristudioCpFigureLayerOrderOpening =
  * (row H6): only `moved` changed the figure, as one undo entry.
  *
  * - `end`: no solution lies that way among those counted, `final` once the
- *   count is; the figure shows it is at its end;
- * - `timed_out`: the check within the next solution ran out of time;
+ *   count is; the figure shows it is at its end. Not final, the search for
+ *   the next ran out within its deadline;
+ * - `timed_out`: the restore of the record (D10's "couldn't check in time"),
+ *   or the search for the next solution, ran out of time; another press
+ *   with more `tries` keeps trying, longer;
  * - `unrestored`: the record restores to no order to step from (D10): its
- *   constraints clash, it ran out of time, or the engine refused it;
+ *   constraints clash, or the engine refused it;
+ * - `too-large`: the next solution's record is past what a figure can save;
  * - `lost`: the Layer order engine went away or never came (`load` for the
  *   browser failing to fetch it, offline);
  * - `not-drawn`: the kernel could not draw the order, and said so through
  *   `oristudioCpError`;
  * - `stopped`: a Stop, or the figure moved on (an undo, a Delete) while it ran;
- * - `blocked`: the figure can't step now (`foldedFigureLayerOrderBlock`).
+ * - `blocked`: the figure can't step now (`foldedFigureLayerOrderBlock`, or
+ *   its saved constraints clash).
  */
 export type OristudioCpFigureSolutionStep =
   | { status: 'moved' }
   | { status: 'end'; final: boolean }
-  | { status: 'timed_out' }
+  | { status: 'timed_out'; stage: 'restore' | 'step' }
   | { status: 'unrestored'; why: LayerOrderSolutionsUnrestored }
+  | { status: 'too-large' }
   | { status: 'lost'; cause: LayerOrderLossCause }
   | { status: 'not-drawn' }
   | { status: 'stopped' }
@@ -1256,11 +1262,13 @@ export interface CreasePatternSliceActions {
    * the step's order into a **new** handle, as an Apply does, with the
    * step's record. The old handle stays with history. Every outcome but
    * `moved` leaves the figure as it was. Callers bracket it as one undo
-   * entry (`foldedFigureVerbs.ts`).
+   * entry (`foldedFigureVerbs.ts`). `tries` counts the user's Keep trying
+   * after running out of time: each gives the engine longer.
    */
   stepOristudioCpFigureLayerOrder: (
     id: string,
-    direction: 'next' | 'previous'
+    direction: 'next' | 'previous',
+    options?: { tries?: number }
   ) => Promise<OristudioCpFigureSolutionStep>;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;

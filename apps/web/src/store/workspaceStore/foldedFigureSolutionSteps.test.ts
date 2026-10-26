@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { TFunction } from 'i18next';
 import type {
   OristudioCpDocumentState,
@@ -88,12 +88,13 @@ vi.mock('../../analytics', async (importOriginal) => ({
   track: analytics.track,
 }));
 
-/** A browser that can stop a fold: the run's Stop reaches its signal. */
+/** Whether the kernel's cancel transport is there (a cross-origin isolated page, or desktop); a test may take it away. */
 const cancellation = vi.hoisted(() => ({
   next: 0,
+  available: true,
   beginFoldRun: () => ++cancellation.next,
   cancelFoldRun: () => {},
-  foldCancellationAvailable: () => true,
+  foldCancellationAvailable: () => cancellation.available,
 }));
 vi.mock('../../lib/foldCancellation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/foldCancellation')>()),
@@ -111,8 +112,12 @@ vi.mock('sonner', () => ({ toast: toasts.toast }));
 import { useWorkspaceStore } from './store';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
-import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
+import { layerOrderRecordOfSize, twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
+import { LAYER_ORDER_RECORD_MAX_BYTES } from '../../lib/layerOrder/layerOrderRecord';
 import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
+import { useLayoutStore } from '../layoutStore';
+import { useLayerOrderDialogStore } from '../../layer-order/dialog/layerOrderDialogStore';
+import { FOLDED_SOLUTION_CURSOR_IDLE_MS } from '../../cp-workspace/folded/foldedSolutionCursor';
 import {
   foldedFigureHandleRefCount,
   resetFoldedFigureHandles,
@@ -456,6 +461,47 @@ describe('the cursor’s life', () => {
     expect(figureNow().layerOrder).toEqual(held(solutionRecord(2)));
   });
 
+  it.each([
+    ['the selection moves off the figure', () => state().setOristudioCpActiveFoldedFigure(null)],
+    ['the workspace switches', () => useLayoutStore.setState({ activeWorkspace: 'diagram' })],
+    [
+      'the Layer order dialog opens',
+      () => useLayerOrderDialogStore.setState({ opening: { id: 99 } as never }),
+    ],
+  ] as const)('is let go, with its worker, when %s', async (_what, meanwhile) => {
+    const workspace = useLayoutStore.getState().activeWorkspace;
+    const figure = seed();
+    const cursor = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(cursor.closed).toBe(false);
+    try {
+      meanwhile();
+      expect(cursor.closed).toBe(true);
+      expect(foldedSolutionCursorFigure()).toBeNull();
+    } finally {
+      useLayoutStore.setState({ activeWorkspace: workspace });
+      useLayerOrderDialogStore.setState({ opening: null });
+    }
+  });
+
+  it('is let go after a minute with no press, and kept through presses', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const figure = seed();
+      const cursor = script(movedTo(2, 3), movedTo(3, 3));
+      await showAnotherFoldedSolution(figure.id, t);
+      vi.advanceTimersByTime(FOLDED_SOLUTION_CURSOR_IDLE_MS - 1000);
+      await showAnotherFoldedSolution(figure.id, t);
+      vi.advanceTimersByTime(FOLDED_SOLUTION_CURSOR_IDLE_MS - 1000);
+      expect(cursor.closed).toBe(false);
+      vi.advanceTimersByTime(1000);
+      expect(cursor.closed).toBe(true);
+      expect(foldedSolutionCursorFigure()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('goes to the figure last stepped: one cursor, one worker, at a time', async () => {
     const one = seed();
     const two = { ...one, id: 'generated-2', handle: 5 };
@@ -486,43 +532,164 @@ describe('a press that moves nothing', () => {
     expect(cycled()).toEqual([]);
   });
 
-  it('says the count may find another when the end is not final', async () => {
-    const figure = seed();
-    script({ outcome: 'end', position: solutionPosition(4, 4, false), counted: true });
-    await showAnotherFoldedSolution(figure.id, t);
-    expect(figureNow()).toBe(figure);
-    expect(toasts.toast).toHaveBeenCalledWith('No other solution found yet. Try again to keep looking.');
-  });
-
   it.each([
     [
       'offline: the engine didn’t load',
       { outcome: 'lost', cause: 'load' },
       'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.',
       true,
+      false,
     ],
-    ['a lost engine', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so the figure wasn’t changed.', true],
-    ['out of time', { outcome: 'timed_out' }, 'Another solution couldn’t be found in time, so the figure wasn’t changed.', false],
+    [
+      'a lost engine',
+      { outcome: 'lost', cause: 'crashed' },
+      'Layer order stopped unexpectedly, so the figure wasn’t changed.',
+      true,
+      false,
+    ],
+    [
+      'a restore out of time (D10)',
+      { outcome: 'timed_out', stage: 'restore' },
+      'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.',
+      false,
+      true,
+    ],
+    [
+      'a step out of time',
+      { outcome: 'timed_out', stage: 'step' },
+      'Couldn’t find another solution in time, so the figure wasn’t changed.',
+      false,
+      true,
+    ],
+    [
+      'an end the count hasn’t reached',
+      { outcome: 'end', position: solutionPosition(4, 4, false), counted: true },
+      'Couldn’t find another solution in time, so the figure wasn’t changed.',
+      false,
+      true,
+    ],
     [
       'a record that needs attention',
       { outcome: 'unrestored', why: 'clash' },
       'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.',
       true,
+      false,
     ],
-  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent) => {
+    [
+      'a solution too large to save',
+      { outcome: 'too_large' },
+      'This layer order is too large to save with the figure, so it is unchanged.',
+      true,
+      false,
+    ],
+  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, retries) => {
     const figure = seed();
     const cursor = script(answer as LayerOrderSolutionStep);
     await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
     expect(figureNow()).toBe(figure);
     expect(history()).toEqual([]);
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
-    expect(toasts.toast.error).toHaveBeenCalledWith(said);
-    // An engine gone or a record it can't restore takes the cursor with it; a timeout keeps it for another try.
+    expect(toasts.toast.error).toHaveBeenCalledTimes(1);
+    const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
+    expect(text).toBe(said);
+    // Out of time offers to keep trying, longer; nothing else does.
+    expect(options.action?.label).toBe(retries ? 'Keep trying' : undefined);
+    // An engine gone, a record it can't restore or an order it can't save takes the cursor with it;
+    // running out of time keeps it for Keep trying.
     expect(cursor.closed).toBe(spent);
     expect(foldedSolutionCursorFigure()).toBe(spent ? null : figure.id);
   });
 
-  it('a Stop ends the step through the fold run, quietly, and the cursor with it', async () => {
+  it('keeps trying, longer each time, on the same cursor, when asked', async () => {
+    const figure = seed();
+    const cursor = script(
+      { outcome: 'timed_out', stage: 'restore' },
+      { outcome: 'end', position: solutionPosition(1, 3, false), counted: true },
+      movedTo(2, 3)
+    );
+    await showAnotherFoldedSolution(figure.id, t);
+    const keepTrying = () => {
+      const calls = toasts.toast.error.mock.calls;
+      (calls.at(-1)![1] as { action: { onClick: () => void } }).action.onClick();
+    };
+    keepTrying();
+    await vi.waitFor(() => expect(cursor.triesAsked).toHaveLength(2));
+    await vi.waitFor(() => expect(toasts.toast.error).toHaveBeenCalledTimes(2));
+    keepTrying();
+    await vi.waitFor(() => expect(figureNow().handle).toBe(9));
+    expect(cursor.triesAsked).toEqual([0, 1, 2]);
+    expect(gateway.open).toHaveBeenCalledTimes(1);
+    expect(history()).toEqual(['Show another solution']);
+  });
+
+  it('says the store’s own too-large refusal the same way, freeing the fold', async () => {
+    const figure = seed();
+    const huge = layerOrderRecordOfSize(LAYER_ORDER_RECORD_MAX_BYTES + 1);
+    const moved = movedTo(2, 3) as Extract<LayerOrderSolutionStep, { outcome: 'moved' }>;
+    script({ ...moved, applied: { ...moved.applied, record: huge } });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(kernel.freed).toEqual([9]);
+    expect(figureNow()).toBe(figure);
+    expect(toasts.toast.error.mock.calls[0]![0]).toBe('This layer order is too large to save with the figure, so it is unchanged.');
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('says nothing for a press whose figure was undone or deleted while it ran', async () => {
+    for (const meanwhile of ['undo', 'delete'] as const) {
+      dropFoldedSolutionCursor();
+      toasts.toast.error.mockClear();
+      const figure = seed();
+      await foldedFigureGesture.run('verb', 'Rotate folded form', () =>
+        state().setOristudioCpFoldedFigurePlacement(figure.id, { rotation: 1 })
+      );
+      let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+      script(() => new Promise((resolve) => (answer = resolve)));
+      const press = showAnotherFoldedSolution(figure.id, t);
+      await vi.waitFor(() => expect(answer).not.toBeNull());
+      if (meanwhile === 'undo') {
+        endOpenCanvasSessions('history');
+        await state().undo();
+      } else {
+        await deleteFoldedFigure(figure.id, t);
+      }
+      answer!({ outcome: 'end', position: solutionPosition(3, 3, false), counted: true });
+      await press;
+      expect(toasts.toast.error, meanwhile).not.toHaveBeenCalled();
+      expect(toasts.toast, meanwhile).not.toHaveBeenCalled();
+    }
+  });
+
+  it('offers Stop while the engine steps, whatever the kernel’s transport allows, and only what it allows for the fold after', async () => {
+    cancellation.available = false;
+    try {
+      const figure = seed();
+      let fold: (() => void) | null = null;
+      kernel.foldWithOrder = () =>
+        new Promise((resolve) => {
+          fold = () => resolve({ status: 'folded', handle: 9, snapshot: snapshot({ shown_order: 'given' }) });
+        });
+      let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+      script(() => new Promise((resolve) => (answer = resolve)));
+      const press = showAnotherFoldedSolution(figure.id, t);
+      await vi.waitFor(() => expect(answer).not.toBeNull());
+      const run = () => Object.values(state().oristudioCpFoldRuns)[0]!;
+      expect(run().cancellable).toBe(true);
+      answer!(movedTo(2, 3));
+      await vi.waitFor(() => expect(fold).not.toBeNull());
+      // The kernel's fold: as stoppable as the transport makes it, here not at all.
+      expect(run().cancellable).toBe(false);
+      fold!();
+      await expect(press).resolves.toBe(true);
+    } finally {
+      cancellation.available = true;
+    }
+  });
+
+  it('a Stop ends the step through the fold run, quietly, and the cursor with it, on a page with no kernel transport', async () => {
+    cancellation.available = false;
+    onTestFinished(() => {
+      cancellation.available = true;
+    });
     const figure = seed();
     let signalled = false;
     const cursor = script(
@@ -631,6 +798,8 @@ describe('what it steps by, and from', () => {
       { status: 'loading' as const },
       { layerOrder: { kind: 'newer' as const, saved: {} } },
       { handle: null, sourceBounds: null },
+      // Saved as clashing since an edit (D10): no solution fits until they are reviewed.
+      { layerOrder: held({ ...RECORD, attention: { reason: 'conflict', count: 2 } }) },
     ]) {
       dropFoldedSolutionCursor();
       const figure = seed(overrides);

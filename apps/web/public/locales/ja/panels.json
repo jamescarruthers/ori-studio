@@ -2737,6 +2737,7 @@
     "lastSolutionShown": "これが最後の解です",
     "layerOrder": "重なり順…",
     "layerOrder3d": "重なり順は平らな図で使えます",
+    "layerOrderConflict": "重なり順の制約が矛盾しています。先に「確認…」で確認してください",
     "layerOrderCreasesChanged": "折ったあとで折り線が変わりました",
     "layerOrderNewer": "新しい Ori Studio で作成されています。ここでは重なり順の制約を変更できません。",
     "layerOrderNoSource": "この折り上がり図には元の折り線がありません",

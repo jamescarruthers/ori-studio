@@ -18,13 +18,20 @@ import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import {
   FAKE_LAYER_ORDER_FIGURE,
   FAKE_LAYER_ORDER_SOURCE,
+  FAKE_LIMITS,
+  FAKE_NO_NODES,
   createFakeLayerOrderBackend,
   fakeLayerOrderWorkers,
   inProcessLayerOrderWorkers,
   type FakeLayerOrderBackend,
   type FakeLayerOrderWorker,
 } from '../engine/layerOrderEngine.fixtures';
-import { createLayerOrderSolutionCursor, type LayerOrderSolutionStep } from './layerOrderSolutionCursor';
+import { KEEP_TRYING_FACTOR } from '../engine/layerOrderEngine';
+import {
+  createLayerOrderSolutionCursor,
+  type LayerOrderSolutionCursorOptions,
+  type LayerOrderSolutionStep,
+} from './layerOrderSolutionCursor';
 
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
@@ -75,14 +82,21 @@ const FRONT = { picture: 'front' } as const;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
 
 /** A cursor over fake workers, each with a fresh backend; `prepare` readies the first one's. */
-function cursorOverFakes(record: LayerOrderRecord = D_ABOVE_A, prepare?: (backend: FakeLayerOrderBackend) => void) {
+function cursorOverFakes(
+  record: LayerOrderRecord = D_ABOVE_A,
+  prepare?: (backend: FakeLayerOrderBackend) => void,
+  limits?: LayerOrderSolutionCursorOptions['limits']
+) {
   let made = 0;
   const fake = fakeLayerOrderWorkers(() => {
     const backend = createFakeLayerOrderBackend();
     if (made++ === 0) prepare?.(backend);
     return backend;
   });
-  const cursor = createLayerOrderSolutionCursor(FAKE_LAYER_ORDER_SOURCE, record, { spawn: fake.spawn });
+  const cursor = createLayerOrderSolutionCursor(FAKE_LAYER_ORDER_SOURCE, record, {
+    spawn: fake.spawn,
+    ...(limits ? { limits } : {}),
+  });
   const worker = (index = 0): FakeLayerOrderWorker => fake.workers[index]!;
   return { fake, cursor, worker };
 }
@@ -165,6 +179,54 @@ describe('a solutions cursor', () => {
     expectStep(step, 'moved');
     expect(step.counted).toBe(false);
     cursor.close();
+  });
+
+  it('answers a restore out of time and stays; Keep trying restores the record again on the session open, longer', async () => {
+    const asked: [string, number][] = [];
+    const { cursor, worker } = cursorOverFakes(D_ABOVE_A, (backend) => {
+      for (const call of ['restore', 'restoreRecord'] as const) {
+        const answer = backend[call] as (...args: never[]) => Promise<unknown>;
+        (backend as unknown as Record<string, unknown>)[call] = (...args: never[]) => {
+          asked.push([call, (args.at(-1) as unknown as { deadlineMs: number }).deadlineMs]);
+          return answer(...args);
+        };
+      }
+    }, { restore: FAKE_NO_NODES, step: FAKE_LIMITS });
+    await expect(cursor.step('next', FRONT)).resolves.toEqual({ outcome: 'timed_out', stage: 'restore' });
+    expect(cursor.alive()).toBe(true);
+    await expect(cursor.step('next', FRONT, { tries: 1 })).resolves.toEqual({ outcome: 'timed_out', stage: 'restore' });
+    await expect(cursor.step('next', FRONT, { tries: 2 })).resolves.toEqual({ outcome: 'timed_out', stage: 'restore' });
+    // The open held: the record again on it, a longer deadline each time, on the one worker.
+    expect(asked).toEqual([
+      ['restore', FAKE_NO_NODES.deadlineMs],
+      ['restoreRecord', FAKE_NO_NODES.deadlineMs * KEEP_TRYING_FACTOR],
+      ['restoreRecord', FAKE_NO_NODES.deadlineMs * KEEP_TRYING_FACTOR ** 2],
+    ]);
+    expect(worker().terminated).toBe(false);
+    cursor.close();
+  });
+
+  it('opens again on Keep trying when the open itself ran out', async () => {
+    const { cursor, worker } = cursorOverFakes(D_ABOVE_A, undefined, {
+      restore: { ...FAKE_LIMITS, deadlineMs: 0 },
+      step: FAKE_LIMITS,
+    });
+    await expect(cursor.step('next', FRONT)).resolves.toEqual({ outcome: 'timed_out', stage: 'restore' });
+    await cursor.step('next', FRONT, { tries: 1 });
+    expect(worker().backend.calls).toEqual(['restore', 'restore']);
+    cursor.close();
+  });
+
+  it('answers a next solution too large to save on its own, and is spent', async () => {
+    const { cursor, worker } = cursorOverFakes(D_ABOVE_A, (backend) => {
+      (backend as unknown as Record<string, unknown>).save = async () => ({
+        status: 'refused',
+        refusal: { code: 'record_over_budget', bytes: 2_000_000, budget: 1_048_576 },
+      });
+    });
+    await expect(cursor.step('previous', FRONT)).resolves.toEqual({ outcome: 'too_large' });
+    expect(cursor.alive()).toBe(false);
+    expect(worker().terminated).toBe(true);
   });
 
   it('has nothing to step from on a record whose constraints clash: unrestored, and spent', async () => {

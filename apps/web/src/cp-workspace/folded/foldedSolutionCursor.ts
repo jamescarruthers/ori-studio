@@ -14,22 +14,28 @@
  *   ({@link beginFoldedSolutionStep}), which spawns its worker and restores
  *   the record. What the verbs offer at rest comes from saved data
  *   (`foldedFigureLayerOrderState.ts`).
- * - **One at a time.** Stepping another figure lets the first one's go, so
- *   at most one worker is kept between presses.
+ * - **One at a time, and only while it is being used.** Its worker holds the
+ *   figure's whole session (about 18 MB on kabuto, 110 MB on iguana-c0), so
+ *   it is kept only between presses on the figure in hand: stepping another
+ *   figure, selecting anything else, leaving Edit for another workspace,
+ *   opening the Layer order dialog, or a minute with no press
+ *   ({@link FOLDED_SOLUTION_CURSOR_IDLE_MS}) closes it, and the next press
+ *   restores the record again.
  * - **In step with the figure, or gone.** The cursor's session shows one
  *   order: the one its last step landed, which the figure then holds as its
  *   fold and its record. Whenever the figure holds anything else — an undo
  *   or a redo, an Apply, a refold, a Delete — or the creases it was folded
  *   from change, or the document closes, the cursor is closed with its
  *   worker ({@link settleFoldedSolutionCursor}, which the store calls on
- *   every change to the figures or the document). So a cursor never steps
- *   from, or draws, an order that is not the figure's record; the next
- *   press makes a fresh one from the record the figure holds then.
+ *   every change to the figures, the selection or the document). So a cursor
+ *   never steps from, or draws, an order that is not the figure's record.
  *
- * Store-free: the store hands it the figures and the document.
+ * Store-free: the store hands it the figures, the selection and the
+ * document ({@link watchFoldedSolutionCursor}).
  */
 import type { OristudioCpDocumentSnapshot, OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import type { LayerStepBy } from '../../layer-order/engine/layerOrderEngine';
+import { onLayerOrderDialogOpen } from '../../layer-order/dialog/layerOrderDialogGateway';
 import {
   openLayerOrderSolutionCursor,
   type LayerOrderSolutionCursor,
@@ -38,10 +44,21 @@ import {
 } from '../../layer-order/host/hostEngineGateway';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
+import { useLayoutStore } from '../../store/layoutStore';
 import { foldedFigureHandleEpoch } from './foldedFigureHandles';
 import { currentSourceFingerprint } from './foldedFigureStaleness';
 
 export type { LayerOrderSolutionPlace };
+
+/**
+ * How long a cursor is kept with no press. A press while it is kept costs one
+ * step; once it is gone, the next press restores the record first, which
+ * takes up to 2–3 s on the largest figures measured (iguana-c0's restore,
+ * census 2). A minute covers stepping back and forth through a figure's
+ * solutions, with pauses to look at each, and lets go of the worker's memory
+ * soon after the user has moved on to something else on the same figure.
+ */
+export const FOLDED_SOLUTION_CURSOR_IDLE_MS = 60_000;
 
 /**
  * What a figure's stepper steps through (D5): every layer order when it is
@@ -74,15 +91,32 @@ interface Held {
   asking: string | null;
   /** A press is running: the figure is waiting on it, and holds the new fold only once it lands. */
   stepping: boolean;
+  /** Stops watching the workspace and the dialog for it. */
+  readonly unwatch: () => void;
 }
 
 let held: Held | null = null;
+let idle: ReturnType<typeof setTimeout> | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
 
 function notify(): void {
   version += 1;
   for (const listener of [...listeners]) listener();
+}
+
+function stopIdleClock(): void {
+  if (idle !== null) clearTimeout(idle);
+  idle = null;
+}
+
+/** Start the minute again: a press, or an answer, just used the cursor. */
+function startIdleClock(): void {
+  stopIdleClock();
+  idle = setTimeout(() => {
+    idle = null;
+    if (held && !held.stepping) dropFoldedSolutionCursor();
+  }, FOLDED_SOLUTION_CURSOR_IDLE_MS);
 }
 
 /** The creases `figure` was folded from, as `document` has them now; null where it has no region to look in. */
@@ -113,9 +147,11 @@ function creasesHeld(cursor: Held, document: OristudioCpDocumentSnapshot | null,
 
 /** Close the cursor, with its worker. Idempotent. */
 export function dropFoldedSolutionCursor(): void {
+  stopIdleClock();
   if (!held) return;
   const gone = held;
   held = null;
+  gone.unwatch();
   gone.cursor.close();
   notify();
 }
@@ -133,33 +169,96 @@ export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): Layer
 }
 
 /**
- * Keep the cursor in step with the figures and the document as they are now:
- * closed when its figure holds another fold or record, has gone, or its
- * creases changed; asked where it stands again when the figure turned over or
- * changed its X-ray. Nothing while a press runs: that press settles it when
- * it ends. The store calls this on every change to either.
+ * Keep the cursor in step with the figures, the selection and the document
+ * as they are now: closed when its figure holds another fold or record, has
+ * gone, is no longer the one selected (`selected`, when given), or its
+ * creases changed; asked where it stands again when the figure turned over
+ * or changed its X-ray. Nothing while a press runs: that press settles it
+ * when it ends.
  */
 export function settleFoldedSolutionCursor(
   figures: readonly OristudioCpFoldedFigureEntry[],
-  document: OristudioCpDocumentSnapshot | null
+  document: OristudioCpDocumentSnapshot | null,
+  selected?: string | null
 ): void {
   const cursor = held;
   if (!cursor || cursor.stepping) return;
   const figure = figures.find((candidate) => candidate.id === cursor.figureId);
-  if (!figure || !inStep(cursor, figure) || !creasesHeld(cursor, document, figure)) {
+  if (
+    !figure ||
+    !inStep(cursor, figure) ||
+    !creasesHeld(cursor, document, figure) ||
+    (selected !== undefined && selected !== cursor.figureId)
+  ) {
     dropFoldedSolutionCursor();
     return;
   }
   const by = foldedFigureStepBy(figure);
   const key = stepByKey(by);
-  if (!cursor.place || cursor.place.by === key || cursor.asking === key) return;
+  if (!cursor.place || cursor.place.by === key) {
+    // Turned over and straight back: an answer still on its way is for a side no longer shown.
+    cursor.asking = null;
+    return;
+  }
+  if (cursor.asking === key) return;
   cursor.asking = key;
   void cursor.cursor.place(by).then((place) => {
     if (held !== cursor || cursor.asking !== key) return;
     cursor.asking = null;
     if (place) cursor.place = { by: key, value: place };
+    startIdleClock();
     notify();
   });
+}
+
+/** What the store is, as far as the cursor needs: its figures, its selection and its document. */
+export interface FoldedSolutionCursorStore {
+  subscribe(
+    listener: (state: FoldedSolutionCursorScene, previous: FoldedSolutionCursorScene) => void
+  ): () => void;
+}
+
+export interface FoldedSolutionCursorScene {
+  readonly oristudioCpFoldedFigures: readonly OristudioCpFoldedFigureEntry[];
+  readonly oristudioCpActiveFoldedFigureId: string | null;
+  readonly oristudioCpDocument: { readonly document: OristudioCpDocumentSnapshot } | null;
+}
+
+/**
+ * Keep the cursor to the figure in hand, for as long as `store` lives:
+ * settled on every change to the figures, the selection or the document.
+ * Returns the unsubscribe. The store calls it once, as it is made; a cursor
+ * watches the workspace and the Layer order dialog itself, while it is kept
+ * ({@link watchWhileKept}).
+ */
+export function watchFoldedSolutionCursor(store: FoldedSolutionCursorStore): () => void {
+  return store.subscribe((state, previous) => {
+    if (
+      state.oristudioCpFoldedFigures === previous.oristudioCpFoldedFigures &&
+      state.oristudioCpDocument === previous.oristudioCpDocument &&
+      state.oristudioCpActiveFoldedFigureId === previous.oristudioCpActiveFoldedFigureId
+    ) {
+      return;
+    }
+    settleFoldedSolutionCursor(
+      state.oristudioCpFoldedFigures,
+      state.oristudioCpDocument?.document ?? null,
+      state.oristudioCpActiveFoldedFigureId
+    );
+  });
+}
+
+/** While a cursor is kept: let it go when the workspace switches or a Layer order dialog opens. */
+function watchWhileKept(): () => void {
+  const stops = [
+    useLayoutStore.subscribe((state, previous) => {
+      if (state.activeWorkspace !== previous.activeWorkspace) dropFoldedSolutionCursor();
+    }),
+    onLayerOrderDialogOpen(dropFoldedSolutionCursor),
+  ];
+  return () => {
+    for (const stop of stops) stop();
+  };
 }
 
 /** What a press asks of the cursor, from the figure as the press found it. */
@@ -171,6 +270,8 @@ export interface FoldedSolutionStepAsk {
   readonly record: LayerOrderRecord;
   /** A Stop: it terminates the cursor's worker. */
   readonly signal?: AbortSignal;
+  /** How many times the user has asked to keep trying after running out of time (the cursor's `tries`). */
+  readonly tries?: number;
 }
 
 /** One press, from its start to its end, however it ends. */
@@ -201,13 +302,14 @@ export function beginFoldedSolutionStep(
   }
   let mine: Held | null = held;
   if (mine) mine.stepping = true;
+  stopIdleClock();
   /** Where a step that moved lands, once the figure shows it. */
   let landing: { by: string; value: LayerOrderSolutionPlace } | null = null;
   let moved = false;
   let over = false;
 
   return {
-    async step({ direction, source, record, signal }) {
+    async step({ direction, source, record, signal, tries = 0 }) {
       if (!mine) {
         const made = openLayerOrderSolutionCursor(await source(), record);
         if (over || held) {
@@ -226,12 +328,13 @@ export function beginFoldedSolutionStep(
           place: null,
           asking: null,
           stepping: true,
+          unwatch: watchWhileKept(),
         };
         held = mine;
       }
       const cursor = mine;
       const by = foldedFigureStepBy(figure);
-      const answer = await cursor.cursor.step(direction, by, signal ? { signal } : {});
+      const answer = await cursor.cursor.step(direction, by, { ...(signal ? { signal } : {}), tries });
       switch (answer.outcome) {
         case 'moved':
           moved = true;
@@ -242,6 +345,7 @@ export function beginFoldedSolutionStep(
           cursor.place = { by: stepByKey(by), value: { position: answer.position, counted: answer.counted } };
           break;
         case 'timed_out':
+          // Kept, for Keep trying on the same session.
           break;
         default:
           // Spent, stopped or lost: its session is gone.
@@ -266,6 +370,7 @@ export function beginFoldedSolutionStep(
         dropFoldedSolutionCursor();
         return;
       }
+      startIdleClock();
       notify();
       settleFoldedSolutionCursor(figures, now);
     },
