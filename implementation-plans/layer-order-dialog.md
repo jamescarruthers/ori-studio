@@ -1137,11 +1137,12 @@ Settled while building H10 (Fold's Import CP):
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
 - [x] H9: the Diagram's ‹ › within constraints (#532)
-- [ ] E9 in the hosts and the dialog: ‹ usable and "Solution k" until the
-      count is exact, Keep trying after a step times out, and steps that
-      don't also count in the dialog or above 20,000 open pairs (#548)
-- [ ] CI: cache the Tauri apt packages, after the mirror timed out the native
-      job five times on 2026-10-26 (#546; the same change for main)
-- [ ] Merge main into `claude/layer-order` (the Fold workspace launch #475,
-      0.7.0 and 0.7.1)
+- [x] E9 in the hosts and the dialog: ‹ usable and "Solution k" until the
+      count is exact, both proved ends kept, Keep trying after a step times
+      out, and steps that don't also count in the dialog or above 20,000 open
+      pairs (#548)
+- [x] CI: cache the Tauri apt packages, after the mirror timed out the native
+      job five times on 2026-10-26 (#546; #547 on main)
+- [x] Merge main into `claude/layer-order` (the Fold workspace launch #475,
+      0.7.0 and 0.7.1; #549)
 - [ ] The umbrella draft PR into main, for a preview and a desktop build
