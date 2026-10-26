@@ -118,6 +118,8 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import type { LayerOrderApplied, LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import type { PaperStyleOverrides } from '../../lib/paper/paperStyle';
+import type { FoldPress } from '../../cp-workspace/folded/foldPress';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
 import type { CpLineClipboardPayload, CpSelectionTransform } from '../../lib/creasePatternClipboard';
@@ -881,17 +883,26 @@ export type OristudioCpSelectionLayerOrderOpening =
       shown: OristudioCpFoldedPaperScene | null;
       /** The model the fold was made with, as the new figure folds with it. */
       model: OristudioCpFoldedFigureModel;
-      /** The creases the press scoped the fold to, which the new figure records as its source. */
+      /** The creases the press scoped the fold to, which the new figure is folded from. */
       lineIds: number[];
-      /** Let go of the dialog's fold, once the dialog has closed. Once only. */
+      /** The press, which Apply checks again before it writes (`foldPress.ts`). */
+      press: FoldPress;
+      /** The new figure as the press found it: its source's provenance and its pins. */
+      figure: OristudioCpPressedFigure;
+      /**
+       * Let go of the dialog's fold, once the dialog has closed and Apply has
+       * folded, and with it the press: until then a second press is refused.
+       * Once only.
+       */
       release: () => Promise<void>;
     }
   /**
    * - `blocked`: nothing foldable is selected, or no crease pattern is open;
    * - `spatial`: these creases fold in 3D, and a layer order is a flat fold's;
-   * - `busy`: another press is still folding;
+   * - `busy`: another press is still folding, or its dialog is still open;
    * - `declined`: the pre-fold check found errors and the user chose not to fold;
    * - `undetermined`: Fold finds no layer order on these creases (D3);
+   * - `moved`: the crease pattern changed or went while it folded (`foldPress.ts`);
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
    * - `cancelled`: stopped while it folded.
    *
@@ -899,8 +910,25 @@ export type OristudioCpSelectionLayerOrderOpening =
    */
   | {
       status: 'unavailable';
-      reason: 'blocked' | 'spatial' | 'busy' | 'declined' | 'undetermined' | 'failed' | 'cancelled';
+      reason: 'blocked' | 'spatial' | 'busy' | 'declined' | 'undetermined' | 'moved' | 'failed' | 'cancelled';
     };
+
+/**
+ * The figure a Fold with layer order… press would make, as the crease pattern
+ * stood at the press: Apply lands it with these, never with what is open by
+ * then, so a figure whose creases changed after the press reads stale.
+ */
+export interface OristudioCpPressedFigure {
+  /** `oristudioCpRevision` at the press. */
+  sourceCpRevision: number;
+  /** Where its creases were and what they were (`foldedSourceProvenance`). */
+  provenance: Pick<
+    OristudioCpFoldedFigureEntry,
+    'sourceBounds' | 'sourceFingerprint' | 'sourceLineIds' | 'sourceScopedLineIds'
+  >;
+  /** The pins a new figure from this document gets: an Oriedita file's saved colours. */
+  appearance: PaperStyleOverrides | undefined;
+}
 
 /**
  * A new figure's fold with the order the Layer order dialog chose (row H5):
@@ -914,6 +942,10 @@ export interface OristudioCpFoldWithChosenOrder {
   relations: Uint32Array;
   /** The record to save on the new figure, its points in the crease pattern's coordinates; null for none. */
   record: LayerOrderRecord | null;
+  /** The press: when it moved, nothing is folded (`foldPress.ts`). */
+  press: FoldPress;
+  /** The new figure as the press found it. */
+  figure: OristudioCpPressedFigure;
 }
 
 export interface CreasePatternSliceState {
@@ -1281,9 +1313,11 @@ export interface CreasePatternSliceActions {
    * figure as it was; a record the figure already holds writes nothing (D16).
    * Callers bracket it as one undo entry (`applyFoldedFigureLayerOrder`,
    * `openFoldedFigureLayerOrder.ts`); the bracket holds the fold it replaces
-   * until the entry has taken it.
+   * until the entry has taken it. When the crease pattern changed or was
+   * replaced since `press` (`foldPress.ts`), it writes nothing and says so:
+   * figure `id` may then be another document's.
    */
-  applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied) => Promise<boolean>;
+  applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied, press: FoldPress) => Promise<boolean>;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;
   /**

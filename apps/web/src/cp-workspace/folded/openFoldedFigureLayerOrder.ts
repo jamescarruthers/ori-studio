@@ -44,6 +44,7 @@ import type { OristudioCpFigureLayerOrderOpening, WorkspaceState } from '../../s
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import { foldPressMoved, foldPressMovedMessage, markFoldPress, type FoldPress } from './foldPress';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type FoldedFigureLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
@@ -141,6 +142,8 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
   const store = useWorkspaceStore;
   const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
   if (!figure) return 'not-opened';
+  // What the press found open: Apply writes only onto the same document's figure (`foldPress.ts`).
+  const press = markFoldPress(store.getState());
   // The dialog's code, while the fold is read or made: loads, never spawns.
   prefetchLayerOrderDialog();
   const opening = await store.getState().prepareOristudioCpFigureLayerOrder(id);
@@ -154,9 +157,15 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
   }
   try {
     const state = store.getState();
+    // A crease edited or another document opened while the fold was read or
+    // made: its Apply would be refused, so the dialog does not open.
+    if (foldPressMoved(press, state)) {
+      toast.error(foldPressMovedMessage(t));
+      return 'not-opened';
+    }
     const shown = state.oristudioCpFoldedFigures.find((entry) => entry.id === id) ?? figure;
     const outcome = await openLayerOrderDialog(foldedFigureLayerOrderRequest(shown, opening, editFigureView(state)));
-    if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, t);
+    if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, press, t);
     return outcome.kind;
   } finally {
     await opening.release();
@@ -167,17 +176,19 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
  * Commit an Apply on figure `id` as one undo entry, "Set layer order": a new
  * fold with the chosen order, the fold before kept by the entry, so an undo
  * shows the order it draws. The bracket holds that fold until the entry has
- * taken it (`foldedFigureGesture.ts`).
+ * taken it (`foldedFigureGesture.ts`). Nothing, and why, when the crease
+ * pattern changed or was replaced since `press`.
  */
 export async function applyFoldedFigureLayerOrder(
   id: string,
   applied: LayerOrderApplied,
+  press: FoldPress,
   t: TFunction
 ): Promise<boolean> {
   const done = await foldedFigureGesture.run(
     'verb',
     t('panels:creasePattern.setLayerOrderAction', 'Set layer order'),
-    () => useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied)
+    () => useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied, press)
   );
   return done === true;
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TFunction } from 'i18next';
 import type {
   OristudioCpDocumentState,
+  OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureSnapshot,
   OristudioCpFoldedPaperScene,
   OristudioCpFoldedRenderSnapshot,
@@ -96,6 +97,15 @@ vi.mock('../../store/workspaceStore/oristudioCpRuntime', async (importOriginal) 
       arena.read(handle);
       return SCENE;
     },
+    // A figure's own fold, for Layer order… on a figure (H3), which the press guard covers too.
+    getOristudioCpFoldedFigureSnapshot: async (handle: number) => {
+      arena.read(handle);
+      return snapshot({ outcome: 'Solved', given: false });
+    },
+    getOristudioCpFoldedFigureSource: async (handle: number) => {
+      arena.read(handle);
+      return source();
+    },
     getOristudioCpFoldedFigureRenderSnapshot: async (handle: number) => {
       arena.read(handle);
       return renderSnapshot();
@@ -129,8 +139,16 @@ import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import { useSettingsStore } from '../../store/settingsStore';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
-import { foldedFigureHandleRefCount, resetFoldedFigureHandles } from './foldedFigureHandles';
+import {
+  foldedFigureHandleRefCount,
+  resetFoldedFigureHandles,
+  retainFoldedFigureHandle,
+} from './foldedFigureHandles';
 import { foldSelectionWithLayerOrder } from './foldSelectionWithLayerOrder';
+import { isFoldedFigureStale } from './foldedFigureStaleness';
+import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
+import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
+import { IDENTITY_FOLDED_PLACEMENT } from '../../engine/oristudioCpTypes';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
@@ -196,11 +214,12 @@ function snapshot({
   } as OristudioCpFoldedFigureSnapshot;
 }
 
-function cpState(lines: OristudioCpLineSegment[] = LINES): OristudioCpDocumentState {
+/** A crease pattern of `lines`, as load `loadSerial` opened it. */
+function cpState(lines: OristudioCpLineSegment[] = LINES, loadSerial = 1): OristudioCpDocumentState {
   const document = createStarterOristudioCpDocument();
   return {
     handle: 4,
-    loadSerial: 1,
+    loadSerial,
     document: { ...document, crease_pattern: { ...document.crease_pattern, line_segments: lines } },
     geometry: null,
     summary: {
@@ -273,6 +292,7 @@ beforeEach(async () => {
   useWorkspaceStore.setState({
     activePanelId: 'crease-pattern',
     oristudioCpDocument: cpState(),
+    oristudioCpRevision: 0,
     oristudioCpFoldedFigures: [],
     oristudioCpActiveFoldedFigureId: null,
     oristudioCpHistoryPast: [],
@@ -437,7 +457,7 @@ describe('Fold with layer order…', () => {
 
     await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
     expect(kernel.folds).toEqual([]);
-    expect(state().oristudioCpError).toBe('Layer order works on flat figures');
+    expect(state().oristudioCpError).toBe('Layer order works on flat folds');
   });
 
   it('a second press while the first folds is refused, and folds nothing', async () => {
@@ -471,5 +491,208 @@ describe('Fold with layer order…', () => {
   it('leaves a plain fold untagged', async () => {
     await state().foldOristudioCpDocument({ lineIds: SELECTION });
     expect(foldEvents('fold attempted')).toEqual([expect.not.objectContaining({ via: expect.anything() })]);
+  });
+
+  it('opens the dialog in the colours the figure Apply makes will have, pins and all', async () => {
+    // A reopened Oriedita file's saved model: its colours become a new figure's pins (D1).
+    const opened = cpState();
+    useWorkspaceStore.setState({
+      oristudioCpDocument: {
+        ...opened,
+        document: {
+          ...opened.document,
+          metadata: { ...opened.document.metadata, 'oriedita:ori:foldedFigureModel': { frontColor: 'ffff0000', backColor: 'ff0000ff' } },
+        },
+      },
+    });
+    dialog.answer = async () => ({ kind: 'unchanged' });
+
+    await foldSelectionWithLayerOrder(SELECTION, t);
+    const [figure] = figures();
+    const display = useSettingsStore.getState().paperStyle.display;
+    expect(figure?.appearance).toBeDefined();
+    expect(dialog.requests[0]?.look.style).toEqual(effectiveObjectPaperStyle(figure!, display));
+    expect(dialog.requests[0]?.look.style).not.toEqual(display);
+  });
+
+  it('a second press while the dialog is open is refused at once: no check, no fold', async () => {
+    let close = () => {};
+    const closed = new Promise<void>((resolve) => {
+      close = resolve;
+    });
+    dialog.answer = async () => {
+      await closed;
+      return { kind: 'cancelled' };
+    };
+    const first = foldSelectionWithLayerOrder(SELECTION, t);
+    await vi.waitFor(() => expect(dialog.requests).toHaveLength(1));
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(kernel.checks).toBe(1);
+    expect(kernel.folds).toHaveLength(1);
+    close();
+    await expect(first).resolves.toBe('cancelled');
+    expect(arena.live.size).toBe(0);
+
+    // Once it has closed, a press goes ahead.
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('cancelled');
+    expect(kernel.folds).toHaveLength(2);
+  });
+});
+
+/**
+ * What the press found (`foldPress.ts`): a crease edited or another document
+ * opened after the press stops it before the dialog opens, and again before
+ * Apply writes, with nothing written and the reason said.
+ */
+describe('what a Layer order press found open', () => {
+  const MOVED = 'The crease pattern changed meanwhile, so Layer order changed nothing.';
+  const OTHER_LINES = [
+    line({ x: 5, y: 5 }, { x: 9, y: 9 }, 'Red1'),
+    line({ x: 9, y: 5 }, { x: 5, y: 9 }, 'Blue2'),
+    line({ x: 5, y: 7 }, { x: 9, y: 7 }, 'Red1'),
+  ];
+  /** As a crease edit commits: the document's edit count moves on. */
+  const editACrease = () => useWorkspaceStore.setState({ oristudioCpRevision: state().oristudioCpRevision + 1 });
+  /** As File ▸ Open or New: every handle torn down, another crease pattern in, its history empty. */
+  async function openAnotherDocument(figuresThere: OristudioCpFoldedFigureEntry[] = []) {
+    await resetFoldedFigureHandles();
+    useWorkspaceStore.setState({
+      oristudioCpDocument: cpState(OTHER_LINES, 2),
+      oristudioCpRevision: 0,
+      oristudioCpFoldedFigures: figuresThere,
+      oristudioCpHistoryPast: [],
+      oristudioCpHistoryFuture: [],
+      dirty: false,
+    });
+  }
+
+  it('a crease edited while the press folds: its fold let go, the dialog never opens', async () => {
+    let open = () => {};
+    kernel.gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const press = foldSelectionWithLayerOrder(SELECTION, t);
+    await vi.waitFor(() => expect(kernel.folds).toHaveLength(1));
+    editACrease();
+    kernel.gate = null;
+    open();
+
+    await expect(press).resolves.toBe('not-opened');
+    expect(dialog.requests).toEqual([]);
+    expect(state().oristudioCpError).toBe(MOVED);
+    expect(arena.freed).toEqual([0]);
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('a crease edited while the dialog is open: Apply folds nothing and writes nothing', async () => {
+    dialog.answer = async (request) => {
+      editACrease();
+      return { kind: 'applied', applied: { record: twoConstraintRecord(), relations: new Uint32Array([0, 1]), source: request.source } };
+    };
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('applied');
+    expect(kernel.folds).toEqual([[]]);
+    expect(figures()).toEqual([]);
+    expect(state().oristudioCpHistoryPast).toEqual([]);
+    expect(state().dirty).toBe(false);
+    expect(state().oristudioCpError).toBe(MOVED);
+    expect(foldEvents('fold attempted')).toEqual([]);
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('another document opened while the dialog is open: Apply lands nothing in it', async () => {
+    dialog.answer = async (request) => {
+      await openAnotherDocument();
+      return { kind: 'applied', applied: { record: twoConstraintRecord(), relations: new Uint32Array([0, 1]), source: request.source } };
+    };
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('applied');
+    expect(kernel.folds).toEqual([[]]);
+    expect(figures()).toEqual([]);
+    expect(state().oristudioCpHistoryPast).toEqual([]);
+    expect(state().oristudioCpError).toBe(MOVED);
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('the creases put back by an undo the count cannot see: the figure lands as the press found them, and reads stale', async () => {
+    // An undo restores the crease pattern without moving its edit count, so
+    // the press goes ahead; the figure is still the press's creases'.
+    dialog.answer = async () => {
+      useWorkspaceStore.setState({ oristudioCpDocument: cpState([...LINES, line({ x: 0, y: 0.5 }, { x: 1, y: 0.5 }, 'Red1')]) });
+      return { kind: 'unchanged' };
+    };
+
+    await foldSelectionWithLayerOrder(SELECTION, t);
+    const [figure] = figures();
+    expect(figure).toMatchObject({ sourceCpRevision: 0, sourceLineIds: SELECTION });
+    expect(isFoldedFigureStale(state().oristudioCpDocument!.document, figure!)).toBe(true);
+  });
+
+  describe('Layer order… on a figure (H3)', () => {
+    /** A flat figure folded from the two creases, its fold live, the live list holding it. */
+    function seedFigure(id = 'generated-1'): OristudioCpFoldedFigureEntry {
+      const handle = arena.take();
+      retainFoldedFigureHandle(handle);
+      const figure: OristudioCpFoldedFigureEntry = {
+        id,
+        title: id,
+        handle,
+        sourceKind: 'generated-from-current-cp',
+        sourceCpRevision: 0,
+        startingFaceId: 1,
+        displayStyle: 'Paper5',
+        status: 'ready',
+        placement: IDENTITY_FOLDED_PLACEMENT,
+        snapshot: snapshot({ outcome: 'Solved', given: false }),
+        renderSnapshot: renderSnapshot(),
+        sourceBounds: null,
+        sourceFingerprint: null,
+        sourceLineIds: SELECTION,
+        error: null,
+      };
+      useWorkspaceStore.setState({ oristudioCpFoldedFigures: [...figures(), figure] });
+      return figure;
+    }
+
+    it('another document opened while its dialog is open: Apply writes nothing onto the figure there with the same id', async () => {
+      const figure = seedFigure();
+      let there: OristudioCpFoldedFigureEntry | null = null;
+      dialog.answer = async (request) => {
+        await openAnotherDocument();
+        there = seedFigure(figure.id);
+        return { kind: 'applied', applied: { record: twoConstraintRecord(), relations: new Uint32Array([0, 1]), source: request.source } };
+      };
+
+      await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('applied');
+      expect(kernel.folds).toEqual([]);
+      expect(figures()).toEqual([there]);
+      expect(state().oristudioCpHistoryPast).toEqual([]);
+      expect(state().oristudioCpError).toBe(MOVED);
+    });
+
+    it('a crease edited while its dialog is open: Apply writes nothing', async () => {
+      const figure = seedFigure();
+      dialog.answer = async (request) => {
+        editACrease();
+        return { kind: 'applied', applied: { record: twoConstraintRecord(), relations: new Uint32Array([0, 1]), source: request.source } };
+      };
+
+      await openFoldedFigureLayerOrder(figure.id, t);
+      expect(kernel.folds).toEqual([]);
+      expect(figures()).toEqual([figure]);
+      expect(state().oristudioCpHistoryPast).toEqual([]);
+      expect(state().oristudioCpError).toBe(MOVED);
+    });
+
+    it('nothing moved: Apply sets the order, as before', async () => {
+      const figure = seedFigure();
+      applies();
+
+      await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('applied');
+      expect(kernel.folds).toEqual([[0, 1]]);
+      expect(figures()[0]).toMatchObject({ id: figure.id, layerOrder: { kind: 'record' } });
+      expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Set layer order']);
+    });
   });
 });

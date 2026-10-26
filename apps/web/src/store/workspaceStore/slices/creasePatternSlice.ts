@@ -141,6 +141,7 @@ import type {
   CreasePatternSlice,
   OristudioCpFigureLayerOrderOpening,
   OristudioCpFoldWithChosenOrder,
+  OristudioCpPressedFigure,
   OristudioCpSelectionLayerOrderOpening,
   OristudioCpFoldRunKind,
   WorkspaceSliceCreator,
@@ -184,6 +185,7 @@ import {
   sameFoldedOrder,
 } from '../../../cp-workspace/folded/foldedFigureState';
 import { holdFoldedFigureAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
+import { foldPressMoved, foldPressMovedMessage, markFoldPress } from '../../../cp-workspace/folded/foldPress';
 import {
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderRecord,
@@ -1315,6 +1317,13 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     return null;
   }
 
+  /** A Layer order press whose crease pattern changed or went (`foldPress.ts`): nothing written, and why. */
+  function refuseMovedPress(): false {
+    const message = foldPressMovedMessage(i18n.t);
+    set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+    return false;
+  }
+
   /** {@link withFoldInFlightIn} over this store: see `foldRuns.ts`. */
   function withFoldInFlight<T>(
     kind: OristudioCpFoldRunKind,
@@ -2201,6 +2210,10 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         });
         return false;
       }
+      // A fold with a chosen order folds what its press folded: when a crease
+      // changed or another document opened since, it would fold the old
+      // creases into what is open now.
+      if (options.withOrder && foldPressMoved(options.withOrder.press, get())) return refuseMovedPress();
 
       // What the fold is scoped to, before the foldable-colour filter: the
       // refusal dialog resolves a region from these, and a region is matched by
@@ -2227,7 +2240,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // A layer order is a flat fold's: these creases fold in 3D now, and the
       // order chosen for them would be drawn on nothing.
       if (withOrder && route.kind !== 'flat') {
-        const message = i18n.t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
+        const message = i18n.t('panels:creasePattern.selectionToolbar.foldWithLayerOrder3d', 'Layer order works on flat folds');
         set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
         return false;
       }
@@ -2491,7 +2504,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       }
 
       const figureId = nextGeneratedFoldedFigureId();
-      const sourceCpRevision = get().oristudioCpRevision;
+      // A fold with a chosen order is of the creases as they stood at its press.
+      const sourceCpRevision = withOrder?.figure.sourceCpRevision ?? get().oristudioCpRevision;
       const figureIndex = get().oristudioCpFoldedFigures.length + 1;
       const loadingEntry: OristudioCpFoldedFigureEntry = {
         id: figureId,
@@ -2597,17 +2611,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           // The model an Oriedita file saved is the figure's own appearance:
           // its non-default colours become pins (D1), so the paper-style
           // mirror keeps them rather than writing the display style over them.
-          appearance: legacyPaperStyleOverrides(model),
+          appearance: withOrder ? withOrder.figure.appearance : legacyPaperStyleOverrides(model),
           error: null,
           contradiction,
           // Provenance, so the figure can later be told apart from the creases
           // it came from and refolded from them. Oriedita keeps exactly this
-          // (a bounding box) — see lib/foldedFigureStaleness.ts.
-          ...foldedSourceProvenance(
-            oristudioCpDocument.document,
-            selectedLineIds,
-            scopedLineIds
-          ),
+          // (a bounding box) — see lib/foldedFigureStaleness.ts. A fold with a
+          // chosen order folded its press's creases, so it is theirs: one
+          // edited since reads stale.
+          ...(withOrder
+            ? withOrder.figure.provenance
+            : foldedSourceProvenance(oristudioCpDocument.document, selectedLineIds, scopedLineIds)),
           // The order the dialog chose, saved as its record; an Apply that
           // changed nothing folds Oriedita's own order, and saves none.
           ...(held?.ok ? { layerOrder: held.layerOrder } : {}),
@@ -3931,7 +3945,10 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       }
     },
 
-    applyOristudioCpFigureLayerOrder: async (id, applied) => {
+    applyOristudioCpFigureLayerOrder: async (id, applied, press) => {
+      // Since the press, a crease edited or another document opened: figure
+      // `id` may be another document's, and its creases not the dialog's.
+      if (foldPressMoved(press, get())) return refuseMovedPress();
       const figure = get().oristudioCpFoldedFigures.find((candidate) => candidate.id === id);
       if (!figure?.snapshot || (figure.folded3d ?? null) !== null || figure.status !== 'ready') {
         const message = 'No folded model is ready';
@@ -4047,31 +4064,53 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         return { status: 'unavailable', reason };
       };
       if (!oristudioCpDocument) return refuse('blocked', 'No editable crease-pattern document is loaded');
+      // What the press found open, checked again before the dialog opens and before Apply writes.
+      const press = markFoldPress(get());
       // The same routing a fold makes, on the same scoped ids.
       const route = resolveFoldRoute(oristudioCpDocument.document, scopedLineIds);
       if (route.kind === 'none') return refuse('blocked', 'Select one or more foldable crease-pattern lines first');
       // A layer order is a flat fold's (D2); the selection toolbar says so before a press.
       if (route.kind === 'spatial') {
-        return refuse('spatial', i18n.t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures'));
+        return refuse(
+          'spatial',
+          i18n.t('panels:creasePattern.selectionToolbar.foldWithLayerOrder3d', 'Layer order works on flat folds')
+        );
       }
+      // One press at a time, from the press until its dialog has closed and its Apply folded.
       if (selectionLayerOrderPending) return refuse('busy');
       selectionLayerOrderPending = true;
+      let handedOver = false;
       try {
         // Asked here, once, as Fold asks it: Apply's fold does not ask again.
         if (!(await confirmFoldDespiteCheck(false))) return refuse('declined');
         const model = newFoldedFigureModel(oristudioCpDocument.document);
+        // The figure Apply makes, as the creases stand now: it lands with these, not with what is open by then.
+        const figure: OristudioCpPressedFigure = {
+          sourceCpRevision: press.revision,
+          provenance: foldedSourceProvenance(oristudioCpDocument.document, route.lineIds, scopedLineIds),
+          appearance: legacyPaperStyleOverrides(model),
+        };
         const { source, folded } = await withFoldInFlight('layer-order', async (runId) => {
           // From face 1, as every fold is (`foldCreases`).
           const source = await getOristudioCpSelectionFoldSource(route.lineIds, 1);
           // No order given: Oriedita's own search, as Fold runs it on these creases.
           return { source, folded: await foldOristudioCpWithOrder(source, new Uint32Array(), model, runId) };
         });
+        // The count holds it from here, and every way out lets go through it:
+        // no figure ever holds this fold.
+        const release = folded.status === 'folded' ? adoptTransientFoldedFigureHandle(folded.handle) : () => {};
+        // A crease edited, or another document opened, while it folded: the
+        // dialog would open on creases that are no longer there.
+        const moved = () => {
+          if (!foldPressMoved(press, get())) return null;
+          release();
+          return refuse('moved', foldPressMovedMessage(i18n.t));
+        };
+        const movedWhileFolding = moved();
+        if (movedWhileFolding) return movedWhileFolding;
         if (folded.status !== 'folded') {
           return refuse('failed', i18n.t('errors:cp.foldProducedNothing', 'These creases have no flat folded form to draw'));
         }
-        // The count holds it from here, and every way out lets go through it:
-        // no figure ever holds this fold.
-        const release = adoptTransientFoldedFigureHandle(folded.handle);
         const { snapshot } = folded;
         // As "Layer order…" is held on a figure Oriedita's search did not order
         // (D3): Apply could not draw the order chosen on these faces.
@@ -4094,21 +4133,32 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         } catch {
           // The dialog opens on its solver's first order instead.
         }
+        const movedWhileReading = moved();
+        if (movedWhileReading) return movedWhileReading;
+        // The press is the opening's from here: its release ends it.
+        handedOver = true;
         return {
           status: 'ready',
           source,
           shown,
           model: snapshot.model,
           lineIds: [...scopedLineIds],
-          release: async () => release(),
+          press,
+          figure,
+          release: async () => {
+            release();
+            selectionLayerOrderPending = false;
+          },
         };
       } catch (error) {
         if (isFoldCancellation(error)) return refuse('cancelled');
+        // A fold of creases that changed under it: that, not the kernel's words, is why.
+        if (foldPressMoved(press, get())) return refuse('moved', foldPressMovedMessage(i18n.t));
         const normalized = engineError(error);
         set({ oristudioCpError: normalized.message, error: normalized });
         return { status: 'unavailable', reason: 'failed' };
       } finally {
-        selectionLayerOrderPending = false;
+        if (!handedOver) selectionLayerOrderPending = false;
       }
     },
 

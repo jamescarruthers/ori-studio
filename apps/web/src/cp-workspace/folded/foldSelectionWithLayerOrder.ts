@@ -14,6 +14,12 @@
  *   `unavailable` leave the canvas and the history as they were.
  * - **One undo entry,** "Fold model", as Fold's: the figure's fold runs inside
  *   the folded layer's bracket (`foldedFigureGesture`).
+ * - **What the press found.** A crease edited or another document opened
+ *   after the press stops it before the dialog opens, and again before Apply
+ *   folds (`foldPress.ts`), with a message and nothing written. The figure
+ *   lands with the creases' provenance as the press found them.
+ * - **One press at a time,** from the press until the dialog has closed and
+ *   Apply has folded: the opening's release ends it.
  *
  * React-free, as the figures' other verbs are (`foldedFigureVerbs.ts`), so the
  * selection toolbar and the shortcut run the same one.
@@ -33,6 +39,7 @@ import type {
 } from '../../store/workspaceStore/types';
 import { uprightRotationForView } from '../annotations/annotationTransform';
 import { cpOverlayViewStore } from '../cpOverlayViewStore';
+import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { editFigureLook, editFigureView, type EditFigureView } from './openFoldedFigureLayerOrder';
 
@@ -43,10 +50,11 @@ export type SelectionLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-op
  * What the dialog opens on for the selection's fold (`opening`), on the canvas
  * `view`: asked from a selection (`edit_pattern`, spec §10), not a figure;
  * the source it folded, with no record yet; the look of the figure
- * Apply makes (D18) — the app's display style, which a new figure follows,
- * front up, turned as a new figure is placed (`rotation`, upright on screen),
- * not see-through; the order Fold would show (D19); and the dialog's name for
- * a selection.
+ * Apply makes (D18) — the app's display style with the pins a new figure
+ * from this document gets (an Oriedita file's saved colours), front up,
+ * turned as a new figure is placed (`rotation`, upright on screen), not
+ * see-through; the order Fold would show (D19); and the dialog's name for a
+ * selection.
  */
 export function selectionLayerOrderRequest(
   opening: Extract<OristudioCpSelectionLayerOrderOpening, { status: 'ready' }>,
@@ -54,11 +62,12 @@ export function selectionLayerOrderRequest(
   rotation: number,
   t: TFunction
 ): LayerOrderRequest {
+  const style = effectiveObjectPaperStyle({ appearance: opening.figure.appearance }, view.display);
   return {
     surface: 'edit_pattern',
     source: layerOrderSourceOf(opening.source, opening.model),
     record: null,
-    look: editFigureLook(view, { style: view.display, rotation, model: opening.model, xray: false }),
+    look: editFigureLook(view, { style, rotation, model: opening.model, xray: false }),
     ...(opening.shown ? { shown: opening.shown } : {}),
     name: t('panels:creasePattern.layerOrderSelectionName', 'Selection'),
   };
@@ -81,11 +90,14 @@ export async function foldSelectionWithLayerOrder(
   try {
     const request = selectionLayerOrderRequest(opening, editFigureView(store.getState()), newFigureRotation(), t);
     const outcome = await openLayerOrderDialog(request);
+    // Folded as the press found the creases, and only if they are still there (`foldPress.ts`).
+    const { press, figure } = opening;
     if (outcome.kind === 'applied') {
       const { source, relations, record } = outcome.applied;
-      await foldWithChosenOrderAsEntry(opening.lineIds, { source, relations, record }, t);
+      await foldWithChosenOrderAsEntry(opening.lineIds, { source, relations, record, press, figure }, t);
     } else if (outcome.kind === 'unchanged') {
-      await foldWithChosenOrderAsEntry(opening.lineIds, { source: request.source, relations: new Uint32Array(), record: null }, t);
+      const none = new Uint32Array();
+      await foldWithChosenOrderAsEntry(opening.lineIds, { source: request.source, relations: none, record: null, press, figure }, t);
     }
     return outcome.kind;
   } finally {
