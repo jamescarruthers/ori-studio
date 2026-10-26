@@ -200,6 +200,19 @@ export function createLayerOrderBridgeBackend(
       return committed;
     },
 
+    order: () => bridge.layer_order(current().handle),
+
+    show(constraints, order, limits) {
+      const now = current();
+      const before = bridge.layer_constraints(now.handle);
+      const sent = packConstraints(constraints);
+      const shown = bridge.layer_show(now.handle, sent, order, limitsOf(limits));
+      // A cursor counting the same constraints stays good (a step's undo); other constraints, a new count.
+      const same = before.length === sent.length && before.every((value, i) => value === sent[i]);
+      if (shown.verdict === 'shown' && !same) dropCursor();
+      return shown;
+    },
+
     commitPreview(token, constraints, limits) {
       const committed = bridge.layer_commit_preview(
         current().handle,

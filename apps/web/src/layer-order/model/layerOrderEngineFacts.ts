@@ -36,12 +36,14 @@ import {
   type LayerExplained,
   type LayerOpened,
   type LayerOpenedOn,
+  type LayerOrderBits,
   type LayerPosition,
   type LayerPreviewed,
   type LayerRefusal,
   type LayerRestored,
   type LayerRestoreOutcomeKind,
   type LayerSavedConstraintStatus,
+  type LayerShown,
   type LayerSide,
   type LayerSolutionCount,
   type LayerStacks,
@@ -55,6 +57,7 @@ export type {
   LayerConstraint,
   LayerFace,
   LayerOpenedOn,
+  LayerOrderBits,
   LayerOrderLimits,
   LayerPosition,
   LayerRefusal,
@@ -116,6 +119,8 @@ export interface LayerOpenFacts {
   readonly openPairs: Uint32Array;
   readonly openedOn: LayerOpenedOn;
   readonly stacks: LayerSidesStacks;
+  /** The order on screen, packed (`layer_order`): what undo puts back exactly. */
+  readonly order: LayerOrderBits;
   /** The constraints committed: a restore's applied ones; none for an open. */
   readonly constraints: readonly LayerConstraint[];
   /** Set for a restore: how it went, and the rows it did not apply. */
@@ -149,12 +154,17 @@ export type LayerPreviewFacts =
   | LayerCantFitFacts
   | LayerTimedOutFacts;
 
+/**
+ * A commit's answer, or an exact restore's (`show`) as one: the order it
+ * landed on, packed, is what an undo from there puts back.
+ */
 export type LayerCommitFacts =
   | {
       readonly verdict: 'committed';
       readonly changed: LayerChangedSpots;
       readonly stacks: LayerSidesStacks;
       readonly openPairs: Uint32Array;
+      readonly order: LayerOrderBits;
     }
   | LayerCantFitFacts
   | LayerTimedOutFacts;
@@ -177,6 +187,7 @@ export type LayerStepFacts =
       readonly changed: LayerChangedSpots;
       readonly position: LayerPosition;
       readonly stacks: LayerSidesStacks;
+      readonly order: LayerOrderBits;
     }
   | { readonly verdict: 'end' }
   | LayerTimedOutFacts;
@@ -203,14 +214,15 @@ export type LayerOpenAnswer =
 
 /**
  * The facts of an open (`layer_open`, `layer_open_showing`) or a restore,
- * with the stacks and the letters (`faceLettersOf(scene).inLetterOrder`) the
- * hook read after it.
+ * with the stacks, the letters (`faceLettersOf(scene).inLetterOrder`) and the
+ * order on screen packed (`layer_order`) the hook read after it.
  */
 export function openFacts(
   opened: LayerOpenAnswer,
   stacks: LayerSidesStacks,
   record: LayerOrderRecord | null,
-  letterOrder: readonly LayerFace[]
+  letterOrder: readonly LayerFace[],
+  order: LayerOrderBits
 ): LayerOpenFacts {
   const restored = 'carried' in opened ? opened : null;
   return {
@@ -219,6 +231,7 @@ export function openFacts(
     openPairs: opened.open_pairs,
     openedOn: opened.opened_on,
     stacks,
+    order,
     constraints: restored ? restoredConstraints(restored.constraints) : [],
     restore: restored ? restoreFacts(restored, record) : null,
     letterOrder,
@@ -280,7 +293,8 @@ export function previewFacts(previewed: LayerPreviewed): LayerPreviewFacts {
   }
 }
 
-export function commitFacts(committed: LayerCommitted): LayerCommitFacts {
+/** A commit's answer; `order` is the order on screen the hook read after it landed (`layer_order`), unread otherwise. */
+export function commitFacts(committed: LayerCommitted, order: LayerOrderBits): LayerCommitFacts {
   switch (committed.verdict) {
     case 'committed':
       return {
@@ -288,12 +302,18 @@ export function commitFacts(committed: LayerCommitted): LayerCommitFacts {
         changed: committed.changed,
         stacks: committed.stacks,
         openPairs: committed.open_pairs,
+        order,
       };
     case 'cant_fit':
       return { verdict: 'cant_fit', constraints: Array.from(committed.constraints) };
     case 'timed_out':
       return { verdict: 'timed_out' };
   }
+}
+
+/** An exact restore that landed (`show`), as the commit it is: `order` is the one it put back. */
+export function shownFacts(shown: Extract<LayerShown, { verdict: 'shown' }>, order: LayerOrderBits): LayerCommitFacts {
+  return { verdict: 'committed', changed: shown.changed, stacks: shown.stacks, openPairs: shown.open_pairs, order };
 }
 
 export function explainFacts(explained: LayerExplained): LayerExplainFacts {
@@ -312,10 +332,11 @@ export function explainFacts(explained: LayerExplained): LayerExplainFacts {
   }
 }
 
-export function stepFacts(stepped: LayerStepped): LayerStepFacts {
+/** A step's answer; `order` is the order on screen the hook read after it moved (`layer_order`), unread otherwise. */
+export function stepFacts(stepped: LayerStepped, order: LayerOrderBits): LayerStepFacts {
   switch (stepped.verdict) {
     case 'moved':
-      return { verdict: 'moved', changed: stepped.changed, position: stepped.position, stacks: stepped.stacks };
+      return { verdict: 'moved', changed: stepped.changed, position: stepped.position, stacks: stepped.stacks, order };
     case 'end':
       return { verdict: 'end' };
     case 'timed_out':

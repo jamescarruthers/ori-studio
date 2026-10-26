@@ -28,6 +28,7 @@ import { inProcessLayerOrderWorkers } from '../engine/layerOrderEngine.fixtures'
 import { LAYER_ORDER_LIMITS, type LayerConstraint } from '../engine/layerOrderEngine';
 import { createLayerOrderRuntime } from '../engine/layerOrderRuntime';
 import { layerOrderSceneRelations } from '../engine/layerOrderSceneRelations';
+import { rowKeyOf } from '../model/layerOrderRowGroups';
 import {
   beginLayerOrderDialog,
   registerLayerOrderDialogMount,
@@ -219,7 +220,7 @@ describe.skipIf(!existsSync(FOLD_WASM) || !existsSync(CP_WASM))('carried rows at
   function trash(mounted: Mounted, recordIndex: number) {
     const { dialog } = mounted.out.current!;
     const row = dialog.state.rows.carried.find((r) => r.facts.index === recordIndex)!;
-    dialog.dispatch({ type: 'rows_removed', ids: [row.id] });
+    dialog.dispatch({ type: 'row_removed', key: rowKeyOf(row, dialog.state.figure) });
   }
 
   it.each([1, 2])('Apply after the trash on record index %i writes back the other row only', async (index) => {

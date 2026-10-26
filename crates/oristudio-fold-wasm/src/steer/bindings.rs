@@ -33,6 +33,11 @@
 //!   /** Add by a preview: its token and the list it checked; no search when current. */
 //!   layer_commit_preview(session: number, token: number, constraints: Int32Array,
 //!     limits?: LayerLimits): LayerCommitted;
+//!   /** The order on screen, one bit per pair: what layer_show puts back. */
+//!   layer_order(session: number): Uint8Array;
+//!   /** Undo and redo: the list committed and an earlier order on screen, exactly, no search. */
+//!   layer_show(session: number, constraints: Int32Array, order: Uint8Array,
+//!     limits?: LayerLimits): LayerShown;
 //!   /** The saved constraints a restore did not apply, in record order. */
 //!   layer_carried(session: number): LayerCarriedRow[];
 //!   /** Remove the carried row of record index `index` (`LayerCarriedRow.index`). */
@@ -109,7 +114,7 @@ use super::wire::{
     CantFitKind, CantFitWire, Committing, Explained, LAYER_LIMITS_FIELDS,
     LAYER_SOLUTION_CAPS_FIELDS, LayerCallError, LayerFoldSource, LayerLimits, LayerOpened,
     LayerRefusal, LayerRestored, LayerSolutionCaps, LayerStepBy, Opening, PackedStacks, Previewed,
-    Restoring, Saving, Sides, Stepping, direction_of, side_of,
+    Restoring, Saving, Showing, Sides, Stepping, direction_of, side_of,
 };
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
@@ -255,6 +260,45 @@ impl FoldEngine {
                 .commit_preview(session, token, constraints, &limits)
                 .map_err(thrown)?,
         )
+    }
+
+    /// The order on screen, packed one bit per variable: what `layer_show`
+    /// puts back exactly. Meaningless to any other session.
+    pub fn layer_order(&self, session: u32) -> Result<Vec<u8>, JsValue> {
+        self.layers.order(session).map_err(thrown)
+    }
+
+    /// Undo and redo: `constraints` (`[subject, object, sign, …]`) committed
+    /// and `order` (`layer_order`'s, from earlier) on screen, exactly, with
+    /// no search: `{ verdict: 'shown', … }` as `layer_commit` answers a
+    /// commit, or `{ verdict: 'refused' }` when the order does not fit the
+    /// creases and the constraints, or timed out. Only `shown` changed the
+    /// session; a cursor counting the same constraints stays good.
+    pub fn layer_show(
+        &mut self,
+        session: u32,
+        constraints: &[i32],
+        order: &[u8],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        match self
+            .layers
+            .show(session, constraints, order, &limits)
+            .map_err(thrown)?
+        {
+            Showing::Shown(done) => {
+                let answer = committed(Committing::Committed(done))?;
+                Reflect::set(
+                    &answer,
+                    &JsValue::from_str("verdict"),
+                    &JsValue::from_str("shown"),
+                )?;
+                Ok(answer)
+            }
+            Showing::Refused => Ok(Fields::new().text("verdict", "refused")?.into()),
+            Showing::TimedOut(out) => Ok(Fields::of(&out)?.text("verdict", "timed_out")?.into()),
+        }
     }
 
     /// The saved constraints the last restore did not apply, in record

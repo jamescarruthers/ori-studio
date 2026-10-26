@@ -12,8 +12,8 @@
 //!   *open* ([`ConstraintSession::open_pairs`]), and only an open pair is
 //!   offered to the user.
 //!
-//! Every question is one of these, and only a commit or a restore changes
-//! the session:
+//! Every question is one of these, and only a commit, a show or a restore
+//! changes the session:
 //!
 //! | Call | Searches | Changes the session |
 //! | --- | --- | --- |
@@ -23,6 +23,7 @@
 //! | [`preview_list`](ConstraintSession::preview_list) | any list, such as the dialog's own rows plus one | never |
 //! | [`commit`](ConstraintSession::commit) | the whole new list | only when it fits |
 //! | [`commit_preview`](ConstraintSession::commit_preview) | nothing, when the preview is still current | yes, to the previewed order |
+//! | [`show`](ConstraintSession::show) | nothing: an order it showed before, checked by deduction | yes, to exactly that order (undo, redo) |
 //! | [`restore`](ConstraintSession::restore) | a saved record on (possibly edited) creases | – (it opens one) |
 //! | [`restore_record`](ConstraintSession::restore_record) | the same, on a session already open | yes |
 //!
@@ -68,7 +69,8 @@
 //!
 //! Ori Studio original work, not a port.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
+use std::hash::{DefaultHasher, Hasher};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 
@@ -425,6 +427,21 @@ pub enum Commit {
     TimedOut(TimedOut),
 }
 
+/// What a [`ConstraintSession::show`] did. Only [`Show::Shown`] changed the
+/// session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Show {
+    /// The session now shows the order given, with the constraints given
+    /// committed. `changed` is the spots whose top face changed; there was
+    /// no search (`stage` is [`CheckStage::Unchanged`]).
+    Shown(Committed),
+    /// The order is not a complete order of this session's that fits the
+    /// creases and the constraints: nothing changed.
+    Refused,
+    /// Checking the order ran out of time: nothing changed.
+    TimedOut(TimedOut),
+}
+
 /// Which order a check is steered toward.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Steer<'a> {
@@ -493,10 +510,24 @@ pub struct ConstraintSession {
     /// Bumped whenever the constraints, the order on screen or what they
     /// force change: a preview of an older generation is out of date.
     generation: u64,
+    /// Every order the session has shown, by fingerprint ([`fingerprint`]):
+    /// each fit the creases, so [`Self::show`] puts one back with no proof
+    /// of the whole order (most of a second on the iguana, 65,851 open
+    /// pairs). A few bytes per order shown.
+    seen: HashSet<u64>,
 }
 
 /// Each session's own number, for [`PreviewFit`]'s guard.
 static SESSIONS: AtomicU64 = AtomicU64::new(0);
+
+/// A complete order's fingerprint, for [`ConstraintSession::show`].
+fn fingerprint(values: &[PairOrder]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    for value in values {
+        hasher.write_u8(u8::from(*value == PairOrder::FirstAbove));
+    }
+    hasher.finish()
+}
 
 impl ConstraintSession {
     /// Open a session over `source`: the letters' deduction, a first order of
@@ -524,6 +555,7 @@ impl ConstraintSession {
         let values = solver.search().first();
         let stacks = spots.stacks(&variables, &values);
         let forced = solver.search().forced();
+        let seen = HashSet::from([fingerprint(&values)]);
         Ok(ConstraintSession {
             shown: Arrangement {
                 variables: variables.clone(),
@@ -541,6 +573,7 @@ impl ConstraintSession {
             opened_on: OpenedOn::First { timed_out: None },
             id: SESSIONS.fetch_add(1, AtomicOrdering::Relaxed),
             generation: 0,
+            seen,
         })
     }
 
@@ -775,6 +808,113 @@ impl ConstraintSession {
         Ok(Commit::Committed(committed))
     }
 
+    /// The order on screen, packed: one bit per variable in ascending order
+    /// (bit `v % 8` of byte `v / 8`), set when the pair's smaller face is
+    /// above. What [`Self::show`] takes back, so an undo can put an order
+    /// back exactly; it means nothing to another session.
+    pub fn shown_bits(&self) -> Vec<u8> {
+        let mut bits = vec![0u8; self.shown.values.len().div_ceil(8)];
+        for (v, value) in self.shown.values.iter().enumerate() {
+            if *value == PairOrder::FirstAbove {
+                bits[v / 8] |= 1 << (v % 8);
+            }
+        }
+        bits
+    }
+
+    /// Make `constraints` the committed list and `bits` ([`Self::shown_bits`])
+    /// the order on screen, exactly: the dialog's undo and redo, putting back
+    /// an order the session showed with those constraints. No search: the
+    /// order must satisfy every constraint, and be one the session has shown
+    /// or pass a deduction with every pair seeded with its order, so one that
+    /// breaks the creases or a constraint is [`Show::Refused`]. What the
+    /// constraints force is deduced again. The solutions cursor stays good when
+    /// the constraints are the ones committed. A carried row the list holds
+    /// leaves the carried rows, as [`Self::commit`] has it.
+    pub fn show(
+        &mut self,
+        constraints: Vec<Constraint>,
+        bits: &[u8],
+        limits: &Limits,
+    ) -> Result<Show, SessionRefusal> {
+        let n = self.variables.len();
+        if bits.len() != n.div_ceil(8) {
+            return Ok(Show::Refused);
+        }
+        let values: Vec<PairOrder> = (0..n)
+            .map(|v| {
+                if bits[v / 8] >> (v % 8) & 1 == 1 {
+                    PairOrder::FirstAbove
+                } else {
+                    PairOrder::SecondAbove
+                }
+            })
+            .collect();
+        let Ok(seeds) = self.seeds_of(&constraints)? else {
+            return Ok(Show::Refused);
+        };
+        if seeds.iter().any(|&(v, value)| values[v] != value) {
+            return Ok(Show::Refused);
+        }
+        let deadline = limits.flatfold_deadline();
+        let undecided = |limit| {
+            Show::TimedOut(TimedOut {
+                limit: complete::budget_limit(limit),
+                nodes: 0,
+            })
+        };
+        // The whole order fits the creases: one the session has shown, or every pair seeded with its
+        // order closes with no conflict.
+        if !self.seen.contains(&fingerprint(&values)) {
+            let whole: Vec<Seed> = values.iter().copied().enumerate().collect();
+            match self
+                .solver
+                .search()
+                .deduce(&whole, deadline)
+                .map_err(internal_search)?
+            {
+                Deduction::Deduced(_) => {}
+                Deduction::Undecided { limit } => return Ok(undecided(limit)),
+                Deduction::Forced { .. } | Deduction::Conflict(_) => return Ok(Show::Refused),
+            }
+        }
+        // What the constraints force, as a commit of them would leave it.
+        let forced = match self
+            .solver
+            .search()
+            .deduce(&seeds, deadline)
+            .map_err(internal_search)?
+        {
+            Deduction::Deduced(deduced) => deduced.forced(),
+            Deduction::Undecided { limit } => return Ok(undecided(limit)),
+            Deduction::Forced { .. } | Deduction::Conflict(_) => return Ok(Show::Refused),
+        };
+        let stacks = if values == self.shown.values {
+            self.shown.stacks.clone()
+        } else {
+            self.spots.stacks(&self.variables, &values)
+        };
+        let committed = Committed {
+            changed: ChangedSpots::between(&self.shown.stacks, &stacks),
+            stage: CheckStage::Unchanged,
+            nodes: 0,
+        };
+        self.adopt(
+            constraints,
+            Fit {
+                arrangement: Arrangement {
+                    variables: self.variables.clone(),
+                    values,
+                    stacks,
+                },
+                forced,
+                stage: CheckStage::Unchanged,
+                nodes: 0,
+            },
+        );
+        Ok(Show::Shown(committed))
+    }
+
     /// The saved form of the session (approach 6): the faces the constraints
     /// and the order name, ascending, by an interior paper point
     /// ([`LayerSource::interior_point`], the face's centroid unless the face
@@ -939,6 +1079,7 @@ impl ConstraintSession {
     pub(crate) fn show_values(&mut self, values: Vec<PairOrder>) -> ChangedSpots {
         let stacks = self.spots.stacks(&self.variables, &values);
         let changed = ChangedSpots::between(&self.shown.stacks, &stacks);
+        self.seen.insert(fingerprint(&values));
         self.shown = Arrangement {
             variables: self.variables.clone(),
             values,
@@ -959,6 +1100,7 @@ impl ConstraintSession {
         self.carried
             .retain(|row| row.constraint.is_none_or(|c| !constraints.contains(&c)));
         self.constraints = constraints;
+        self.seen.insert(fingerprint(&fit.arrangement.values));
         self.shown = fit.arrangement;
         self.forced = fit.forced;
         self.generation += 1;
@@ -986,6 +1128,7 @@ impl ConstraintSession {
         values: Vec<PairOrder>,
         forced: Vec<Option<PairOrder>>,
     ) {
+        self.seen.insert(fingerprint(&values));
         self.shown = Arrangement {
             stacks: self.spots.stacks(&self.variables, &values),
             variables: self.variables.clone(),

@@ -60,7 +60,7 @@ pub use restore::{
 };
 pub use session::{
     CantFit, CantFitProof, Commit, Committed, Constraint, ConstraintFault, ConstraintSession,
-    Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
+    Limits, Preview, PreviewFit, SessionRefusal, Show, TimedOut, Verb,
 };
 pub use showing::{FoldInside, OpenedOn, scene_relations};
 pub use solutions::{

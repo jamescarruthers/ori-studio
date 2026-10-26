@@ -18,7 +18,7 @@ use oristudio_fold::complete::Deadline;
 use oristudio_fold::random::Rng;
 use oristudio_fold::steer::{
     Commit, Constraint, ConstraintSession, Explanation, LayerSource, Limits, Preview,
-    SessionRefusal, SolutionCaps, StepBy, StepDirection, Stepped, Verb, ViewSide,
+    SessionRefusal, Show, SolutionCaps, StepBy, StepDirection, Stepped, Verb, ViewSide,
 };
 use oristudio_layer_order::check::Scope;
 use oristudio_layer_order::{FacePair, LayerOrder};
@@ -305,6 +305,131 @@ fn a_step_puts_an_earlier_preview_out_of_date() {
     assert!(moved > 0, "no step moved a preview's order");
 }
 
+// Undo and redo put an order back exactly (`ConstraintSession::show`).
+
+fn shown(session: &mut ConstraintSession, constraints: Vec<Constraint>, bits: &[u8]) {
+    match session.show(constraints, bits, &unlimited()).expect("show") {
+        Show::Shown(_) => {}
+        other => panic!("{other:?}"),
+    }
+}
+
+/// A step, then a commit that moves the order, taken back one at a time:
+/// each order before comes back bit for bit, and the stepper's cursor stays
+/// good while the constraints are the ones it counted. The dialog's undo of
+/// "› then Add", which stepping back by a picture could not do (#539's
+/// review).
+#[test]
+fn show_puts_back_the_order_before_a_step_and_a_commit_exactly() {
+    let mut checked = 0;
+    for &(name, relative) in FIXTURES {
+        for by in BY {
+            let mut session = open(relative);
+            let opening = session.shown_bits();
+            let opening_order = session.shown_order();
+            let mut solutions = session.solutions().expect("count");
+            let Stepped::Moved(_) = session
+                .step(&mut solutions, by, StepDirection::Next, &unlimited())
+                .expect("step")
+            else {
+                continue;
+            };
+            let stepped = session.shown_bits();
+            let stepped_key = key(&session, by);
+            assert_ne!(stepped, opening, "{name} {by:?}: a step that moved");
+            // Add a constraint the stepped order breaks, so the commit moves it.
+            let Some(c) = session.open_pairs().into_iter().find_map(|pair| {
+                let c = against_shown(&session, pair);
+                matches!(
+                    session.preview_list(&[c], &unlimited()),
+                    Ok(Preview::Fits(_))
+                )
+                .then_some(c)
+            }) else {
+                continue;
+            };
+            let Commit::Committed(_) = session.commit(vec![c], &unlimited()).expect("add") else {
+                panic!("{name} {by:?}: a previewed fit can't commit");
+            };
+            let added = session.shown_bits();
+            assert_ne!(added, stepped, "{name} {by:?}");
+            // Undo the Add: the list before, and exactly the stepped order.
+            shown(&mut session, Vec::new(), &stepped);
+            assert_eq!(
+                session.shown_bits(),
+                stepped,
+                "{name} {by:?}: undo of the Add"
+            );
+            assert!(session.constraints().is_empty());
+            assert_fits(&session, "undo of the Add");
+            // Undo the step: the opening order, exactly, on the cursor the step used.
+            shown(&mut session, Vec::new(), &opening);
+            assert_eq!(
+                session.shown_bits(),
+                opening,
+                "{name} {by:?}: undo of the step"
+            );
+            assert_eq!(session.shown_order(), opening_order);
+            // The cursor the step used is still good: stepping again lands on the same solution.
+            let Stepped::Moved(_) = session
+                .step(&mut solutions, by, StepDirection::Next, &unlimited())
+                .expect("the cursor, still good")
+            else {
+                panic!("{name} {by:?}: the step again did not move");
+            };
+            assert_eq!(key(&session, by), stepped_key, "{name} {by:?}");
+            // Redo both, from the opening order again.
+            shown(&mut session, Vec::new(), &opening);
+            shown(&mut session, Vec::new(), &stepped);
+            shown(&mut session, vec![c], &added);
+            assert_eq!(session.shown_bits(), added, "{name} {by:?}: redo");
+            assert_eq!(session.constraints(), [c]);
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "no fixture stepped and committed");
+}
+
+/// An order that is not one of the session's, or breaks a committed
+/// constraint, is refused, and nothing changes.
+#[test]
+fn show_refuses_an_order_that_does_not_fit() {
+    let mut session = open(FIXTURES[0].1);
+    let before = session.shown_bits();
+    // The wrong length.
+    assert_eq!(
+        session
+            .show(Vec::new(), &before[1..], &unlimited())
+            .expect("show"),
+        Show::Refused
+    );
+    // A constraint the order breaks.
+    let pair = session.open_pairs()[0];
+    let against = against_shown(&session, pair);
+    assert_eq!(
+        session
+            .show(vec![against], &before, &unlimited())
+            .expect("show"),
+        Show::Refused
+    );
+    // A pair the creases force, turned the other way.
+    let pairs: Vec<_> = session.shown_order().pairs().collect();
+    let forced = pairs
+        .iter()
+        .position(|(pair, _)| session.forced(pair.lo(), pair.hi()).is_some())
+        .expect("a forced pair");
+    let mut broken = before.clone();
+    broken[forced / 8] ^= 1 << (forced % 8);
+    assert_eq!(
+        session
+            .show(Vec::new(), &broken, &unlimited())
+            .expect("show"),
+        Show::Refused
+    );
+    assert_eq!(session.shown_bits(), before);
+    assert!(session.constraints().is_empty());
+}
+
 #[test]
 fn a_count_is_refused_once_the_constraints_change() {
     let mut session = open(FIXTURES[0].1);
@@ -534,6 +659,7 @@ fn the_iguana_steps_without_its_count() {
         ..SolutionCaps::default()
     };
     let mut solutions = session.solutions_with(caps).expect("a cursor");
+    let opening = session.shown_bits();
     let front = StepBy::Picture(ViewSide::Front);
     let back = StepBy::Picture(ViewSide::Back);
     let x = StepBy::LayerOrder;
@@ -573,6 +699,21 @@ fn the_iguana_steps_without_its_count() {
         solutions.count(),
         solutions.nodes()
     );
+    // Undo all of it at once (#539's review): the opening order put back exactly, by deduction alone.
+    let t = std::time::Instant::now();
+    let bits = session.shown_bits();
+    let read_ms = t.elapsed().as_secs_f64() * 1e3;
+    let t = std::time::Instant::now();
+    let shown = session
+        .show(Vec::new(), &opening, &limits(1.0))
+        .expect("show");
+    println!(
+        "show back to the opening: {shown:?} in {:.0} ms ({} bytes, read in {read_ms:.1} ms)",
+        t.elapsed().as_secs_f64() * 1e3,
+        bits.len()
+    );
+    assert!(matches!(shown, Show::Shown(_)));
+    assert_eq!(session.shown_bits(), opening);
 }
 
 /// Row E9: a step that runs out of its limits says so (`TimedOut`), never

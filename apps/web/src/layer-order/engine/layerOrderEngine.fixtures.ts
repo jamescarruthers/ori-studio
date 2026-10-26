@@ -615,6 +615,30 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
       return committed(current(), constraints, limits);
     },
 
+    async order() {
+      await answering('order');
+      // The fake's order is one stack of every face, top first: its bytes are the faces.
+      return Uint8Array.from(current().order);
+    },
+
+    async show(constraints, order, limits) {
+      await answering('show');
+      const now = current();
+      question(constraints);
+      const faces = Array.from(order);
+      const whole = faces.length === faceCount && new Set(faces).size === faceCount && faces.every((f) => f < faceCount);
+      if (!whole || !fitsEdges(faces, edgesOf(constraints))) return { verdict: 'refused' };
+      if (limits.maxNodes === 0 && limits.deadlineMs === 0) return { verdict: 'timed_out', limit: 'deadline', nodes: 0 };
+      // A cursor counting the same constraints stays good, as the bridge's does.
+      const cursor = now.cursor && sameList(now.cursor.constraints, constraints) ? now.cursor : null;
+      const { verdict: _verdict, ...done } = committedOn(now, constraints, faces, false) as Extract<
+        LayerCommitted,
+        { verdict: 'committed' }
+      >;
+      now.cursor = cursor;
+      return { ...done, verdict: 'shown', stage: 'unchanged', nodes: 0 };
+    },
+
     async commitPreview(token, constraints, limits) {
       await answering('commitPreview');
       const now = current();

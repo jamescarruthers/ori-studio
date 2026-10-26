@@ -4,8 +4,9 @@
  * them, and shown one row per subject and verb, "D in front of H, K".
  *
  * - A row sits at the place of its earliest constraint, and a later Add for
- *   the same subject and verb joins it. Removing one of its constraints keeps
- *   the row where it was ({@link withoutRows}).
+ *   the same subject and verb joins it. It goes as a whole, by its trash
+ *   ({@link withoutRow}): a row has no per-object remove (D21, your words
+ *   after trying it, 2026-10-26).
  * - A row is keyed by its subject and its verb as read ({@link LayerRowKey}),
  *   so its key survives the removal of any of its constraints and a turn of
  *   the figure: the verb is read from the front here, which groups exactly as
@@ -111,30 +112,8 @@ export function rowGroupByKey(groups: readonly LayerRowGroup[], key: LayerRowKey
   return groups.find((group) => group.key === key) ?? null;
 }
 
-/**
- * `list` without the rows `gone` names, every row keeping its place: when a
- * row's earliest constraint goes and others stay, its next one takes that
- * constraint's place. The engine treats the list as a set, so only the
- * list's order moves.
- */
-function keepingPlaces<T extends LayerRow>(list: readonly T[], gone: ReadonlySet<number>, figure: LayerFigure | null): T[] {
-  const keys = list.map((row) => rowKeyOf(row, figure));
-  const out: (T | null)[] = list.map((row) => (gone.has(row.id) ? null : row));
-  const placed = new Set<LayerRowKey>();
-  list.forEach((row, i) => {
-    const key = keys[i]!;
-    if (placed.has(key)) return;
-    placed.add(key);
-    if (!gone.has(row.id)) return;
-    const next = keys.findIndex((other, j) => j > i && other === key && out[j] !== null);
-    if (next < 0) return;
-    out[i] = out[next]!;
-    out[next] = null;
-  });
-  return out.filter((row): row is T => row !== null);
-}
-
-/** The rows without the stored constraints `gone` names, each row keeping its place. */
-export function withoutRows(rows: LayerRows, gone: ReadonlySet<number>, figure: LayerFigure | null): LayerRows {
-  return { committed: keepingPlaces(rows.committed, gone, figure), carried: keepingPlaces(rows.carried, gone, figure) };
+/** The rows without the list row `key`: every stored constraint it shows goes, and the other rows keep their places. */
+export function withoutRow(rows: LayerRows, key: LayerRowKey, figure: LayerFigure | null): LayerRows {
+  const stays = <T extends LayerRow>(row: T) => rowKeyOf(row, figure) !== key;
+  return { committed: rows.committed.filter(stays), carried: rows.carried.filter(stays) };
 }

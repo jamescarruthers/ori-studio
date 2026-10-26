@@ -581,13 +581,15 @@
       "nothingToUndo": "실행 취소할 작업이 없습니다",
       "redo": "다시 실행",
       "redoShortcut": "다시 실행 ({{shortcut}})",
+      "redoWaits": "다시 실행은 진행 중인 변경을 기다리는 중입니다",
       "remove": "{{sentence}} 제거",
       "reveal": "{{face}}을(를) 문장에 넣기",
       "separator": ",",
       "title": "제약",
       "titleCount_other": "제약 · {{count}}",
       "undo": "실행 취소",
-      "undoShortcut": "실행 취소 ({{shortcut}})"
+      "undoShortcut": "실행 취소 ({{shortcut}})",
+      "undoWaits": "실행 취소는 진행 중인 변경을 기다리는 중입니다"
     },
     "lost": "겹침 순서가 예기치 않게 중지되었습니다. 아무것도 바뀌지 않았습니다.",
     "lostLoad": "겹침 순서를 불러오지 못했습니다. 연결을 확인한 다음 다시 시도하세요.",

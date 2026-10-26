@@ -63,12 +63,13 @@ function ready(answer: LayerOrderOpenAnswer) {
 }
 
 describe('opening the dialog’s session', () => {
-  it('opens on the order the host shows, then reads both sides’ stacks and scenes', async () => {
+  it('opens on the order the host shows, then reads both sides’ stacks and scenes, and the order packed for undo', async () => {
     const { fakes, engine } = overFakes();
     const request = { ...REQUEST, shown: SHOWN };
     expect(layerOrderOpenHow(request)).toBe('showing');
     const open = ready(await openLayerOrderSession(engine, request, FAKE_LIMITS));
-    expect(fakes.workers[0]!.backend.calls).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene']);
+    expect(fakes.workers[0]!.backend.calls).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene', 'order']);
+    expect(Array.from(open.facts.order)).toEqual([2, 3, 0, 1]);
     expect(open.how).toBe('showing');
     // The order the host drew, held whole: 0 must stay over 1, and does.
     expect(open.opened.opened_on).toEqual({ kind: 'held', ignored: 0 });

@@ -19,6 +19,7 @@ import {
   type FakeLayerOrderBackend,
 } from '../engine/layerOrderEngine.fixtures';
 import { layerOrderReducer } from '../model/layerOrderReducer';
+import { rowKeyOf } from '../model/layerOrderRowGroups';
 import { applyState } from '../model/layerOrderSelectors';
 import {
   beginLayerOrderDialog,
@@ -132,7 +133,8 @@ describe('useLayerOrderDialog', () => {
     await vi.waitFor(() => expect(h.out.current?.state.phase.kind).toBe('open'));
     const carried = h.out.current!.state.rows.carried;
     expect(carried.map((row) => row.facts.index)).toEqual([0, 1]);
-    await act(async () => h.out.current!.dispatch({ type: 'rows_removed', ids: [carried[0]!.id] }));
+    const key = rowKeyOf(carried[0]!, h.out.current!.state.figure);
+    await act(async () => h.out.current!.dispatch({ type: 'row_removed', key }));
     await act(async () => h.out.current!.apply());
     await vi.waitFor(() => expect(saves).toHaveLength(1));
     expect(saves[0]).toEqual([1]);

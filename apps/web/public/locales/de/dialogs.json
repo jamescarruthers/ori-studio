@@ -598,6 +598,7 @@
       "nothingToUndo": "Nichts rückgängig zu machen",
       "redo": "Wiederholen",
       "redoShortcut": "Wiederholen ({{shortcut}})",
+      "redoWaits": "Wiederholen wartet auf die laufende Änderung",
       "remove": "{{sentence}} entfernen",
       "reveal": "{{face}} in den Satz übernehmen",
       "separator": ",",
@@ -605,7 +606,8 @@
       "titleCount_one": "Vorgaben · {{count}}",
       "titleCount_other": "Vorgaben · {{count}}",
       "undo": "Rückgängig",
-      "undoShortcut": "Rückgängig ({{shortcut}})"
+      "undoShortcut": "Rückgängig ({{shortcut}})",
+      "undoWaits": "Rückgängig wartet auf die laufende Änderung"
     },
     "lost": "Lagenreihenfolge wurde unerwartet beendet. Es wurde nichts geändert.",
     "lostLoad": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es dann erneut.",

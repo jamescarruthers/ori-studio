@@ -615,6 +615,7 @@
       "nothingToUndo": "Rien à annuler",
       "redo": "Rétablir",
       "redoShortcut": "Rétablir ({{shortcut}})",
+      "redoWaits": "Rétablir attend la modification en cours",
       "remove": "Retirer {{sentence}}",
       "reveal": "Mettre {{face}} dans la phrase",
       "separator": ",",
@@ -623,7 +624,8 @@
       "titleCount_many": "Contraintes · {{count}}",
       "titleCount_other": "Contraintes · {{count}}",
       "undo": "Annuler",
-      "undoShortcut": "Annuler ({{shortcut}})"
+      "undoShortcut": "Annuler ({{shortcut}})",
+      "undoWaits": "Annuler attend la modification en cours"
     },
     "lost": "Ordre des couches s’est arrêté de façon inattendue. Rien n’a été modifié.",
     "lostLoad": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion, puis réessayez.",

@@ -99,7 +99,7 @@ export function requestFaceLetters(request: LayerOrderRequest): FaceLetters | nu
  * dialog draws. Resolves `ready` or `refused`; rejects when a call fails.
  */
 export async function openLayerOrderSession(
-  engine: Pick<LayerOrderEngine, 'open' | 'openShowing' | 'restore' | 'restoreRecord' | 'stacks' | 'scene'>,
+  engine: Pick<LayerOrderEngine, 'open' | 'openShowing' | 'restore' | 'restoreRecord' | 'stacks' | 'scene' | 'order'>,
   request: LayerOrderRequest,
   limits: LayerOrderLimits,
   { sessionOpen = false }: LayerOrderOpenOptions = {}
@@ -116,11 +116,12 @@ export async function openLayerOrderSession(
         : await engine.open(source, limits);
   if (outcome.status === 'refused') return { kind: 'refused', refusal: outcome.refusal };
   // Asked together: the worker answers them in turn, behind nothing but each other.
-  const [front, back, frontScene, backScene] = await Promise.all([
+  const [front, back, frontScene, backScene, order] = await Promise.all([
     engine.stacks('front'),
     engine.stacks('back'),
     engine.scene('front'),
     engine.scene('back'),
+    engine.order(),
   ]);
   const stacks = { front, back };
   const scene = frontScene ?? backScene;
@@ -134,7 +135,7 @@ export async function openLayerOrderSession(
       scenes: { front: frontScene, back: backScene },
       letters,
       // With no scene to letter, every face ranks alike and sorts by its index.
-      facts: openFacts(outcome, stacks, record, letters?.inLetterOrder ?? []),
+      facts: openFacts(outcome, stacks, record, letters?.inLetterOrder ?? [], order),
     },
   };
 }

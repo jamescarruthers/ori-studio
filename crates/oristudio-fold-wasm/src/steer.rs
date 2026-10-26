@@ -39,6 +39,6 @@ pub use wire::{
     FACE_AMBIGUOUS, FACE_GONE, FACE_INTACT, LayerCallError, LayerFoldSource, LayerLimits,
     LayerOpened, LayerRefusal, LayerRestored, LayerSolutionCaps, LayerStepBy, OpenedOnWire,
     Opening, PAIR_KEPT, PAIR_MOVED, PAIR_UNRESOLVED, PackedStacks, PreviewFits, Previewed,
-    RestoredOutcome, Restoring, SavedFace, SavedFaces, Saving, Sides, SteppedTo, Stepping,
+    RestoredOutcome, Restoring, SavedFace, SavedFaces, Saving, Showing, Sides, SteppedTo, Stepping,
     candidate_of, constraints_of, direction_of, flat_pairs, relations_of, side_of, triples_of,
 };
