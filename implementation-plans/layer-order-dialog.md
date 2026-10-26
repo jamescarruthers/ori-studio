@@ -1070,8 +1070,10 @@ Settled while building H4, for the PRs that meet it:
 - [x] U9b: compound constraints in the model (#515)
 - [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
+- [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
+- [ ] Your test feedback: no per-object × and exact undo of every action (#539)
 - [ ] H10: Fold's Import CP chooses its order in the dialog
-- [ ] Deeper stacks: measure the too-deep designs through the dialog's engine and raise the dialog's own cap as far as they stay usable (your ask, 2026-10-26)
+- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s) waits on your answer
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
