@@ -593,11 +593,11 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         if (choice.status !== 'found') return choice;
         const lineIds = choice.creases.foldLineIds;
         const route = resolveFoldRoute(document, lineIds);
-        if (route.kind === 'none') return { status: 'missing' };
         const saved = stepLayerOrderOf(linked.layerOrder);
-        if (!saved || linked.render.mode !== 'folded-flat' || route.kind !== 'flat') {
+        if (!saved || linked.render.mode !== 'folded-flat' || route.kind === 'spatial') {
           return posed(begun, linked, document, choice.creases, { verb }, {});
         }
+        if (route.kind === 'none') return { status: 'missing' };
         const render = linked.render;
         const turn = beginStepSolutionStep(stepId, linked, { loadId: begun.guard.loadId, document });
         try {
