@@ -41,7 +41,10 @@ export function selectionFoldActions(deps: SelectionFoldActionDeps): SelectionFo
       id: 'fold-with-layer-order',
       label: foldWithLayerOrderLabel(t),
       disabled: spatial,
-      ...(spatial ? { hint: t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures') } : {}),
+      // A crease selection's words (the board's): "…flat figures" is a figure's.
+      ...(spatial
+        ? { hint: t('panels:creasePattern.selectionToolbar.foldWithLayerOrder3d', 'Layer order works on flat folds') }
+        : {}),
       run: deps.foldWithLayerOrder,
     },
   ];

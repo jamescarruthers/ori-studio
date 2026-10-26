@@ -84,6 +84,7 @@ import {
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
+import { foldSelectionWithLayerOrder } from './foldSelectionWithLayerOrder';
 
 /**
  * How long a wheel must go quiet before a figure's zoom is written to the
@@ -731,13 +732,32 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
     [setOristudioCpFoldedFigurePlacement]
   );
 
+  // Fold, and Fold with layer order…, on given creases: the selection
+  // toolbar's sheet, or the selection `G` and its sibling key fold. A colour
+  // run still open lands as its own entry first, as for every verb run
+  // through `runFoldedFigureAction`.
+  const handleFoldLines = useCallback(
+    (lineIds: readonly number[]) => {
+      endOpenMenuGesture();
+      void foldCreases(lineIds, t);
+    },
+    [endOpenMenuGesture, t]
+  );
+  const handleFoldLinesWithLayerOrder = useCallback(
+    (lineIds: readonly number[]) => {
+      endOpenMenuGesture();
+      void foldSelectionWithLayerOrder(lineIds, t);
+    },
+    [endOpenMenuGesture, t]
+  );
+
   const handleFoldModel = useCallback(() => {
-    if (!canFoldSelectedModel) return;
-    // A colour run still open lands as its own entry first, as for every verb
-    // run through `runFoldedFigureAction`.
-    endOpenMenuGesture();
-    void foldCreases(selectedFoldLineIds, t);
-  }, [canFoldSelectedModel, endOpenMenuGesture, selectedFoldLineIds, t]);
+    if (canFoldSelectedModel) handleFoldLines(selectedFoldLineIds);
+  }, [canFoldSelectedModel, handleFoldLines, selectedFoldLineIds]);
+
+  const handleFoldModelWithLayerOrder = useCallback(() => {
+    if (canFoldSelectedModel) handleFoldLinesWithLayerOrder(selectedFoldLineIds);
+  }, [canFoldSelectedModel, handleFoldLinesWithLayerOrder, selectedFoldLineIds]);
 
   const trackStyled = useCallback(
     (figure: OristudioCpFoldedFigureEntry, options: readonly FoldedFigureStyleOption[]) => {
@@ -1106,6 +1126,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
     gestureLabel: foldedGestureLabel,
     applyBoxUpdate: handleFoldedFigureBoxUpdate,
     foldModel: handleFoldModel,
+    /** Fold with layer order… on the selection, for its key (row H5). */
+    foldModelWithLayerOrder: handleFoldModelWithLayerOrder,
+    /** Fold given creases, and Fold with layer order… on them: the selection toolbar's two fold verbs. */
+    foldLines: handleFoldLines,
+    foldLinesWithLayerOrder: handleFoldLinesWithLayerOrder,
     duplicate: handleDuplicateFoldedFigure,
     remove: handleDeleteFoldedFigure,
   };

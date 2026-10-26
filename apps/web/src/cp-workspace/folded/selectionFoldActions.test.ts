@@ -30,7 +30,7 @@ describe('selectionFoldActions', () => {
     expect(list[1]).toMatchObject({
       id: 'fold-with-layer-order',
       disabled: true,
-      hint: 'Layer order works on flat figures',
+      hint: 'Layer order works on flat folds',
     });
   });
 

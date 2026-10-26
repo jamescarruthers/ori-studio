@@ -18,8 +18,6 @@ import { IconButton } from '../components/ui/IconButton';
 import { MenuIconButton } from '../components/ui/MenuIconButton';
 import { useCanvasObjectAnchor } from './canvasObjects/useCanvasObjectAnchor';
 import { useSimulateSelection } from './inlineSimulation/useSimulateSelection';
-import { foldCreases } from './folded/foldedFigureVerbs';
-import { foldSelectionWithLayerOrder } from './folded/foldSelectionWithLayerOrder';
 import { resolveFoldRoute } from './folded/foldRoute';
 import { selectionFoldActions } from './folded/selectionFoldActions';
 import { FoldWithLayerOrderIcon } from '../components/ui/FoldWithLayerOrderIcon';
@@ -90,7 +88,18 @@ function ExportMenu({
  * unless the selection resolves to exactly one sheet (see
  * {@link resolveSelectedSheet}).
  */
-export function CpSelectionToolbar({ container }: { container: HTMLElement | null }) {
+export interface CpSelectionToolbarProps {
+  container: HTMLElement | null;
+  /**
+   * Fold the sheet's creases, and Fold with layer order… on them: the folded
+   * layer's verbs as the panel binds them (`useFoldedFigures`), so a Style-menu
+   * colour run still open lands as its own entry first, as it does for G.
+   */
+  fold: (lineIds: readonly number[]) => void;
+  foldWithLayerOrder: (lineIds: readonly number[]) => void;
+}
+
+export function CpSelectionToolbar({ container, fold, foldWithLayerOrder }: CpSelectionToolbarProps) {
   const { t } = useTranslation();
   const selection = useWorkspaceStore((s) => s.oristudioCpSelection);
   const cpDocument = useWorkspaceStore((s) => s.oristudioCpDocument?.document ?? null);
@@ -188,8 +197,8 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
       {selectionFoldActions({
         t,
         route: foldRoute,
-        fold: () => runAndDismiss(() => void foldCreases(cpLineIds, t)),
-        foldWithLayerOrder: () => runAndDismiss(() => void foldSelectionWithLayerOrder(cpLineIds, t)),
+        fold: () => runAndDismiss(() => fold(cpLineIds)),
+        foldWithLayerOrder: () => runAndDismiss(() => foldWithLayerOrder(cpLineIds)),
       }).map((action) => (
         <IconButton
           key={action.id}

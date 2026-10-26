@@ -151,7 +151,6 @@ import { useSelectedCanvasObject } from '../../cp-workspace/canvasObjects/useSel
 import { usePropertiesPaneActivation } from '../../cp-workspace/properties/usePropertiesPaneActivation';
 import { CpSelectionToolbar } from '../../cp-workspace/CpSelectionToolbar';
 import { useFoldedFigures } from '../../cp-workspace/folded/useFoldedFigures';
-import { foldSelectionWithLayerOrder } from '../../cp-workspace/folded/foldSelectionWithLayerOrder';
 import {
   mergeCanvasLayerBindings,
   type CanvasObjectGestureKind,
@@ -1409,7 +1408,7 @@ export function CreasePatternPanel() {
     (actionId: OristudioCpActionId) => {
       // Edit's own verb, in the tools' space but no tool: on the creases selected, as G folds them.
       if (actionId === FOLD_WITH_LAYER_ORDER_SHORTCUT_ID) {
-        if (selectedEditableFoldLineIds.length > 0) void foldSelectionWithLayerOrder(selectedEditableFoldLineIds, t);
+        folded.foldModelWithLayerOrder();
         return;
       }
       const action = cpActionById(actionId);
@@ -1429,7 +1428,7 @@ export function CreasePatternPanel() {
       }
       handleCpToolAction(action, true);
     },
-    [handleCpToolAction, folded, selectedEditableFoldLineIds, t]
+    [handleCpToolAction, folded]
   );
 
   useEffect(
@@ -3303,7 +3302,11 @@ export function CreasePatternPanel() {
                     standing, so without the guard picking a region while creases
                     are selected puts two toolbars on the canvas at once. */}
                 {!editingTextId && !selectedCanvasObject && !openToolOptionWindow && (
-                  <CpSelectionToolbar container={toolbarContainer} />
+                  <CpSelectionToolbar
+                    container={toolbarContainer}
+                    fold={folded.foldLines}
+                    foldWithLayerOrder={folded.foldLinesWithLayerOrder}
+                  />
                 )}
                 </>
               ) : (

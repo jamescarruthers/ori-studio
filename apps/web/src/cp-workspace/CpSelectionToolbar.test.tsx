@@ -7,7 +7,10 @@ import { cpOverlayViewStore } from './cpOverlayViewStore';
 import { emptyOristudioCpSelection } from '../lib/creasePatternViewport';
 import { FOLD_MAGNITUDE_FULL } from '../lib/foldAngle';
 import { TooltipProvider } from '../components/ui/Tooltip';
+import type { TFunction } from 'i18next';
 import { CpSelectionToolbar } from './CpSelectionToolbar';
+import { foldCreases } from './folded/foldedFigureVerbs';
+import { foldSelectionWithLayerOrder } from './folded/foldSelectionWithLayerOrder';
 import { resolveInlineSimulationRegion } from './inlineSimulation/resolveSimulationRegion';
 import { selectionCoversEntireCp } from './references/useOpenReferences';
 import {
@@ -45,10 +48,17 @@ vi.mock('./share/cpShareService', () => ({
   isShareEnabled: () => shareEnabled.value,
 }));
 
+const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
+
+/** The toolbar, its fold verbs bound as the panel binds them (`useFoldedFigures`), less the menu-run hand-off. */
 function renderToolbar(root: Root, container: HTMLElement): void {
   root.render(
     <TooltipProvider>
-      <CpSelectionToolbar container={container} />
+      <CpSelectionToolbar
+        container={container}
+        fold={(lineIds) => void foldCreases(lineIds, t)}
+        foldWithLayerOrder={(lineIds) => void foldSelectionWithLayerOrder(lineIds, t)}
+      />
     </TooltipProvider>
   );
 }
