@@ -541,7 +541,12 @@ disagrees, the artboard wins):
   strengthens the tints (Round3:473, 883).
 - The faint subject tint is on the crease pattern only (spec §6.4).
 - Each pane has its own zoom toolbar, and Fit frames both (Round3:385-389,
-  421-425).
+  421-425), each filling about 91% of its pane with its own content: the
+  crease pattern the one pattern its fold came from (the host's `region`,
+  its sheet, never the rest of a document of many), the folded pane the
+  figure itself. Your call after trying the branch (2026-10-26), over
+  Round3's one sheet-sized scale on both: "when i press fit to view for the
+  folded figure its too small".
 - The flash is one 1.6 s fade (Round3:172-176).
 - The status dot turns to success when the order is decided (Round3:200).
 - The footer note ("Apply keeps the order on screen…", Round3:1536) is
