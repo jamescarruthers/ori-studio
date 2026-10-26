@@ -702,6 +702,7 @@
         "page": "Auf der Seite",
         "picture": "Bild"
       },
+      "importFromFile": "Aus Datei (CP, Defox)…",
       "insert": {
         "rotateAfter": "Drehen danach",
         "stepAfter": "Schritt danach",
@@ -1019,7 +1020,6 @@
       "capturing": "Wird erfasst…",
       "enlarged": "Vergrößert",
       "enlargedFrom": "Vergrößert · {{number}}",
-      "fromReferences": "Referenzen…",
       "goToEdit": "Zu Bearbeiten wechseln",
       "lightingChanged": "Beleuchtung geändert",
       "link": "Verknüpfen…",
@@ -1057,9 +1057,7 @@
     },
     "empty": {
       "addStep": "Schritt hinzufügen",
-      "fromReferences": "Aus Referenzen…",
       "goToEdit": "Zu Bearbeiten wechseln",
-      "import": "Importieren…",
       "learn": "Neu bei Diagrammen?",
       "link": "Muster verknüpfen…",
       "message": "Ein Diagramm ist Ihre Faltfolge, Schritt für Schritt. Fügen Sie einen Schritt hinzu und geben Sie ihm ein Bild und eine Anleitung – oder importieren Sie Faltmuster, Bilder oder ein Defox-Projekt.",
@@ -1195,6 +1193,7 @@
       "layout": "Vorschau der Anordnung im Bearbeitungsbereich",
       "layoutHeading": "Anordnung im Bearbeitungsbereich",
       "menu": "Schritte importieren…",
+      "menuButton": "Importieren",
       "noCanvas": "Für den Import konnte keine Bearbeitungsfläche erstellt werden.",
       "noFiles": "Keine Faltmuster, Defox-Projekte oder Bilder gefunden.",
       "noRegion": "Kein Papierbereich gefunden; das Faltmuster wird trotzdem im Bearbeitungsbereich eingefügt.",

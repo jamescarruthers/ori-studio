@@ -11,13 +11,14 @@ import { DiagramEmptyState } from './DiagramEmptyState';
 /**
  * The empty Diagram's ways to learn: the example crane, opened through the
  * store's own `openProject` — its unsaved-changes prompt included — and the
- * video walkthrough.
+ * video walkthrough. And its Import menu.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const analytics = vi.hoisted(() => ({
   trackDiagramExampleOpened: vi.fn(),
   trackDiagramTutorialOpened: vi.fn(),
+  trackDiagramImportWayChosen: vi.fn(),
 }));
 vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
@@ -58,6 +59,7 @@ const EXAMPLE = JSON.stringify({
 const workspaceInitial = useWorkspaceStore.getInitialState();
 const layoutInitial = useLayoutStore.getInitialState();
 const fetchMock = vi.fn<typeof fetch>();
+const onImport = vi.fn();
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 
@@ -80,10 +82,10 @@ beforeEach(() => {
           readOnly={false}
           dropTarget={false}
           onAddStep={noop}
-          onImport={noop}
+          onImport={onImport}
           patternOpen={false}
+          foldSteps={false}
           onLink={noop}
-          onFromReferences={noop}
           onGoToEdit={noop}
         />
         <CommandDialogModal />
@@ -190,5 +192,35 @@ describe('DiagramEmptyState: the example and the walkthrough', () => {
     link?.addEventListener('click', (event) => event.preventDefault());
     act(() => link?.click());
     expect(analytics.trackDiagramTutorialOpened).toHaveBeenCalledOnce();
+  });
+});
+
+describe('DiagramEmptyState: the ways in', () => {
+  const menuRows = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+  const openImport = () =>
+    act(() => buttonNamed('Import')?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 })));
+
+  it('offers Import as a menu of files, References and Fold, in place of an Import… and a From References… of their own', () => {
+    expect(buttonNamed('Import…')).toBeUndefined();
+    expect(buttonNamed('From References…')).toBeUndefined();
+    openImport();
+    expect(menuRows().map((row) => row.textContent)).toEqual([
+      'From File (CP, Defox)…',
+      'From References…',
+      'From Fold…',
+    ]);
+    act(() => menuRows()[0]!.click());
+    expect(onImport).toHaveBeenCalledWith('import-steps');
+    expect(analytics.trackDiagramImportWayChosen).toHaveBeenCalledWith('file', 'empty_state');
+  });
+
+  it('says why References and Fold wait: no crease pattern open, no step in Fold', () => {
+    openImport();
+    const [file, references, fold] = menuRows();
+    expect(file!.hasAttribute('data-disabled')).toBe(false);
+    expect(references!.hasAttribute('data-disabled')).toBe(true);
+    expect(references!.title).toBe('Open a crease pattern in Edit to plan its folds');
+    expect(fold!.hasAttribute('data-disabled')).toBe(true);
+    expect(fold!.title).toBe('Fold a step in Fold to take it from there');
   });
 });

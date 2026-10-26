@@ -14,12 +14,14 @@ import styles from './DiagramPatternPicker.module.css';
 
 /**
  * The open crease pattern's patterns, to link a step to one (D3): in the Step
- * pane's Picture section, while a step's pattern is being chosen.
+ * pane's Picture section, while a step's pattern is being chosen — always, for
+ * an empty step, whose picker has no Cancel.
  *
- * Several to a row, each a small drawing and its number, as the pattern rails
- * number them; the one the step shows is marked. Above them, how the step will
- * show the pattern (D19): a press links the step (or relinks it) shown that
- * way, and the picker closes when the picture is in.
+ * Two to a row, each a drawing and its number, as the pattern rails number
+ * them; the one the step shows is marked. Above them, how the step will show
+ * the pattern (D19): a press links the step (or relinks it) shown that way,
+ * and the picker closes when the picture is in. With no crease pattern open
+ * there is nothing to show, so only the note saying where to open one.
  *
  * One tab stop, as a listbox is: the arrows and Home and End move between the
  * patterns, and the Diagram's own step keys stand down while it has the focus.
@@ -44,7 +46,8 @@ export function DiagramPatternPicker({
   showAs: DiagramShowAs;
   onShowAs: (way: DiagramShowAs) => void;
   onPick: (sheet: DiagramPatternSheet) => void;
-  onCancel: () => void;
+  /** Null for a picker that stays open: an empty step's. */
+  onCancel: (() => void) | null;
 }) {
   const { t } = useTranslation();
   const list = useRef<HTMLDivElement | null>(null);
@@ -67,20 +70,24 @@ export function DiagramPatternPicker({
     <div className={styles.picker}>
       <div className={styles.header}>
         <span className={styles.title}>{t('panels:diagram.picker.title', 'Choose a pattern')}</span>
-        <Button size="sm" variant="ghost" onClick={onCancel}>
-          {t('panels:diagram.picker.cancel', 'Cancel')}
-        </Button>
+        {onCancel && (
+          <Button size="sm" variant="ghost" onClick={onCancel}>
+            {t('panels:diagram.picker.cancel', 'Cancel')}
+          </Button>
+        )}
       </div>
-      <div className={styles.showAs}>
-        <span className={styles.showAsLabel}>{t('panels:diagram.picture.showAs', 'Show as')}</span>
-        <SegmentedControl<DiagramShowAs>
-          size="sm"
-          aria-label={t('panels:diagram.picture.showAs', 'Show as')}
-          value={showAs}
-          options={DIAGRAM_SHOW_AS.map((way) => ({ value: way, label: showAsName(way, t) }))}
-          onChange={onShowAs}
-        />
-      </div>
+      {sheets.status !== 'no-pattern' && (
+        <div className={styles.showAs}>
+          <span className={styles.showAsLabel}>{t('panels:diagram.picture.showAs', 'Show as')}</span>
+          <SegmentedControl<DiagramShowAs>
+            size="sm"
+            aria-label={t('panels:diagram.picture.showAs', 'Show as')}
+            value={showAs}
+            options={DIAGRAM_SHOW_AS.map((way) => ({ value: way, label: showAsName(way, t) }))}
+            onChange={onShowAs}
+          />
+        </div>
+      )}
       {sheets.status === 'ready' && sheets.sheets.length > 0 ? (
         <div
           ref={list}

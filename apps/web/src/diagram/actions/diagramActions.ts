@@ -3,6 +3,7 @@ import type { ShortcutActionId } from '../../keyboard/shortcuts';
 import { MAX_STEP_ANNOTATIONS } from '../annotate/annotationModel';
 import type { DiagramLinkStatus } from '../capture/linkStatus';
 import { DIAGRAM_FOLD_SHOW_AS, DIAGRAM_SHOW_AS, type DiagramShowAs, type DiagramStep } from '../document/diagramDocument';
+import { importFromFileLabel } from './diagramImportWays';
 import type { DiagramTurnActionId } from './diagramTurnActions';
 
 /**
@@ -38,6 +39,7 @@ export type DiagramStepActionId =
   | 'link-pattern'
   | 'from-references'
   | 'from-fold'
+  | 'import-steps'
   | 'make-turn-over'
   | 'make-rotate'
   | 'refresh-picture'
@@ -258,6 +260,8 @@ export interface DiagramStepActionDeps {
   fromReferences: () => void;
   /** Fill an empty step from the Fold browser. */
   fromFold: () => void;
+  /** Fill an empty step from files: the step import dialog, its first step taking this one's place. */
+  importSteps: () => void;
   /** Replace a References step's card from the References browser, its own card marked. */
   replaceFromReferences: () => void;
   /** Lift a References step's card's marks out of its picture into annotations (17e). */
@@ -552,6 +556,16 @@ export function buildDiagramStepActions(
           state.locked || state.capturing,
           state.locked ? lockedEditHint : capturingHint
         );
+  // And from files, through the step import dialog: its first step fills this one.
+  const importSteps = state.hasSource
+    ? null
+    : command(
+        'import-steps',
+        importFromFileLabel(t),
+        deps.importSteps,
+        state.locked || state.capturing,
+        state.locked ? lockedEditHint : capturingHint
+      );
   // An empty step can be a turn instead (D24): the verbs are noise on any other.
   const makeTurn =
     state.hasSource || state.locked
@@ -693,7 +707,9 @@ export function buildDiagramStepActions(
   const updateFirst = update !== null && !update.disabled && !update.waiting;
   // A step with a picture leads with what is done to it; an empty one with the
   // ways to give it one, or to make it a turn — what its Step pane offers.
-  const first = state.hasSource ? [adjustPose, annotate] : [upload, link, ...present(fromReferences, fromFold), ...makeTurn];
+  const first = state.hasSource
+    ? [adjustPose, annotate]
+    : [upload, link, ...present(fromReferences, fromFold, importSteps), ...makeTurn];
   const picture: DiagramStepGroup['items'] = [
     ...(state.hasSource ? [upload, link] : [adjustPose, annotate]),
     ...present(

@@ -2663,7 +2663,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -2693,7 +2692,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -6081,7 +6079,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -6372,7 +6369,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9038,7 +9037,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -9068,7 +9066,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -12456,7 +12453,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -12747,7 +12743,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15413,7 +15411,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -15443,7 +15440,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -18833,7 +18829,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -19124,7 +19119,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -21743,7 +21740,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -21773,7 +21769,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -24880,7 +24875,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -25154,7 +25148,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -27773,7 +27769,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -27803,7 +27798,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -30910,7 +30904,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -31184,7 +31177,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -33850,7 +33845,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -33880,7 +33874,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -37268,7 +37261,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -37559,7 +37551,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -40225,7 +40219,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -40255,7 +40248,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -43643,7 +43635,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -43934,7 +43925,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -46553,7 +46546,6 @@
     "panels:diagram.card.badgeSimulated": "2469fc9e24d8",
     "panels:diagram.card.badgeSvg": "3edb66ea075e",
     "panels:diagram.card.capturing": "806e32d3e4fa",
-    "panels:diagram.card.fromReferences": "d88745ada393",
     "panels:diagram.card.goToEdit": "6a218c5f7329",
     "panels:diagram.card.lightingChanged": "6e3f79703cdd",
     "panels:diagram.card.link": "5c25e21e1ab7",
@@ -46583,7 +46575,6 @@
     "panels:diagram.detail.previous": "f1fe8694fccd",
     "panels:diagram.detail.title": "f64b4110cc17",
     "panels:diagram.empty.addStep": "839bd5e01e3a",
-    "panels:diagram.empty.fromReferences": "34c9f5453009",
     "panels:diagram.empty.goToEdit": "6a218c5f7329",
     "panels:diagram.empty.link": "bd63b1fe0b1a",
     "panels:diagram.empty.message": "10279760d5d1",
@@ -49690,7 +49681,6 @@
     "panels:diagram.import.reading": "c3ec64928d7d",
     "panels:diagram.import.selected": "be0d38a7574a",
     "panels:diagram.import.formats": "eafac491f8ce",
-    "panels:diagram.empty.import": "ea94509e38cf",
     "panels:diagram.import.batchTooLarge": "f85c542c3ad4",
     "panels:diagram.import.defoxEntryFailed": "dd930b4d6c0b",
     "panels:diagram.import.defoxRegions": "7fa58cf9a182",
@@ -49964,6 +49954,8 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:fold.canvas.creasePatternBackLabel": "168670237703",
     "panels:fold.canvas.showCpBack": "27d5bab8ad95",
-    "panels:fold.canvas.showCpFront": "067ff5e04097"
+    "panels:fold.canvas.showCpFront": "067ff5e04097",
+    "panels:diagram.actions.importFromFile": "c5243d675700",
+    "panels:diagram.import.menuButton": "2cff9baabf56"
   }
 }

@@ -1,19 +1,22 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRight, Bird, BookOpen, CirclePlay, Compass, Import, Link2, PenTool, Plus } from 'lucide-react';
+import { ArrowUpRight, Bird, BookOpen, CirclePlay, Link2, PenTool, Plus } from 'lucide-react';
 import { trackDiagramTutorialOpened } from '../../analytics';
+import type { DiagramImportWayId } from '../../diagram/actions/diagramImportWays';
 import { DIAGRAM_TUTORIAL_URL } from '../../diagram/example/diagramExample';
 import { useOpenDiagramExample } from '../../diagram/example/useOpenDiagramExample';
 import { Button, ButtonLink } from '../ui/Button';
 import { externalAnchorProps } from '../ui/ExternalAnchor';
+import { DiagramImportMenu } from './DiagramImportMenu';
 import styles from './DiagramEmptyState.module.css';
 
 /**
  * A diagram with no steps yet. Useful with no crease pattern at all: a step can
  * be written before it has a picture, or start from a drawing, so the ways in
- * are to add one or import files — or drop them here — and, with a crease
- * pattern open, to link a step to one of its patterns or send steps from
- * References; with none open, Go to Edit stands in for those two (D12). The
- * diagram itself comes into being with that first step, never on open.
+ * are to add one, or to import — files (or drop them here), cards from
+ * References or steps from Fold, under one Import menu — and, with a crease
+ * pattern open, to link a step to one of its patterns; with none open, Go to
+ * Edit stands in for that (D12). The diagram itself comes into being with
+ * that first step, never on open.
  *
  * Under them, for someone new to diagrams, a finished one to open — the
  * example crane, opened as any file is — and the video walkthrough.
@@ -24,22 +27,25 @@ export function DiagramEmptyState({
   onAddStep,
   onImport,
   patternOpen,
+  foldSteps,
   onLink,
-  onFromReferences,
   onGoToEdit,
 }: {
   readOnly: boolean;
   /** Pictures are being dragged over it. */
   dropTarget: boolean;
   onAddStep: () => void;
-  /** Open the step import dialog. */
-  onImport: () => void;
+  /**
+   * A row of the Import menu: the step import dialog, or the References or
+   * Fold browser, whose cards or steps become the first steps.
+   */
+  onImport: (way: DiagramImportWayId) => void;
   /** A crease pattern is open to link a step to. */
   patternOpen: boolean;
+  /** The project's Fold sequence has a step to take. */
+  foldSteps: boolean;
   /** Add a step and choose its pattern. */
   onLink: () => void;
-  /** Open the References browser: its cards become the first steps. */
-  onFromReferences: () => void;
   /** Go to Edit, to open or draw the crease pattern a step links to. */
   onGoToEdit: () => void;
 }) {
@@ -62,20 +68,17 @@ export function DiagramEmptyState({
           <Plus size={15} aria-hidden="true" />
           {t('panels:diagram.empty.addStep', 'Add step')}
         </Button>
-        <Button variant="secondary" disabled={readOnly} onClick={onImport}>
-          <Import size={15} aria-hidden="true" />
-          {t('panels:diagram.empty.import', 'Import…')}
-        </Button>
+        <DiagramImportMenu
+          from="empty_state"
+          disabled={readOnly}
+          patternOpen={patternOpen}
+          foldSteps={foldSteps}
+          onChoose={onImport}
+        />
         {patternOpen && (
           <Button variant="secondary" disabled={readOnly} onClick={onLink}>
             <Link2 size={15} aria-hidden="true" />
             {t('panels:diagram.empty.link', 'Link a pattern…')}
-          </Button>
-        )}
-        {patternOpen && (
-          <Button variant="secondary" disabled={readOnly} onClick={onFromReferences}>
-            <Compass size={15} aria-hidden="true" />
-            {t('panels:diagram.empty.fromReferences', 'From References…')}
           </Button>
         )}
         {!patternOpen && (

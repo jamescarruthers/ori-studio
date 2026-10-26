@@ -702,6 +702,7 @@
         "page": "On the Page",
         "picture": "Picture"
       },
+      "importFromFile": "From File (CP, Defox)…",
       "insert": {
         "rotateAfter": "Rotate After",
         "stepAfter": "Step After",
@@ -1019,7 +1020,6 @@
       "capturing": "Capturing…",
       "enlarged": "Enlarged",
       "enlargedFrom": "Enlarged · {{number}}",
-      "fromReferences": "References…",
       "goToEdit": "Go to Edit",
       "lightingChanged": "Lighting changed",
       "link": "Link…",
@@ -1057,9 +1057,7 @@
     },
     "empty": {
       "addStep": "Add step",
-      "fromReferences": "From References…",
       "goToEdit": "Go to Edit",
-      "import": "Import…",
       "learn": "New to diagrams?",
       "link": "Link a pattern…",
       "message": "A diagram is your folding sequence, one step at a time. Add a step, then give it a picture and an instruction — or import crease patterns, pictures or a Defox project.",
@@ -1195,6 +1193,7 @@
       "layout": "Edit layout preview",
       "layoutHeading": "Edit layout",
       "menu": "Import steps…",
+      "menuButton": "Import",
       "noCanvas": "Couldn’t create an Edit canvas for the import.",
       "noFiles": "No crease patterns, Defox projects or pictures were found.",
       "noRegion": "No paper region was found; the crease pattern is still added to Edit.",

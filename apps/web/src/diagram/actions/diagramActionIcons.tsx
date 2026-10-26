@@ -14,6 +14,7 @@ import {
   FoldVertical,
   Image,
   ImageOff,
+  Import,
   Link2,
   Move,
   PenLine,
@@ -71,6 +72,8 @@ export const DIAGRAM_ACTION_ICONS: Readonly<Record<DiagramActionIconId, LucideIc
   'from-references': Compass,
   // A Fold step's way in and its way back: Fold's own glyph, as its workspace rail draws it.
   'from-fold': FoldVertical,
+  // The empty diagram's Import, which the step import dialog has always been.
+  'import-steps': Import,
   'refresh-picture': RefreshCw,
   // The zoom status's Update.
   'update-enlarged': RefreshCw,

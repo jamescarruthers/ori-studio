@@ -45,6 +45,8 @@ import type {
   DiagramPulledInto,
   DiagramPulledMarks,
   DiagramPulledMode,
+  DiagramImportMenuFrom,
+  DiagramImportWayName,
   DiagramImportedMarkEdit,
   DiagramMarksLiftedVia,
   PaperExportMarkShown,
@@ -309,6 +311,11 @@ export function trackDiagramSourceOpened(workspace: DiagramSourceWorkspace): voi
 /** The References browser opened (D20), and where what it adds would go. */
 export function trackDiagramReferencesBrowserOpened(into: DiagramPulledInto): void {
   track(ANALYTICS_EVENTS.diagramReferencesBrowserOpened, { into });
+}
+
+/** A row chosen in the Diagram's Import menu, and where the menu was. */
+export function trackDiagramImportWayChosen(way: DiagramImportWayName, from: DiagramImportMenuFrom): void {
+  track(ANALYTICS_EVENTS.diagramImportWayChosen, { way, from });
 }
 
 /** Cards pulled from the References browser into the diagram (D20): from which list, where to, how many (bucketed). */
