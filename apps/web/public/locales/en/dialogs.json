@@ -367,6 +367,10 @@
         "text": "This FOLD file describes paper already folded. Import the flat crease pattern instead.",
         "title": "A folded form, not a crease pattern"
       },
+      "layerOrder": {
+        "text": "Fold couldn’t land this layer order. Nothing was imported.",
+        "title": "Couldn’t land this layer order"
+      },
       "noFigure": {
         "text": "Fold the crease pattern flat in Edit first, then start from its folded figure.",
         "title": "No folded figure in Edit"

@@ -1,7 +1,7 @@
 /**
  * The one door into the Layer order dialog (`implementation-plans/layer-order-dialog.md`,
- * row U4). Edit's figures and selection (H3, H5), a Diagram step (H7) and
- * Pose (H8) each build a `LayerOrderRequest` and call
+ * row U4). Edit's figures and selection (H3, H5), a Diagram step (H7), Pose
+ * (H8) and Fold's Import CP (H10) each build a `LayerOrderRequest` and call
  * {@link openLayerOrderDialog}; nothing else outside the dialog imports any
  * of it, and nothing at all but this module imports the dialog's component
  * (`layerOrderBoundary.test.ts`).
@@ -45,6 +45,8 @@ const dialog = lazyModule<LayerOrderDialogModule>(() => import('../../components
   reload: false,
 });
 
+const CANCELLED: LayerOrderDialogOutcome = { kind: 'cancelled' };
+
 /**
  * Open the Layer order dialog on `request`, and answer how it ended.
  *
@@ -54,11 +56,28 @@ const dialog = lazyModule<LayerOrderDialogModule>(() => import('../../components
  * - `busy`: another Layer order dialog is open, and this ask opened nothing;
  * - `unavailable`: the dialog's code did not load (offline); the user has
  *   been told, so the host says nothing more.
+ *
+ * **A host can withdraw its ask** (`options.signal`): when the signal aborts,
+ * the dialog closes and the ask answers `cancelled`, as Cancel does, unless
+ * it has answered already. A host whose own state goes away under an open
+ * dialog (Import CP's flow, let go) withdraws it, so the dialog never
+ * outlives what its Apply would land in. A signal already aborted opens
+ * nothing.
  */
-export function openLayerOrderDialog(request: LayerOrderRequest): Promise<LayerOrderDialogOutcome> {
+export function openLayerOrderDialog(
+  request: LayerOrderRequest,
+  options: { readonly signal?: AbortSignal } = {}
+): Promise<LayerOrderDialogOutcome> {
+  const { signal } = options;
+  if (signal?.aborted) return Promise.resolve(CANCELLED);
   const begun = beginLayerOrderDialog(request);
   if (!('opening' in begun)) return Promise.resolve(begun);
   const { id } = begun.opening;
+  if (signal) {
+    const withdraw = () => withdrawLayerOrderDialog(id);
+    signal.addEventListener('abort', withdraw, { once: true });
+    void begun.outcome.then(() => signal.removeEventListener('abort', withdraw));
+  }
   dialog.load().catch((error: unknown) => {
     // A load that can't reach the server is the browser's, not a defect
     // (`layerOrderLoadFailure.ts`): said once, here, so no host has to, with
@@ -103,7 +122,17 @@ export function useLayerOrderDialogOpening(): LayerOrderDialogOpening | null {
  * For the mount's error boundary. Whether it was still waiting.
  */
 export function abandonLayerOrderDialog(id: number): boolean {
-  return settleLayerOrderDialog(id, { kind: 'cancelled' });
+  return settleLayerOrderDialog(id, CANCELLED);
+}
+
+/**
+ * Close the dialog of opening `id` from outside it, as Cancel would: its
+ * host hears `cancelled`. For a host withdrawing its ask (`signal`), and for
+ * the mount when the route or the workspace changes under the dialog
+ * (`LayerOrderDialogMount`). Whether it was still waiting.
+ */
+export function withdrawLayerOrderDialog(id: number): boolean {
+  return settleLayerOrderDialog(id, CANCELLED);
 }
 
 export function resetLayerOrderDialogGatewayForTest(): void {

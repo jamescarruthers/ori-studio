@@ -22,8 +22,8 @@ export function trackLayerOrderFact(fact: LayerOrderFact): void {
   track(EVENT_OF[fact.event], { ...fact.properties });
 }
 
-/** Where a host's layer order lives: an Edit figure, an Edit selection, a Diagram step, Pose. */
-type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
+/** Where a host's layer order lives: an Edit figure, an Edit selection, a Diagram step, Pose, Fold's Import CP. */
+type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose' | 'fold_import';
 
 /**
  * A host's saved layer constraints need attention after an edit (spec §10):

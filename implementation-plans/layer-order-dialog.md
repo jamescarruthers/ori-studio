@@ -915,6 +915,53 @@ Settled while building H4, for the PRs that meet it:
   refold on them could not draw, is a stale figure on flat creases:
   flagged, opened on them, refolded flat by its Apply.
 
+Settled while building H10 (Fold's Import CP):
+- **The engine route: the import is seeded with the dialog's relations,
+  over faces matched one for one.** Fold's import traces its own faces
+  (`ImportedPattern`), the dialog Oriedita's, so the Fold engine matches the
+  two (`oristudio_fold::steer::ImportedFaces`) by the rule a saved record's
+  faces are found again by: each Oriedita face's interior point lies in one
+  import face, no two in the same one, areas within `AREA_TOLERANCE`, as
+  many faces on each side. `import_layer_opening` builds the dialog's
+  source from the import's own stored `cpJson` the way Edit folds it whole
+  (`CpSession::fold_source_of_selection`, every line, face 1), matches the
+  faces, and draws the import's default pick over Oriedita's faces as the
+  `shown` scene; `import_pick_layer_order` turns Apply's relations into the
+  import's seeds through the match (`ImportedPattern::oriedita_face_seeds`,
+  the body Start from Edit's figure already used) and lands the unique
+  completion as a pick lands a card. Exact: every pair the dialog relates is
+  fixed as it chose it, the letters decide the rest, and an order left open
+  is refused rather than guessed. Tested natively (every order the dialog
+  steps through lands as that order, and they are the chooser's orders, on
+  kabuto and `solution_sample_1`), in wasm (stack for stack) and in the
+  browser.
+- **The dialog opens on the import's default pick,** held whole, so an
+  untouched Apply (`unchanged`) lands that pick: today's import, step for
+  step. Its look is Fold's: the sequence's paper through Fold's policy, from
+  the side Fold shows and turned as Fold turns it (`ImportedFaces::look`).
+- **One order goes straight through,** as it did: the import's own count
+  says so for free. A truncated count opens the dialog.
+- **When the dialog can't take it** (`busy`, `unavailable`, or the engine
+  can't match the faces — an unassigned crease Fold folds and Edit doesn't),
+  the canvas chooser asks, as before H10; `busy` says so in a toast, and the
+  gateway already says why for `unavailable`.
+- **From the review (#541):**
+  - *A host can withdraw its ask:* `openLayerOrderDialog(request, { signal })`
+    closes the dialog when the signal aborts, answering `cancelled`. Import
+    CP's flow aborts it when it lets the import go: a reset, a dispose (Back
+    or a workspace switch unmounts Import CP), a newer request, or the step it
+    goes after moving under the dialog (an undo).
+  - *The mount closes the dialog when the route or the workspace changes
+    under it,* for every host: an Apply never lands in a place the user left.
+  - *A refusal of the dialog's order* (`import_order_open`,
+    `import_budget_exceeded`, any) says "Fold couldn't land this layer order.
+    Nothing was imported.", with no Search longer; the pick spends the limits
+    the import was opened with.
+  - *The dialog's code is fetched only once an import reports several
+    orders,* never on Import CP's open.
+  - *The face match is checked both ways:* each import face's witness lies in
+    the Oriedita face it was matched to (`face_at_paper`), as a restore checks.
+
 ### Risks
 
 - **Display fidelity on real files.**
@@ -1079,7 +1126,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] H2: host engine (#512)
 - [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
 - [ ] Your test feedback: no per-object × and exact undo of every action (#539)
-- [ ] H10: Fold's Import CP chooses its order in the dialog
+- [x] H10: Fold's Import CP chooses its order in the dialog (#541)
 - [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)

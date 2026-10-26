@@ -377,6 +377,10 @@
         "text": "Este archivo FOLD describe papel ya plegado. Importa en su lugar el patrón de pliegues plano.",
         "title": "Una forma plegada, no un patrón de pliegues"
       },
+      "layerOrder": {
+        "text": "No se pudo aplicar este orden de capas. No se importó nada.",
+        "title": "No se pudo aplicar este orden de capas"
+      },
       "noFigure": {
         "text": "Pliega primero en plano el patrón en Editar y luego empieza desde su figura plegada.",
         "title": "No hay figura plegada en Editar"

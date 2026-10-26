@@ -162,6 +162,7 @@
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
   "layerOrder": {
+    "foldImportBusy": "Die Lagenreihenfolge ist schon geöffnet. Wähle die Lagenreihenfolge dieses Faltmusters daher auf der Leinwand.",
     "folds3d": "Die Faltlinien dieses Modells falten sich jetzt in 3D, und die Lagenreihenfolge gilt für flache Faltungen. Falte es neu, um es zu sehen.",
     "refoldKept": "Die Lagenvorgaben von {{name}} brauchen Aufmerksamkeit, daher behält es sein Bild.",
     "refoldKeptChosenOrder": "Die gewählte Lagenreihenfolge von {{name}} braucht Aufmerksamkeit, daher behält es sein Bild.",
