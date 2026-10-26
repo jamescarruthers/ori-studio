@@ -299,8 +299,9 @@ export interface LayerSolutionsState {
   /**
    * The ways a step proved nothing lies from the order on screen (E9), both
    * kept: a › that runs out or ends after a ‹ that ended leaves ‹ waiting.
-   * Let go when the order moves, the generation or what it steps by changes,
-   * or the position is read at another index.
+   * Let go when the order moves or the generation or what it steps by
+   * changes; never by a read of its position, whose index moves with the
+   * count until the total is exact.
    */
   readonly ended: LayerProvedEnds;
 }

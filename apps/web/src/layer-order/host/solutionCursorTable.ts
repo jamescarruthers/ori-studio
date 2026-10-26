@@ -395,10 +395,11 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
               break;
             case 'end': {
               // Nothing moved: where it stands is known now, for the readout, and that way is proved
-              // to end (E9), so its verb waits there; the other way's proof, from the same place, stays.
+              // to end (E9), so its verb waits there; the other way's proof, of the same order by the
+              // same thing, stays, though the index moved as the count found solutions before it.
               const key = stepByKey(by);
               const before = cursor.place;
-              const same = before?.by === key && before.value.position.index === answer.position.index;
+              const same = before?.by === key;
               cursor.place = {
                 by: key,
                 value: {

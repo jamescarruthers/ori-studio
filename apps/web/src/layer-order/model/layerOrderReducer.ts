@@ -366,7 +366,10 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
       return state.pointedVerb === action.verb ? state : { ...state, pointedVerb: action.verb };
     case 'verb_set':
       if (!builderLive(state)) return state;
-      return edited(state, { ...state, sentence: setVerb(state.sentence, action.verb), pointedVerb: null });
+      // An edit like a pick: the line is the sentence's check now, a step's running out let go.
+      return withoutStepRanOut(
+        edited(state, { ...state, sentence: setVerb(state.sentence, action.verb), pointedVerb: null })
+      );
     case 'reason_hovered':
       return state.hover.reason === action.on ? state : { ...state, hover: { ...state.hover, reason: action.on } };
     case 'add':
@@ -452,18 +455,20 @@ function withoutStepRanOut(state: LayerOrderDialogState): LayerOrderDialogState 
 }
 
 /**
- * The solutions with the order on screen read at `position` by `by`: the ends
- * a step proved stay while it is read at the same place by the same thing, and
- * go otherwise.
+ * The solutions with the order on screen read at `position` by `by`. A read
+ * never moves the order, so the ends a step proved of it stay: before the
+ * count is exact its index moves as the count finds solutions before it, and
+ * a read for another side, late, proves nothing either way. What does move
+ * the order or what the stepper steps by lets them go where it happens (a
+ * step that moved, an order put back, an open or commit, `repositioned`), and
+ * an end is only kept when proved by what the stepper steps by (`stepped`).
  */
 function positionedAt(
   solutions: LayerOrderDialogState['solutions'],
   position: LayerPosition,
   by: LayerStepBy
 ): LayerOrderDialogState['solutions'] {
-  const positionBy = stepByKey(by);
-  const same = solutions.positionBy === positionBy && solutions.position?.index === position.index;
-  return { ...solutions, position, positionBy, ended: same ? solutions.ended : NO_PROVED_ENDS };
+  return { ...solutions, position, positionBy: stepByKey(by) };
 }
 
 // ---------------------------------------------------------------------------

@@ -1047,6 +1047,20 @@ describe('solutions: the count and the stepper', () => {
     expect(play(ranOut.state, { type: 'sentence_cleared' }).state.solutions.step).toEqual({ kind: 'idle' });
   });
 
+  it('a step that ran out lets the line go to a verb changed too: the sentence’s check is said', () => {
+    const subject = play(countingAt(opened().state, 2, 4), { type: 'face_picked', face: 2, origin: 'pattern' });
+    const sentence = play(subject.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const ranOut = pressed(sentence.state, 'next', 'timed_out');
+    expect(hintLine(ranOut.state)?.text.key).toBe('step_timed_out');
+    const verb = ranOut.state.sentence.verb === 'behind' ? 'in_front_of' : 'behind';
+    const changed = play(ranOut.state, { type: 'verb_set', verb });
+    expect(changed.state.sentence.verb).toBe(verb);
+    expect(changed.state.solutions.step).toEqual({ kind: 'idle' });
+    // The changed sentence is checked, and the line says so rather than the step's old news.
+    expect(lastOf(changed.effects, 'preview')).toBeDefined();
+    expect(hintLine(changed.state)).toMatchObject({ tone: 'busy', text: { key: 'checking' } });
+  });
+
   it('keeps both ends a step proved from the order on screen: neither undoes the other (E9)', () => {
     const counting = countingAt(opened().state, 1, 1);
     const back = pressed(counting, 'previous', 'end').state;
@@ -1062,7 +1076,46 @@ describe('solutions: the count and the stepper', () => {
     expect(countingAt(both, 1, 1).solutions.ended).toEqual({ previous: true, next: true });
   });
 
-  it('lets proved ends go when the order moves, is read at another place, or is stepped by something else', () => {
+  it('keeps a proved end through the count’s slices, though the index moves as it finds solutions before (E9)', () => {
+    const last = pressed(countingAt(opened().state, 5, 5), 'next', 'end').state;
+    expect(statusView(last)?.stepper?.next).toBe(false);
+    // The count finds three more, all before the order on screen: its index moves to 8, and › stays proved.
+    const later = countingAt(last, 8, 8);
+    expect(later.solutions.ended).toEqual({ previous: false, next: true });
+    expect(statusView(later)?.stepper).toMatchObject({ index: 8, next: false, waits: { next: 'last' } });
+    // And again on the next slice.
+    expect(statusView(countingAt(later, 11, 11))?.stepper?.next).toBe(false);
+  });
+
+  it('keeps an end proved by a step that ran while the figure turned over and back, once its reads arrive', () => {
+    const at = countingAt(opened().state, 5, 5);
+    const stepping = play(at, { type: 'step', direction: 'next' });
+    // Turned over and straight back while it ran: the stepper steps by the front again, its position read anew.
+    const turned = play(stepping.state, { type: 'side_set', side: 'back' }, { type: 'side_set', side: 'front' });
+    const ended = play(turned.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'end' },
+    }).state;
+    expect(ended.solutions.ended).toEqual({ previous: false, next: true });
+    // The reads asked by the turns land, the back's late: the front's proof stays.
+    const backRead = dispatch(ended, {
+      type: 'solutions_positioned',
+      generation: ended.solutions.generation,
+      by: { picture: 'back' },
+      position: position(2, 5, false),
+    }).state;
+    const frontRead = dispatch(backRead, {
+      type: 'solutions_positioned',
+      generation: ended.solutions.generation,
+      by: { picture: 'front' },
+      position: position(5, 5, false),
+    }).state;
+    expect(frontRead.solutions.ended).toEqual({ previous: false, next: true });
+    expect(statusView(frontRead)?.stepper?.next).toBe(false);
+  });
+
+  it('lets proved ends go when the order moves, or is stepped by something else', () => {
     const back = pressed(countingAt(opened().state, 2, 4), 'previous', 'end');
     expect(back.state.solutions.ended).toEqual({ previous: true, next: false });
     // Moved: another order, nothing proved of it.
@@ -1080,8 +1133,6 @@ describe('solutions: the count and the stepper', () => {
     });
     expect(moved.state.solutions.ended).toEqual({ previous: false, next: false });
     expect(statusView(moved.state)?.stepper?.previous).toBe(true);
-    // Read at another index.
-    expect(countingAt(back.state, 3, 4).solutions.ended).toEqual({ previous: false, next: false });
     // X-ray: steps by every layer order now.
     expect(play(back.state, { type: 'xray_set', on: true }).state.solutions.ended).toEqual({ previous: false, next: false });
   });

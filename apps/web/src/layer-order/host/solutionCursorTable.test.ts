@@ -235,6 +235,24 @@ describe('the hosts’ solutions-cursor table', () => {
     expect(solutionPlaceEnds(table.place(thing)!)).toEqual({ first: true, last: true, only: true });
   });
 
+  it('keeps a proved end when the next end reads the same order at another index, the count gone on', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    gateway.open.mockReturnValueOnce(
+      scriptedSolutionCursor([
+        { outcome: 'end', position: solutionPosition(5, 5, false), counted: true },
+        { outcome: 'end', position: solutionPosition(8, 8, false), counted: true },
+      ])
+    );
+    for (const direction of ['next', 'previous'] as const) {
+      const turn = table.begin(thing, 0);
+      await turn.step({ ...ask, direction });
+      turn.end(() => thing, 0);
+    }
+    expect(table.place(thing)).toEqual({ position: solutionPosition(8, 8, false), counted: true, ended: BOTH });
+    expect(solutionPlaceEnds(table.place(thing)!)).toMatchObject({ first: true, last: true });
+  });
+
   it('lets proved ends go when a step lands elsewhere', async () => {
     const [table] = tables;
     const thing = { id: 'step', holds: 'a' };
