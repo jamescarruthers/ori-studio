@@ -1135,7 +1135,7 @@ Settled while building H10 (Fold's Import CP):
 - [x] H5: Fold with layer order… (#526)
 - [ ] H5 on Shift+G: your ask 2026-10-26, "can you please wire up Shift + G
       to be fold with layer constraints" — Shift+G under both layouts, named
-      in the selection toolbar's tooltips beside Fold's G (`claude/lo-shift-g`)
+      in the selection toolbar's tooltips beside Fold's G (#553)
 - [x] H6: Edit "Another solution" within constraints (#528)
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
