@@ -28,11 +28,17 @@ import {
   UNSEARCHED_FRONTIER,
   type SolutionFrontier,
 } from '../../lib/layerOrderPlace';
+import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
+import type { PaperFrame } from '../../lib/layerOrder/paperFrame';
 import type { DiagramStyle } from '../document/diagramDocument';
 import {
+  foldAppliedOrder,
   foldWithLayerOrder,
+  heldFoldSource,
+  layerOrderDigestOf,
   LayerOrderNotShownError,
   type CaptureLayerOrderResolve,
+  type StepFoldSource,
   type StepLayerOrder,
 } from './captureLayerOrder';
 import { foldedMirrorAxes } from './mirrorAxes';
@@ -62,10 +68,17 @@ export interface CaptureSessionDeps {
   env?: SanitizeEnv;
 }
 
-/** Which fold a session holds: what it was folded from, so a change of either folds again. */
+/** Which fold a session holds: what it was folded from, so a change of any of it folds again. */
 interface FoldKey {
   document: OristudioCpDocumentSnapshot;
   lineIds: string;
+  /**
+   * The layer order it is drawn in (H7, H8): the digest of the step's record
+   * as asked (`layerOrderDigestOf`), or null for the kernel's own
+   * enumeration — and always null for a 3D fold, which draws no record's
+   * order. A digest, so the key stays short however large the record.
+   */
+  layerOrder: string | null;
 }
 
 /**
@@ -77,11 +90,17 @@ export interface HeldLayerOrder {
   resolve: CaptureLayerOrderResolve;
 }
 
-/** The layer order a held flat fold shows: the record it was asked in, and the record of what it shows. */
+/** An order the Layer order dialog applied, and the step's paper frame its record is saved in (H8). */
+export interface AppliedLayerOrder {
+  applied: LayerOrderApplied;
+  frame: PaperFrame;
+}
+
+/** The layer order a held flat fold shows: the record of what it shows, beside the one it was asked in (its key's). */
 interface HeldOrder {
-  /** The step's record as asked: the hold is this fold for it, or for {@link HeldOrder.shown}'s. */
-  asked: string;
   shown: StepLayerOrder;
+  /** The digest of {@link HeldOrder.shown}'s text: the hold is this fold for it too. */
+  shownDigest: string;
   attention: LayerOrderAttention | null;
 }
 
@@ -154,6 +173,39 @@ export interface CaptureSession {
     knownCases?: number,
     layerOrder?: HeldLayerOrder | null
   ) => Promise<FlatFoldState>;
+  /**
+   * The flat fold of these lines from this document, on `side`, in an order
+   * the Layer order dialog applied (H8): `applied.relations` folded on
+   * `applied.source` into a new figure (`fold_with_order`), which replaces
+   * the fold held — never a change to it, so an undo finds the fold it had
+   * gone, not redrawn in the undone order. It is held for the record it is
+   * saved as, in the step's paper frame (`frame`). Null when the kernel
+   * cannot draw the order (D3): nothing was made, and the fold held stays.
+   */
+  flatWithOrder: (
+    document: OristudioCpDocumentSnapshot,
+    lineIds: readonly number[],
+    side: 'front' | 'back',
+    applied: AppliedLayerOrder
+  ) => Promise<FlatFoldState | null>;
+  /**
+   * What the held flat fold was made from and the paper it lies on, as it
+   * stands (`heldFoldSource`): the Layer order dialog's source for it, read
+   * with no fold (H8).
+   */
+  heldFlatSource: () => Promise<StepFoldSource>;
+  /**
+   * Whether the session holds the flat fold of these lines from this document
+   * drawn in `layerOrder` — a record's text, or null for the kernel's own —
+   * as `flat` would find it: no fold and no restore needed.
+   */
+  holdsFlat: (document: OristudioCpDocumentSnapshot, lineIds: readonly number[], layerOrder: string | null) => boolean;
+  /**
+   * Let go of the held flat fold unless it is drawn in `layerOrder` — a
+   * record's text, or null for the kernel's own enumeration: after an undo or
+   * redo, the fold of an order the step no longer has (H8). Whether it let go.
+   */
+  releaseUnlessIn: (layerOrder: string | null) => boolean;
   /** Turn the held flat fold over: a model change, no fold. */
   turnOver: () => Promise<FlatFoldState>;
   /** The held flat fold's next solution, on the same handle. */
@@ -239,11 +291,21 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     if (epoch === deps.epoch()) deps.release(handle);
   };
 
+  /** Whether `hold` is drawn in the order a step asks for (a record's digest, or null): its key's, or the one it showed. */
+  const sameOrder = (hold: FlatHold, asked: string | null): boolean =>
+    asked === hold.layerOrder || (hold.order !== null && asked === hold.order.shownDigest);
+
+  /** Whether the fold held is the one `key` names: of its document and lines, a flat one in its layer order. */
   const live = (key: FoldKey): boolean =>
     held !== null &&
     held.epoch === deps.epoch() &&
     held.document === key.document &&
-    held.lineIds === key.lineIds;
+    held.lineIds === key.lineIds &&
+    (held.kind === 'spatial' || sameOrder(held, key.layerOrder));
+
+  /** A record's text as a key names it; null for none. */
+  const orderKey = (layerOrder: string | null | undefined): string | null =>
+    layerOrder == null ? null : layerOrderDigestOf(layerOrder);
 
   const take = (handle: number) => {
     deps.retain(handle);
@@ -288,9 +350,12 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     layerOrder: hold.order ? { order: hold.order.shown, attention: hold.order.attention, fresh } : null,
   });
 
-  /** Whether `hold` is drawn in the order a step asks for: none, or its record's (or the record of what it showed). */
-  const sameOrder = (hold: FlatHold, asked: string | null): boolean =>
-    hold.order === null ? asked === null : asked === hold.order.asked || asked === hold.order.shown.json;
+  /** The order a hold shows, as it keeps it. */
+  const heldOrder = (shown: StepLayerOrder, attention: LayerOrderAttention | null): HeldOrder => ({
+    shown,
+    shownDigest: layerOrderDigestOf(shown.json),
+    attention,
+  });
 
   /** A flat fold of these lines, in the kernel's first order or in a record's, held. */
   const foldFlat = async (
@@ -333,7 +398,7 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
       handle: state.handle,
       epoch,
       side,
-      order: { asked: layerOrder.order.json, shown: shown.layerOrder, attention: shown.attention },
+      order: heldOrder(shown.layerOrder, shown.attention),
       state,
       // Its order is the record's, not a step of an enumeration.
       reached: { cases: 1, complete: true },
@@ -343,9 +408,8 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
 
   return {
     async flat(document, lineIds, side, foldCase, knownCases = 0, layerOrder = null) {
-      const key: FoldKey = { document, lineIds: lineIds.join(',') };
-      const asked = layerOrder?.order.json ?? null;
-      const fresh = !live(key) || held?.kind !== 'flat' || !sameOrder(held, asked);
+      const key: FoldKey = { document, lineIds: lineIds.join(','), layerOrder: orderKey(layerOrder?.order.json) };
+      const fresh = !live(key) || held?.kind !== 'flat';
       if (fresh) {
         held = await foldFlat(key, lineIds, side, layerOrder);
         settle(held, held.state);
@@ -362,6 +426,58 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
         settle(hold, await deps.search((runtime) => runtime.foldToCase(hold.handle, foldCase)));
       }
       return flatState(hold, fresh);
+    },
+
+    async flatWithOrder(document, lineIds, side, { applied, frame }) {
+      const ticket = ++generation;
+      const model = captureModel(document, side);
+      const shown = await deps.search((runtime) => foldAppliedOrder(runtime, applied, model, frame));
+      // Let go of while it folded: a refusal made nothing to free; a figure is freed by `adopt`.
+      if (shown.kind !== 'shown') {
+        if (ticket !== generation) throw new CaptureSessionClosedError();
+        return null;
+      }
+      const epoch = adopt(ticket, shown.state.handle);
+      // The fold it replaces goes only once the new one is held: a refusal leaves it as it was.
+      release();
+      const { handle: _handle, ...state } = shown.state;
+      const hold: FlatHold = {
+        kind: 'flat',
+        document,
+        lineIds: lineIds.join(','),
+        layerOrder: layerOrderDigestOf(shown.layerOrder.json),
+        handle: shown.state.handle,
+        epoch,
+        side,
+        order: heldOrder(shown.layerOrder, shown.attention),
+        state,
+        reached: { cases: 1, complete: true },
+        read: null,
+      };
+      held = hold;
+      settle(hold, state);
+      return flatState(hold, true);
+    },
+
+    async heldFlatSource() {
+      const hold = flatHold();
+      return heldFoldSource(
+        deps.runtime(),
+        hold.handle,
+        captureModel(hold.document, hold.side),
+        // Its paper as read for its picture, when it has been: the fold as it stands.
+        hold.read ? hold.read.scene : undefined
+      );
+    },
+
+    holdsFlat(document, lineIds, layerOrder) {
+      return held?.kind === 'flat' && live({ document, lineIds: lineIds.join(','), layerOrder: orderKey(layerOrder) });
+    },
+
+    releaseUnlessIn(layerOrder) {
+      if (held?.kind !== 'flat' || sameOrder(held, orderKey(layerOrder))) return false;
+      letGo();
+      return true;
     },
 
     async turnOver() {
@@ -393,13 +509,13 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     heldFlatPicture({ document, side, foldCase, layerOrder = null }, rotationDeg, spread) {
       if (held?.kind !== 'flat' || held.epoch !== deps.epoch() || held.document !== document) return null;
       if (!held.read || held.side !== side || flatState(held).foldCase !== foldCase) return null;
-      if (!sameOrder(held, layerOrder)) return null;
+      if (!sameOrder(held, orderKey(layerOrder))) return null;
       // A preview, never stored: no faces on the paper, which only a stored capture is anchored by.
       return flatPicture(held.read, rotationDeg, deps.env, spread, { faces: false });
     },
 
     async spatial(document, lineIds) {
-      const key: FoldKey = { document, lineIds: lineIds.join(',') };
+      const key: FoldKey = { document, lineIds: lineIds.join(','), layerOrder: null };
       if (live(key) && held?.kind === 'spatial') return held;
       release();
       const ticket = ++generation;
