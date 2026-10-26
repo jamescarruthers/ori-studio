@@ -460,13 +460,22 @@ const FOLD_TO_DIAGRAM_ACTIONS: Partial<Record<MenuActionId, FoldSendToDiagramSco
   'fold.send-path-to-diagram': 'path',
 };
 
+/** The examples' File menu entries: data-driven, so the id carries the example (`file.openExample:<id>`). */
+const OPEN_EXAMPLE_PREFIX = 'file.openExample:';
+
 /**
  * What an open modal dialog ({@link isShortcutBarrierOpen}) holds back from the
  * menus: the actions that change the workspace behind it. Undo and redo would
  * rewind a document the dialog covers, and a view switch would move the
- * workspace out from under a dialog opened over it. A key stops at the dialog
+ * workspace out from under a dialog opened over it. The rest would replace the
+ * document under it, or load another into it: the File menu's New, Open,
+ * Import (Add), Import Diagram Steps and Detect CP from Image, and Fold's
+ * Import CP, Start from Edit's Folded Figure, Send to Edit and Send to Diagram.
+ * The examples and Fold's samples are held by their prefix
+ * ({@link HELD_BEHIND_MODAL_PREFIXES}). A key stops at the dialog
  * (`handleAppKeyDown`), but a menu reaches {@link handleMenuAction} with no key
- * to stop — so the native Edit ▸ Undo undid the workspace behind any modal.
+ * to stop — so the native menu ran every one of these behind any modal. A file
+ * opened from the Finder is refused for the same reason (`useTauriOpenedFiles`).
  *
  * Only these. Settings, About and the exports open over a dialog on purpose;
  * `App.tsx` stacks the modals for it.
@@ -479,7 +488,24 @@ const HELD_BEHIND_MODAL_ACTIONS: ReadonlySet<MenuActionId> = new Set<MenuActionI
   'edit.redo',
   ...(Object.keys(VIEW_PANEL_ACTIONS) as MenuActionId[]),
   'cp.analyzeReferences',
+  'file.new',
+  'file.open',
+  'file.importAdd',
+  'file.importDiagramSteps',
+  'file.detectCpImage',
+  'fold.import-cp',
+  'fold.start-from-edit-folded-figure',
+  'fold.send-to-edit',
+  'fold.send-to-diagram',
+  'fold.send-path-to-diagram',
 ]);
+
+/**
+ * The held actions named by a prefix: the examples, whose ids carry the example
+ * outside the static union, and Fold's samples, so a sample added later is
+ * held without a line here.
+ */
+const HELD_BEHIND_MODAL_PREFIXES: readonly string[] = [OPEN_EXAMPLE_PREFIX, 'fold.import-sample-'];
 
 /**
  * The held actions that a dialog with a history of its own takes instead
@@ -497,8 +523,11 @@ export function isMenuActionId(id: string): id is MenuActionId {
   return (MENU_ACTION_IDS as readonly string[]).includes(id);
 }
 
-function isHeldBehindModal(id: string): id is MenuActionId {
-  return isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id) && isShortcutBarrierOpen();
+function isHeldBehindModal(id: string): boolean {
+  const held =
+    HELD_BEHIND_MODAL_PREFIXES.some((prefix) => id.startsWith(prefix)) ||
+    (isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id));
+  return held && isShortcutBarrierOpen();
 }
 
 /**
@@ -506,8 +535,8 @@ function isHeldBehindModal(id: string): id is MenuActionId {
  * True when that took a step. False for every other held action, and for Undo
  * and Redo with no history registered or nothing left in it.
  */
-function runInsteadBehindModal(id: MenuActionId): boolean {
-  const verb = MODAL_HISTORY_VERBS[id];
+function runInsteadBehindModal(id: string): boolean {
+  const verb = isMenuActionId(id) ? MODAL_HISTORY_VERBS[id] : undefined;
   return verb !== undefined && runModalHistory(verb);
 }
 
@@ -532,8 +561,6 @@ function runInsteadBehindModal(id: MenuActionId): boolean {
  * they differ only in the `CpExactSolveRunKind` each run is registered under.
  */
 export const CP_EXACT_SOLVE_REQUEST_EVENT = 'ori-studio:cp-exact-solve';
-
-const OPEN_EXAMPLE_PREFIX = 'file.openExample:';
 
 export function createMenuActionHandler(deps: MenuActionDependencies) {
   const showWorkspace = () => (deps.showWorkspace ?? showActiveWorkspace)();
