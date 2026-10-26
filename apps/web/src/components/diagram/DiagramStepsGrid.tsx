@@ -9,6 +9,7 @@ import {
   type DiagramTurn,
 } from '../../diagram/document/diagramDocument';
 import { GRID_DROP_TARGET } from '../../diagram/upload/useStepPictureDrop';
+import type { DiagramImportWayId } from '../../diagram/actions/diagramImportWays';
 import { DIAGRAM_STEPS_ATTRIBUTE } from '../../diagram/actions/diagramShortcuts';
 import type { DiagramCardLinks } from '../../diagram/capture/useCardLinks';
 import type { StepPageFit } from '../../diagram/pages/pageOverflow';
@@ -41,8 +42,9 @@ export function DiagramStepsGrid({
   links,
   pageFits,
   patternOpen,
+  foldSteps,
   onLink,
-  onFromReferences,
+  onImport,
   onOpenIn,
   onGoToEdit,
   onAppend,
@@ -70,10 +72,12 @@ export function DiagramStepsGrid({
   pageFits: ReadonlyMap<string, StepPageFit>;
   /** A crease pattern is open to link an empty step to. */
   patternOpen: boolean;
+  /** The project's Fold sequence has a step to take into an empty step. */
+  foldSteps: boolean;
   /** Choose a pattern for a step, from a click on its card. */
   onLink: (stepId: string) => void;
-  /** Fill an empty step from the References browser, from a click on its card. */
-  onFromReferences: (stepId: string) => void;
+  /** Fill an empty step from files, References or Fold, from its card's Import menu. */
+  onImport: (stepId: string, way: DiagramImportWayId) => void;
   /** Open a step in Pose or Annotate, from the buttons over its picture. */
   onOpenIn: (stepId: string, mode: 'pose' | 'annotate') => void;
   /** Go to Edit, from an empty card when no crease pattern is open. */
@@ -132,9 +136,10 @@ export function DiagramStepsGrid({
             areaChanged={enlarged.get(slot.entry.id)?.changed === true}
             capture={links.captures[slot.entry.id] ?? null}
             patternOpen={patternOpen}
+            foldSteps={foldSteps}
             onLink={onLink}
             onStop={links.stop}
-            onFromReferences={onFromReferences}
+            onImport={onImport}
             onOpenIn={onOpenIn}
             onGoToEdit={onGoToEdit}
             onMakeTurn={onMakeTurn}

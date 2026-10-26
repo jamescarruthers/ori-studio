@@ -731,6 +731,7 @@
         "page": "Sur la page",
         "picture": "Image"
       },
+      "importFromFile": "Depuis un fichier (CP, Defox)…",
       "insert": {
         "rotateAfter": "Rotation après",
         "stepAfter": "Étape après",
@@ -1053,7 +1054,6 @@
       "capturing": "Capture…",
       "enlarged": "Agrandie",
       "enlargedFrom": "Agrandie · {{number}}",
-      "fromReferences": "Références…",
       "goToEdit": "Aller dans Édition",
       "lightingChanged": "L’éclairage a changé",
       "link": "Lier…",
@@ -1091,9 +1091,7 @@
     },
     "empty": {
       "addStep": "Ajouter une étape",
-      "fromReferences": "Depuis Références…",
       "goToEdit": "Aller dans Édition",
-      "import": "Importer…",
       "learn": "Première fois avec les diagrammes ?",
       "link": "Lier un patron…",
       "message": "Un diagramme présente votre séquence de pliage, étape par étape. Ajoutez une étape, une image et une instruction, ou importez des patrons de plis, des images ou un projet Defox.",
@@ -1232,6 +1230,7 @@
       "layout": "Aperçu de la disposition dans Édition",
       "layoutHeading": "Disposition dans Édition",
       "menu": "Importer des étapes…",
+      "menuButton": "Importer",
       "noCanvas": "Impossible de créer un canevas Édition pour l’importation.",
       "noFiles": "Aucun patron de plis, projet Defox ou image trouvé.",
       "noRegion": "Aucune région de papier trouvée\u00a0; le patron de plis est tout de même ajouté à Édition.",

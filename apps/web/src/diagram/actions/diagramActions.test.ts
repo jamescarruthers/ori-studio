@@ -35,6 +35,7 @@ function deps(): DiagramStepActionDeps {
     makeMarksEditable: vi.fn(),
     fromReferences: vi.fn(),
     fromFold: vi.fn(),
+    importSteps: vi.fn(),
     showAs: vi.fn(),
     duplicateAs: vi.fn(),
     adjustPose: vi.fn(),
@@ -135,6 +136,7 @@ describe('the diagram step verbs', () => {
       'upload-picture',
       'link-pattern',
       'from-references',
+      'import-steps',
       'make-turn-over',
       'make-rotate',
       'duplicate',
@@ -661,6 +663,22 @@ describe('the diagram step verbs', () => {
     diagramStepCommand(offered, 'from-fold')?.run();
     expect(bound.fromFold).toHaveBeenCalledOnce();
     expect(diagramStepCommand(build({ foldSteps: true, hasSource: true }), 'from-fold')).toBeNull();
+  });
+
+  it('fills an empty step from files, with or without a pattern open, as its card’s Import menu does', () => {
+    const bound = deps();
+    const offered = build({ patternOpen: false }, bound);
+    expect(diagramStepCommand(offered, 'import-steps')).toMatchObject({
+      label: 'From File (CP, Defox)…',
+      disabled: false,
+    });
+    diagramStepCommand(offered, 'import-steps')?.run();
+    expect(bound.importSteps).toHaveBeenCalledOnce();
+    expect(diagramStepCommand(build({ locked: true }), 'import-steps')?.disabled).toBe(true);
+    expect(diagramStepCommand(build({ readOnly: true }), 'import-steps')?.disabled).toBe(true);
+    expect(diagramStepCommand(build({ capturing: true }), 'import-steps')?.disabled).toBe(true);
+    // Only for an empty step: the header's Import steps… adds after one with a picture.
+    expect(diagramStepCommand(build({ hasSource: true, hasPicture: true }), 'import-steps')).toBeNull();
   });
 });
 

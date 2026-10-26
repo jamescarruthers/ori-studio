@@ -9,6 +9,7 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep, fixedPicture, scenePicture } from '../../diagram/document/diagramSteps.fixtures';
+import type { DiagramImportWayId } from '../../diagram/actions/diagramImportWays';
 import type { DiagramCardLinks } from '../../diagram/capture/useCardLinks';
 import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { DiagramStepsGrid } from './DiagramStepsGrid';
@@ -64,7 +65,9 @@ function render(
     onUpload?: (stepId: string) => void;
     links?: Partial<DiagramCardLinks>;
     patternOpen?: boolean;
+    foldSteps?: boolean;
     onLink?: (stepId: string) => void;
+    onImport?: (stepId: string, way: DiagramImportWayId) => void;
     pageFits?: ReadonlyMap<string, StepPageFit>;
     onAppend?: () => void;
     onInsertBefore?: (stepId: string) => void;
@@ -102,8 +105,9 @@ function render(
         }}
         pageFits={options.pageFits ?? new Map()}
         patternOpen={options.patternOpen ?? false}
+        foldSteps={options.foldSteps ?? false}
         onLink={options.onLink ?? vi.fn()}
-        onFromReferences={vi.fn()}
+        onImport={options.onImport ?? vi.fn()}
         onAppend={options.onAppend}
         onInsertBefore={options.onInsertBefore}
         onOpenIn={options.onOpenIn ?? vi.fn()}
@@ -393,8 +397,8 @@ describe('DiagramStepsGrid', () => {
     render(null);
     expect(listbox().getAttribute('aria-label')).toBe('Steps');
     expect(options().map((option) => option.textContent)).toEqual([
-      'Step 1EmptyNo picture yetUpload…Go to Editor a turnTurn overRotateNo instruction',
-      'Step 2EmptyNo picture yetUpload…Go to Editor a turnTurn overRotateFold the corner\nto the centre.',
+      'Step 1EmptyNo picture yetUpload…Go to EditImportor a turnTurn overRotateNo instruction',
+      'Step 2EmptyNo picture yetUpload…Go to EditImportor a turnTurn overRotateFold the corner\nto the centre.',
       'Step 3NewerMade with a newer Ori StudioNo instruction',
     ]);
   });
@@ -592,6 +596,27 @@ describe('DiagramStepsGrid', () => {
     for (const button of host?.querySelectorAll('button') ?? []) {
       expect(button.getAttribute('aria-hidden')).toBe('true');
     }
+  });
+
+  it('offers an empty card’s Import menu, whose every way fills that step, References with a pattern open and Fold with a step to take', () => {
+    const onImport = vi.fn();
+    render(null, vi.fn(), { onImport, patternOpen: true, foldSteps: true });
+    const trigger = [...options()[1]!.querySelectorAll('button')].find((button) => button.textContent === 'Import')!;
+    const choose = (name: string) => {
+      act(() => trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 })));
+      const row = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (item) => item.textContent === name
+      );
+      act(() => row?.click());
+    };
+    choose('From File (CP, Defox)…');
+    choose('From References…');
+    choose('From Fold…');
+    expect(onImport.mock.calls).toEqual([
+      ['step-b', 'import-steps'],
+      ['step-b', 'from-references'],
+      ['step-b', 'from-fold'],
+    ]);
   });
 
   it('offers an empty card’s Upload… for that step', () => {

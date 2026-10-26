@@ -317,11 +317,12 @@ describe('DiagramPanel', () => {
       // Each row is its label, then the key that runs it where there is one.
       // An empty step leads with the ways to give it a picture; the rest are submenus.
       const rows = menuItems();
-      expect(rows).toHaveLength(10);
+      expect(rows).toHaveLength(11);
       [
         'Upload Picture…',
         'Link Pattern…',
         'From References…',
+        'From File \\(CP, Defox\\)…',
         'Make Turn Over',
         'Make Rotate',
         'Duplicate Step',

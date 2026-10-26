@@ -8,7 +8,15 @@ interface ImportDialogState {
   files: PickedFile[];
   opener: HTMLElement | null;
   folder: ((recursive: boolean) => Promise<PickedFile[]>) | null;
-  open: (files?: PickedFile[], folder?: (recursive: boolean) => Promise<PickedFile[]>) => void;
+  /**
+   * `anchorStepId` is where the steps go (D2): an empty step takes the first,
+   * any other has them after it. The selected step, unless named.
+   */
+  open: (
+    files?: PickedFile[],
+    folder?: (recursive: boolean) => Promise<PickedFile[]>,
+    anchorStepId?: string
+  ) => void;
   close: () => void;
 }
 export const useImportDialogStore = create<ImportDialogState>((set) => ({
@@ -16,11 +24,12 @@ export const useImportDialogStore = create<ImportDialogState>((set) => ({
   files: [],
   opener: null,
   folder: null,
-  open: (files = [], folder) => {
+  open: (files = [], folder, anchorStepId) => {
     if (useWorkspaceStore.getState().diagramReadOnly) return;
+    const target = importTarget();
     set({
       folder: folder ?? null,
-      target: importTarget(),
+      target: anchorStepId === undefined ? target : { ...target, anchor: anchorStepId },
       // A drop brings whatever was dragged; only what an import takes is listed, as the pickers do.
       files: orderedImportFiles(files.filter((file) => supportsStepImport(file.name))),
       opener: document.activeElement instanceof HTMLElement ? document.activeElement : null,

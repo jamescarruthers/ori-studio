@@ -22,6 +22,7 @@ import { useDiagramCardLinks } from '../../diagram/capture/useCardLinks';
 import { useDiagramLinkedPose } from '../../diagram/capture/useDiagramLinkedPose';
 import { pickStepPictures } from '../../diagram/upload/addStepPictures';
 import { useStepPictureDrop } from '../../diagram/upload/useStepPictureDrop';
+import { importInto, importIntoStep } from '../../diagram/import/stepImportActions';
 import {
   addDiagramStep,
   appendDiagramStep,
@@ -265,10 +266,10 @@ export function DiagramPanel() {
             readOnly={readOnly}
             dropTarget={dropTarget !== null}
             onAddStep={addStep}
-            onImport={() => void handleMenuAction('file.importDiagramSteps')}
+            onImport={importInto}
             patternOpen={patternOpen}
+            foldSteps={foldSteps}
             onLink={linkNewStep}
-            onFromReferences={openReferencesBrowser}
             onGoToEdit={goToEdit}
           />
         ) : (
@@ -285,8 +286,9 @@ export function DiagramPanel() {
             links={links}
             pageFits={pageFits}
             patternOpen={patternOpen}
+            foldSteps={foldSteps}
             onLink={openDiagramPatternPicker}
-            onFromReferences={fillStepFromReferences}
+            onImport={importIntoStep}
             onOpenIn={openFromCard}
             onGoToEdit={goToEdit}
             onAppend={readOnly ? undefined : appendStep}
