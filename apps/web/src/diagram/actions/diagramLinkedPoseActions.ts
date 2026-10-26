@@ -5,7 +5,9 @@ import {
   type LayerSpreadChoice,
   type LayerSpreadControls,
 } from '../../cp-workspace/folded/layerSpreadControls';
-import { layerOrderCount, type LayerOrderSolutions } from '../../lib/layerOrderPlace';
+import type { LayerOrderSolutionPlace } from '../../layer-order/host/hostEngineGateway';
+import { solutionPlaceEnds } from '../../layer-order/host/solutionCursorTable';
+import { layerOrderCount, solutionPlaceCount, type LayerOrderSolutions } from '../../lib/layerOrderPlace';
 import { defaultCaptureCamera } from '../capture/captureFolded';
 import {
   DEFAULT_SIMULATED_VIEW,
@@ -98,10 +100,16 @@ export interface DiagramLinkedPoseState {
   liveView?: boolean;
   /**
    * The step keeps a layer order chosen in the Layer order dialog (H7), from
-   * its saved source: its order is the record's, so ‹ › wait for a stepper
-   * that keeps to its constraints (D9's stop-gap, until H9).
+   * its saved source: its ‹ › step through the solutions that fit its
+   * record (H9, D9), not the kernel's orders.
    */
   constrained?: boolean;
+  /**
+   * Where a constrained step's order stands among the solutions that fit,
+   * once a press has asked (`stepSolutionCursor.ts`); null or absent before,
+   * when both are offered, from saved data alone.
+   */
+  place?: LayerOrderSolutionPlace | null;
 }
 
 /**
@@ -135,6 +143,22 @@ export function layerOrderLabel(
   if (render.mode !== 'folded-flat') return null;
   // The readout Edit's Properties pane shows too (`layerOrderPlace.ts`).
   return { count: layerOrderCount(render.foldCase, solutions, t) };
+}
+
+/**
+ * Where a constrained flat step stands among the solutions that fit its
+ * record (H9), for the Step pane's pager: what its solutions cursor last
+ * answered, in the words Edit's Properties pane reads too ("2 of 3+",
+ * "Solution 3" while the count is skipped, `solutionPlaceCount`). Null at
+ * rest, before a press has asked: the host never counts (D11), and the pane
+ * keeps the readout's width. Null for any other render.
+ */
+export function solutionPlaceLabel(
+  render: DiagramCpRender,
+  place: LayerOrderSolutionPlace | null,
+  t: TFunction
+): { count: string } | null {
+  return render.mode === 'folded-flat' && place ? { count: solutionPlaceCount(place, t) } : null;
 }
 
 /** The verb that shows a linked step each way (D19): the one map every surface reads. */
@@ -246,21 +270,28 @@ export function buildDiagramLinkedPoseActions(
     toggle: true,
   });
 
-  // A layer order chosen in the dialog is the record's, not a place in the kernel's enumeration (D9).
-  const constrained = t('panels:diagram.pose.layerOrderConstrained', 'Step through solutions in Layer order…');
   const { solutions } = state;
   const foldCase = render.mode === 'folded-flat' ? render.foldCase : 1;
   // Nowhere to go: no layer order, or one only; with `stopsAtLast`, the last of several once the search ran out.
   const single = solutions !== null && !solutions.hasNext && solutions.discovered <= 1;
   const last = stopsAtLast && solutions !== null && !solutions.hasNext && foldCase >= solutions.discovered;
-  const nextHeld = state.constrained === true || solutions?.none === true || (single && foldCase === 1) || last;
-  const nextHint = state.constrained
-    ? constrained
-    : solutions?.none
-      ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
-      : single
-        ? t('panels:diagram.pose.onlySolution', 'This fold has one layer order')
-        : t('panels:diagram.pose.lastSolution', 'This is its last layer order');
+  const nextHeld = solutions?.none === true || (single && foldCase === 1) || last;
+  const nextHint = solutions?.none
+    ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
+    : single
+      ? t('panels:diagram.pose.onlySolution', 'This fold has one layer order')
+      : t('panels:diagram.pose.lastSolution', 'This is its last layer order');
+  // A layer order chosen in the dialog is the record's (H9, D9): ‹ › step through the solutions that fit it,
+  // in a fixed order with ends, which every pager waits at — the Step pane's too — once a press has found
+  // them; before one has, both are offered, from saved data alone.
+  const ends = state.constrained && state.place ? solutionPlaceEnds(state.place) : null;
+  const previousHeld = state.constrained ? ends?.first === true : render.mode === 'folded-flat' && render.foldCase <= 1;
+  const solutionNextHeld = state.constrained ? ends?.last === true : nextHeld;
+  const solutionNextHint = state.constrained
+    ? ends?.only
+      ? t('panels:diagram.pose.onlySolution', 'This fold has one layer order')
+      : t('panels:diagram.pose.lastSolution', 'This is its last layer order')
+    : nextHint;
 
   switch (render.mode) {
     case 'defox': return modes;
@@ -279,14 +310,15 @@ export function buildDiagramLinkedPoseActions(
         // Any layer order found, in either direction (D23): back to the one
         // before, on to the next — the search's next when none is found past
         // this one — the last wrapping round to the first, as Edit's does,
-        // unless the pager has no readout to show it (`stopsAtLast`).
+        // unless the pager has no readout to show it (`stopsAtLast`). A
+        // constrained step's, through the solutions that fit, never wrap.
         action('previous-solution', t('panels:diagram.pose.previousSolution', 'Previous Layer Order'), {
-          disabled: state.constrained === true || render.foldCase <= 1,
-          hint: state.constrained ? constrained : t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
+          disabled: previousHeld,
+          hint: t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
         }),
         action('next-solution', t('panels:diagram.pose.nextLayerOrder', 'Next Layer Order'), {
-          disabled: nextHeld,
-          hint: nextHint,
+          disabled: solutionNextHeld,
+          hint: solutionNextHint,
         }),
         spreadLayers,
         reset,

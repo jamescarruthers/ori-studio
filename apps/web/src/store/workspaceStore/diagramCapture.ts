@@ -20,6 +20,7 @@ import {
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
 import { layerOrderSummaryOf, type CaptureLayerOrderResolve } from '../../diagram/capture/captureLayerOrder';
 import { abandonOnEngineLoss } from '../../diagram/capture/engineLoss';
+import { dropStepSolutionCursor } from '../../diagram/capture/stepSolutionCursor';
 import {
   DEFAULT_DIAGRAM_STYLE,
   DEFAULT_LAYER_SPREAD,
@@ -416,6 +417,10 @@ export async function runDiagramCapture(
 ): Promise<DiagramCaptureOutcome> {
   const start = beginStepCapture(store, stepId);
   if ('status' in start) return start;
+  // A capture from outside Pose — Refresh, Refresh All, Show as, a Relink, an
+  // Apply — restores the step's record afresh: a solutions cursor stepping it
+  // goes (layer order H9), and the next press makes one from what it lands.
+  dropStepSolutionCursor(stepId);
   try {
     const document = start.cp.document;
     const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));

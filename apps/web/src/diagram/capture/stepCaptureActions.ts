@@ -15,6 +15,7 @@ import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequ
 import { boundariesMatch, regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
 import { needsAttentionFact } from '../../layer-order/model/layerOrderAnalytics';
+import type { LayerOrderSolutionPress } from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -484,6 +485,46 @@ export function sayLayerOrderLost(offline: boolean): void {
         )
       : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.')
   );
+}
+
+/**
+ * What a constrained step's ‹ or › that moved nothing says, if anything
+ * (layer order H9), as Edit's figures say it (`sayFoldedSolutionStep`) in the
+ * Diagram's words: the engine didn't load or stopped, the check ran out of
+ * time, or the step's constraints need attention. An end, a Stop, or a step
+ * that moved on says nothing — the pager shows where it stands, and the rest
+ * the user did — but an end the count has not settled yet says another press
+ * may find one.
+ */
+export function sayStepSolutionPress(press: LayerOrderSolutionPress): void {
+  const t = i18n.t;
+  switch (press.status) {
+    case 'lost':
+      sayLayerOrderLost(press.cause === 'load');
+      return;
+    case 'timed_out':
+      toast.error(
+        t('toasts:diagram.layerOrder.stepTimedOut', 'Another solution couldn’t be found in time, so this step wasn’t changed.')
+      );
+      return;
+    case 'unrestored':
+      toast.error(
+        t(
+          'toasts:diagram.layerOrder.stepUnrestored',
+          'This step’s layer constraints need attention, so it can’t step through its solutions. Edit its layer order to review them.'
+        )
+      );
+      return;
+    case 'end':
+      // Not final: the count goes on with each press, so another may find one.
+      if (!press.final) toast.message(t('toasts:layerOrder.stepNotFoundYet', 'No other solution found yet. Try again to keep looking.'));
+      return;
+    case 'moved':
+    case 'not-drawn':
+    case 'stopped':
+    case 'blocked':
+      return;
+  }
 }
 
 function trackedOutcome(outcome: DiagramCaptureOutcome): TrackedOutcome | null {

@@ -8,8 +8,9 @@
  *   the Layer order row, its note and the flag — spawns no worker; only a
  *   capture does, through the host engine.
  * - The row's states by role and name: Edit… after the pager, the
- *   constraints on its note line, ‹ › held (D9), held with its reason on a
- *   3D step (D13); the flag with Review… (D14).
+ *   constraints on its note line, ‹ › offered with no readout at rest (H9,
+ *   D11), held with its reason on a 3D step (D13); the flag with Review…
+ *   (D14).
  */
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -220,12 +221,13 @@ describe('a constrained step in the Step pane', () => {
     const edit = button('Edit Layer Order…')!;
     expect(edit.textContent).toBe('Edit…');
     expect(edit.hasAttribute('aria-disabled')).toBe(false);
-    // ‹ › held until the dialog's stepper (D9; their hint is the catalog's), and Edit… last, so the pager never moves.
+    // ‹ › offered at rest, from saved data (H9: they step through the solutions that fit), and Edit… last,
+    // so the pager never moves.
     for (const name of ['Previous Layer Order', 'Next Layer Order']) {
-      expect(button(name)?.getAttribute('aria-disabled')).toBe('true');
+      expect(button(name)?.hasAttribute('aria-disabled')).toBe(false);
     }
-    // A record's order has no place among the kernel's: no count read out between them, but its
-    // width kept, so the chevrons stand where a count puts them (until H9's stepper).
+    // The host never counts at rest (D11): no count read out between them, but its width kept, so the
+    // chevrons stand where a count puts them once a press has asked.
     const readable = row.cloneNode(true) as HTMLElement;
     for (const hidden of readable.querySelectorAll('[aria-hidden="true"]')) hidden.remove();
     expect(readable.textContent).not.toMatch(/\d of \d/);
