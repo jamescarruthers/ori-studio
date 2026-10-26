@@ -649,7 +649,7 @@
       "recordUnreadable": "This figure’s saved constraints couldn’t be read, so Layer order can’t open on them. Nothing was changed.",
       "timedOut": "Couldn’t work out this figure’s layer orders in time.",
       "tolerance": "Some of this figure’s faces or creases are too small or too close together for Layer order to work with. Nothing was changed.",
-      "tooDeep": "This figure stacks too many layers in one place for Layer order to work with yet. Nothing was changed.",
+      "tooDeep": "This figure stacks {{depth}} layers in one place, more than Layer order can work with yet. Nothing was changed.",
       "tooManyFaces": "This figure has {{faces}} faces, more than the {{limit}} Layer order can work with. Nothing was changed.",
       "unreadable": "Layer order couldn’t read how this figure folds, so it can’t open on it. Nothing was changed."
     },
