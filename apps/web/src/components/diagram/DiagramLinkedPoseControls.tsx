@@ -9,7 +9,6 @@ import {
   Layers,
   RotateCcw,
   RotateCw,
-  RotateCcwSquare,
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import { DIAGRAM_SHOW_AS, type DiagramShowAs } from '../../diagram/document/diag
 import { IconButton } from '../ui/IconButton';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './DiagramLinkedPoseControls.module.css';
+import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 /** A linked pose verb's icon. */
 const LINKED_POSE_ICONS: Partial<Record<DiagramLinkedPoseActionId, LucideIcon>> = {
@@ -29,8 +29,8 @@ const LINKED_POSE_ICONS: Partial<Record<DiagramLinkedPoseActionId, LucideIcon>> 
   'rotate-right': RotateCw,
   // Stood on its mirror axis: the axis up to the top.
   upright: ArrowUpToLine,
-  // As Edit's folded figures flip (`foldedFigureActionIcons`): the paper turned over, not mirrored.
-  'turn-over': RotateCcwSquare,
+  // The looped arrow the diagram uses for turning paper over.
+  'turn-over': TurnOverIcon,
   'previous-solution': ChevronLeft,
   'next-solution': ChevronRight,
   'view-top': ArrowDownToDot,

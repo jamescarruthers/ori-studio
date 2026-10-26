@@ -11,7 +11,6 @@ import {
   PenTool,
   RotateCcw,
   RotateCw,
-  RotateCcwSquare,
   Undo2,
   Upload,
   type LucideIcon,
@@ -56,14 +55,14 @@ import { useXRayStanding } from '../../diagram/xray/useXRayStanding';
 import { xraySurfaceOf } from '../../diagram/xray/xrayPaint';
 import { useAnnotateToolInHand } from '../../diagram/annotate/useAnnotateToolInHand';
 import styles from './DiagramStepDetail.module.css';
+import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 const POSE_ICONS: Record<DiagramPoseActionId, LucideIcon> = {
   'rotate-left': RotateCcw,
   'rotate-right': RotateCw,
-  // The sheet with a turn arrow Edit's folded figures flip with (`foldedFigureActionIcons`):
-  // turning the paper over is not mirroring its shape.
-  flip: RotateCcwSquare,
-  'turn-over': RotateCcwSquare,
+  // The looped arrow the diagram uses for turning paper over.
+  flip: TurnOverIcon,
+  'turn-over': TurnOverIcon,
   reset: Undo2,
 };
 

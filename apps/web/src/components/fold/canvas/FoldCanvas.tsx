@@ -127,7 +127,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();
-  // The sequence's own paper style (its Paper tab's), the Diagram style by default.
+  // The sequence's own paper style (its Paper tab's), the Default style for a new sequence.
   const style = useFoldPaperStyle();
   const wheelGesture = useSettingsStore((state) => state.cpWheelGesture);
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);

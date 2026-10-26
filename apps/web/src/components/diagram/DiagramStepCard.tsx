@@ -8,7 +8,6 @@ import {
   PenLine,
   PenTool,
   Rotate3d,
-  RotateCcwSquare,
   RotateCw,
   ScanSearch,
   Upload,
@@ -42,6 +41,7 @@ import { TurnCard } from '../ui/steps/TurnCard';
 import { PatternThumbnail } from '../ui/PatternThumbnail';
 import styles from './DiagramStepCard.module.css';
 import { capturedStyleChange } from '../../diagram/pictures/lighting';
+import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 /**
  * One step in the Steps grid: its number and kind, its picture, and its
@@ -379,7 +379,7 @@ export const DiagramStepCard = memo(function DiagramStepCard({
                     onMakeTurn(step.id, 'turn-over');
                   }}
                 >
-                  <RotateCcwSquare size={13} aria-hidden="true" />
+                  <TurnOverIcon size={13} aria-hidden="true" />
                   {t('panels:diagram.card.turnOver', 'Turn over')}
                 </Button>
                 <Button

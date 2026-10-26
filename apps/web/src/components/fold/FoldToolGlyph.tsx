@@ -7,7 +7,6 @@ import {
   Divide,
   Flower2,
   Rabbit,
-  RotateCcwSquare,
   RotateCw,
   Undo2,
   type LucideIcon,
@@ -21,6 +20,7 @@ import type {
 } from '../../fold/tools/foldToolCatalog';
 import { FoldRepeatGlyph } from './FoldActionIcon';
 import { FoldKindMark } from './FoldKindMark';
+import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 const SIZE = 20;
 
@@ -149,8 +149,7 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
  * Every Fold rail item's icon: a fold's symbol in the control's ink; a line
  * mode's picture of what it locates; Edit's own glyph for the rabbit ear; the
  * diagram's repeat symbol for Repeat; the app's own icons for the tuck, the Divide line, Unfold to step, the model
- * verbs (Turn over is the turn-over icon of Edit's Flip and the Diagram's
- * turns), the other vertex folds and the sinks.
+ * verbs (Turn over is the Diagram's looped turnover arrow), the other vertex folds and the sinks.
  * `compact`: beside text in a toolbar button, at the text's scale, as Edit's
  * "Tools" trigger draws its glyph.
  */
@@ -176,8 +175,8 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
     case 'divide-line':
       return <Divide size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'turn-over':
-      // Edit's Flip and the Diagram's Turn over: a sheet with a turn arrow, never a mirror.
-      return <RotateCcwSquare size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+      // The same looped arrow the diagram prints for a turnover.
+      return <TurnOverIcon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'rotate':
       return <RotateCw size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     // The sequence tools, by the icons their header buttons and menu rows wear.

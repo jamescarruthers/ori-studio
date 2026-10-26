@@ -17,7 +17,7 @@ export function useFoldStoredPaperStyle(): ResolvedDocumentPaperStyle {
 
 /**
  * The paper style the shown sequence is drawn in — its own, picked in the
- * Paper tab, else the default (the built-in Diagram style) — for every Fold
+ * Paper tab, else the built-in Default style — for every Fold
  * surface that paints paper: both canvas panes, the step strip's
  * cards. Never the app's display style: a sequence's look is its own, as a
  * diagram's is.

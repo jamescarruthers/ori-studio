@@ -2,12 +2,12 @@ import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  FOLD_DEFAULT_PAPER_STYLE,
   regularPolygonShape,
   type FoldPaperShape,
   type FoldStartSide,
 } from '../../fold/document/foldSequenceDocument';
 import {
-  DEFAULT_DOCUMENT_PAPER_STYLE,
   type DocumentPaperStyle,
   type DocumentPaperStyleChoice,
 } from '../../lib/paper/documentPaperStyle';
@@ -35,7 +35,7 @@ function Harness({
   shape = { kind: 'square' },
   stepCount = 0,
   readOnly = false,
-  initialStyle = DEFAULT_DOCUMENT_PAPER_STYLE,
+  initialStyle = FOLD_DEFAULT_PAPER_STYLE,
 }: {
   shape?: FoldPaperShape;
   stepCount?: number;
@@ -115,14 +115,14 @@ async function choose(selectLabel: string, option: string) {
 
 describe('FoldPaperPane', () => {
   describe('style', () => {
-    it('picks the sequence’s own style as the Diagram picks a diagram’s, the Diagram style first', async () => {
+    it('starts in Default and lets the sequence choose Diagram', async () => {
       render();
       // No colour pickers: the look is a style, chosen whole.
       expect(host.querySelector('input[type="color"]')).toBeNull();
-      expect(styleShown()).toBe('Diagram');
-      await choose('Style', 'Default');
-      expect(onStyleChange).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'builtin:default', analytics: 'default' }));
       expect(styleShown()).toBe('Default');
+      await choose('Style', 'Diagram');
+      expect(onStyleChange).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'builtin:diagram', analytics: 'diagram' }));
+      expect(styleShown()).toBe('Diagram');
     });
 
     it('copies the Settings export style into the sequence as it is when chosen', async () => {
@@ -145,11 +145,11 @@ describe('FoldPaperPane', () => {
       const swatches = [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Start"] button span')]
         .map((element) => element.style.background)
         .filter(Boolean);
-      // The Diagram style's: white, with a grey colour side.
-      const { front, back } = builtInPaperPreset('diagram').style.paper;
-      expect(front).toBe('#ffffff');
-      expect(back).toBe('#b3b3b3');
-      expect(swatches).toEqual(['rgb(255, 255, 255)', 'rgb(179, 179, 179)']);
+      // Default’s yellow front and light grey back.
+      const { front, back } = builtInPaperPreset('default').style.paper;
+      expect(front).toBe('#ffff32');
+      expect(back).toBe('#e9e9e9');
+      expect(swatches).toEqual(['rgb(255, 255, 50)', 'rgb(233, 233, 233)']);
       act(() => segment('Start', 'Back up')?.click());
       expect(onStartSideChange).toHaveBeenCalledWith('back');
       expect(pressed('Start')).toEqual(['Back up']);

@@ -37,7 +37,7 @@ export function snapshotDocumentPaperStyle(style: DocumentPaperStyle): ResolvedD
   return { preset: style.preset, style: builtInPaperPreset(style.preset).style };
 }
 
-/** What a new document draws in: the built-in Diagram style. */
+/** What a new Diagram document draws in: the built-in Diagram style. */
 export const DEFAULT_DOCUMENT_PAPER_STYLE: ResolvedDocumentPaperStyle = snapshotDocumentPaperStyle({ preset: 'diagram' });
 
 /**
@@ -91,7 +91,7 @@ export interface DocumentPaperStyleChoice {
   analytics: DiagramStyleChoiceName;
 }
 
-/** The built-in Diagram first: it is what a new document is drawn in. */
+/** The built-in Diagram first in the shared picker; each workspace chooses its starting style. */
 const BUILT_IN_ORDER: readonly BuiltInPaperPresetId[] = ['diagram', 'default'];
 
 export const EXPORT_STYLE_CHOICE = 'export-style';

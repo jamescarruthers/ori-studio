@@ -4,7 +4,9 @@
 
 Draw the Fold workspace's crease-pattern sheet in its paper style's front/back
 colors and let the user turn it over left to right to inspect the back, with
-mountain and valley creases reversed.
+mountain and valley creases reversed. Use the paper’s pens throughout, start
+new Fold sequences in Default, and use Diagram’s looped turnover symbol for
+the model-turn actions in Fold and Diagram.
 
 ## Approach
 
@@ -14,8 +16,8 @@ step and starting side. Mirror the pane's model-to-screen transform about the
 sheet's horizontal midpoint so picking, hover and tool overlays stay aligned.
 Reverse M/V appearance for both ordinary and instruction creases, using the
 paper style's pens for all creases. Show the current side with a white front
-or grey back paper-face icon, and label the action with the side it will show. Compose the existing viewport toolbar control
-on desktop and its overflow menu on phones; record an enum-only analytics event.
+or grey back paper-face icon, and label the action with the side it will show.
+Compose the existing viewport toolbar control on desktop and its overflow menu on phones; record an enum-only analytics event.
 
 ## Affected Areas
 
@@ -37,6 +39,10 @@ on desktop and its overflow menu on phones; record an enum-only analytics event.
 - [x] Apply the paper pens to every CP crease, including step instructions.
 - [x] Replace turnover arrows with front/back paper-face icons and descriptive labels.
 - [x] Validate the follow-up and update the draft PR.
+- [x] Share Diagram’s looped turnover symbol across Fold and Diagram actions.
+- [x] Verify Default’s crease categories and report why its pens differ.
+- [x] Start new Fold sequences in Default, preserving saved style choices.
+- [x] Validate the turnover-symbol and starting-style updates for the existing draft PR.
 
 Draft PR: https://github.com/zacharyfmarion/ori-studio/pull/544.
 
@@ -82,3 +88,23 @@ Screenshots are in `artifacts/fold-cp-pens-*.png`. The complete web suite above
 was run for the initial implementation; the follow-up uses focused coverage
 because it changes only Fold presentation. The same native/build exclusions
 apply.
+
+The model-turn actions in Fold and Diagram now share `TurnOverIcon`, drawn
+from the same shaft and arrowhead geometry as the diagram’s turnover mark.
+This covers Fold’s rail and menus, Diagram’s card shortcuts, action menus,
+and pose controls. The CP viewing-side control retains its white/grey faces.
+
+New Fold sequences snapshot the built-in Default preset. Saved style choices,
+including Diagram, are preserved. Default’s red/blue crease colors are
+intentional: folded creases keep their M/V pens, current instructions use
+the diagram-crease pens, and flat/unfolded creases use the auxiliary pen.
+The user explicitly chose to keep that distinction.
+
+Final validation after the turnover-symbol and Default-style changes passed:
+web lint, typecheck, `git diff --check`, and the full web suite (1,260 passing
+files, 16,153 passing tests, one expected failure and 21 skipped tests).
+Chromium verified the looped arrow in Fold’s rail and Diagram’s empty-step
+shortcut, both turnover actions, Default on a fresh Fold sheet, and keeping
+an explicitly selected Diagram style across a turn. No page errors. No new
+translation strings, engine changes, or production build changes were added;
+the native/oracle/build exclusions above still apply.
