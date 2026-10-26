@@ -192,6 +192,30 @@ describe('keys while a barrier dialog is open', () => {
     expect(dispatch(press(surfaceOf(under), undoKey)).menu).toHaveBeenCalledWith('edit.undo');
   });
 
+  it('takes ⌘Z and ⇧⌘Z from a menu the dialog opened, and leaves the menu every other key', () => {
+    const dialog = openDialog();
+    keep(dialog, historyOf(1, 1));
+    // A menu portalled out of the dialog, its open trigger inside it (as Radix renders one).
+    const trigger = dialog.appendChild(document.createElement('button'));
+    trigger.setAttribute('aria-controls', 'verb-menu');
+    const menu = document.body.appendChild(document.createElement('div'));
+    menu.setAttribute('role', 'menu');
+    menu.id = 'verb-menu';
+    const item = menu.appendChild(document.createElement('div'));
+    item.setAttribute('role', 'menuitemradio');
+
+    expect(dispatch(press(item, undoKey)).menu).toHaveBeenCalledWith('edit.undo');
+    expect(dispatch(press(item, redoKey)).menu).toHaveBeenCalledWith('edit.redo');
+    for (const init of [{ key: 'ArrowDown' }, { key: 'Enter' }, { key: 'Escape' }, { key: 'b' }]) {
+      const event = press(item, init);
+      expect(dispatch(event).claimed, init.key).toBe(false);
+      expect(event.defaultPrevented, init.key).toBe(false);
+    }
+    // A menu no trigger of the dialog's opened keeps its keys, ⌘Z included.
+    trigger.removeAttribute('aria-controls');
+    expect(dispatch(press(item, undoKey)).claimed).toBe(false);
+  });
+
   it('claims nothing else, Escape included, which is the dialog’s own', () => {
     const dialog = openDialog();
     keep(dialog, historyOf(1));
