@@ -6,10 +6,12 @@
 //! Fold's import ([`ImportedPattern`]) traces its own faces of the same
 //! creases and numbers them its own way. [`ImportedFaces`] matches the two by
 //! the rule a saved record's faces are found again by
-//! (`restore.rs`): each Oriedita face's interior point lies in one imported
-//! face, no two in the same one, and their paper areas agree within
-//! [`AREA_TOLERANCE`]. With as many faces on each side, every face is then
-//! matched, and an order goes across exactly, pair for pair:
+//! (`restore.rs`), checked both ways: each Oriedita face's interior point
+//! lies in one imported face, no two in the same one, their paper areas
+//! agree within [`AREA_TOLERANCE`], and each imported face's own witness lies
+//! in the Oriedita face it was matched to. With as many faces on each side,
+//! every face is then matched, and an order goes across exactly, pair for
+//! pair:
 //!
 //! - **into the dialog**, an imported order as Oriedita's relations over its
 //!   faces ([`ImportedFaces::oriedita_relations`]): the order the dialog
@@ -51,6 +53,10 @@ pub enum FacesDiffer {
     /// none, or in one another face took, or in one of another area.
     #[error("face {face} is no face of the import")]
     Unmatched { face: FaceId },
+    /// The imported face Oriedita face `face` was matched to has its own
+    /// point elsewhere: the match does not hold both ways.
+    #[error("face {face}'s match does not hold both ways")]
+    Unwitnessed { face: FaceId },
 }
 
 /// How Fold shows the imported state, in the dialog's terms
@@ -80,41 +86,42 @@ impl ImportedFaces {
         pattern: &ImportedPattern,
     ) -> Result<ImportedFaces, FacesDiffer> {
         let wireframe = layer.render_inputs().wireframe();
-        let parts = pattern.unordered().parts();
-        let (n, m) = (wireframe.faces.len(), parts.faces.len());
-        if n != m {
-            return Err(FacesDiffer::Count {
-                oriedita: n,
-                imported: m,
-            });
-        }
-        let mut imported = Vec::with_capacity(n);
-        let mut oriedita: Vec<Option<FaceId>> = vec![None; m];
-        for k in 0..n {
-            let face = FaceId(k as u32);
-            let unmatched = FacesDiffer::Unmatched { face };
-            let point = layer.interior_point(face).ok_or(unmatched.clone())?;
-            let f = pattern
-                .unordered()
-                .face_at(pattern.to_sheet(point))
-                .ok_or(unmatched.clone())?;
-            let index = parts
+        let unordered = pattern.unordered();
+        let parts = unordered.parts();
+        // An imported face by its index, which is its id (`ImportedPattern::new` numbers them so).
+        let index_of = |f: FaceId| {
+            parts
                 .faces
-                .iter()
-                .position(|candidate| candidate.id == f)
-                .ok_or(unmatched.clone())?;
-            if oriedita[index].is_some() {
-                return Err(unmatched);
-            }
-            let theirs = layer.paper_area(face).unwrap_or(0.0).abs();
-            let ours = input_area(pattern, index);
+                .get(f.0 as usize)
+                .filter(|face| face.id == f)
+                .map(|_| f.0 as usize)
+        };
+        let forward = |k: usize| {
+            let point = layer.interior_point(FaceId(k as u32))?;
+            index_of(unordered.face_at(pattern.to_sheet(point))?)
+        };
+        let backward = |f: usize| {
+            let witness = unordered.face_witness(parts.faces.get(f)?.id)?;
+            layer
+                .face_at_paper(pattern.to_input(witness))
+                .map(|k| k.0 as usize)
+        };
+        let same_area = |k: usize, f: usize| {
+            let theirs = layer.paper_area(FaceId(k as u32)).unwrap_or(0.0).abs();
+            let ours = input_area(pattern, f);
             // False for a NaN area too: no match.
-            let same_area = (ours - theirs).abs() <= AREA_TOLERANCE * theirs;
-            if !same_area {
-                return Err(unmatched);
-            }
-            oriedita[index] = Some(face);
-            imported.push(f);
+            (ours - theirs).abs() <= AREA_TOLERANCE * theirs
+        };
+        let imported = matched(
+            wireframe.faces.len(),
+            parts.faces.len(),
+            forward,
+            backward,
+            same_area,
+        )?;
+        let mut oriedita = vec![FaceId(0); imported.len()];
+        for (k, &f) in imported.iter().enumerate() {
+            oriedita[f] = FaceId(k as u32);
         }
         let start = *imported
             .get(wireframe.starting_face)
@@ -122,10 +129,9 @@ impl ImportedFaces {
                 face: FaceId(wireframe.starting_face as u32),
             })?;
         Ok(ImportedFaces {
-            imported,
-            // Every slot is filled: n faces, each taking a slot of its own.
-            oriedita: oriedita.into_iter().flatten().collect(),
-            start,
+            imported: imported.iter().map(|&f| FaceId(f as u32)).collect(),
+            oriedita,
+            start: FaceId(start as u32),
         })
     }
 
@@ -236,6 +242,47 @@ impl ImportedFaces {
     }
 }
 
+/// The match rule (see the module docs), over faces by index: `oriedita`
+/// faces on one side, `imported` on the other; `forward(k)` is the imported
+/// face Oriedita face `k`'s interior point lies in, `backward(f)` the
+/// Oriedita face imported face `f`'s witness lies in, and `same_area(k, f)`
+/// whether their paper areas agree. Answers each Oriedita face's imported
+/// face: one for one, each checked both ways, as a saved record's faces are
+/// found again (`restore.rs`).
+fn matched(
+    oriedita: usize,
+    imported: usize,
+    forward: impl Fn(usize) -> Option<usize>,
+    backward: impl Fn(usize) -> Option<usize>,
+    same_area: impl Fn(usize, usize) -> bool,
+) -> Result<Vec<usize>, FacesDiffer> {
+    if oriedita != imported {
+        return Err(FacesDiffer::Count { oriedita, imported });
+    }
+    let mut of_oriedita = Vec::with_capacity(oriedita);
+    let mut taken = vec![false; imported];
+    for k in 0..oriedita {
+        let unmatched = FacesDiffer::Unmatched {
+            face: FaceId(k as u32),
+        };
+        let f = forward(k).ok_or(unmatched.clone())?;
+        if f >= imported || taken[f] || !same_area(k, f) {
+            return Err(unmatched);
+        }
+        taken[f] = true;
+        of_oriedita.push(f);
+    }
+    // And back: each imported face's own point lies in the Oriedita face it was matched to.
+    for (k, &f) in of_oriedita.iter().enumerate() {
+        if backward(f) != Some(k) {
+            return Err(FacesDiffer::Unwitnessed {
+                face: FaceId(k as u32),
+            });
+        }
+    }
+    Ok(of_oriedita)
+}
+
 /// Imported face `index`'s area on the sheet, in the input's units squared
 /// (its ring mapped back through the placement).
 fn input_area(pattern: &ImportedPattern, index: usize) -> f64 {
@@ -256,5 +303,80 @@ fn wrap_degrees(degrees: f64) -> f64 {
         0.0
     } else {
         wrapped
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Three faces each side, imported face `f` being Oriedita face `PERM[f]`.
+    const PERM: [usize; 3] = [2, 0, 1];
+
+    fn forward(k: usize) -> Option<usize> {
+        PERM.iter().position(|&o| o == k)
+    }
+
+    fn backward(f: usize) -> Option<usize> {
+        PERM.get(f).copied()
+    }
+
+    #[test]
+    fn faces_that_match_both_ways_are_matched_one_for_one() {
+        let of = matched(3, 3, forward, backward, |_, _| true);
+        assert_eq!(of, Ok(vec![1, 2, 0]));
+    }
+
+    #[test]
+    fn a_match_that_holds_one_way_only_is_refused() {
+        // Every Oriedita face's point lies in a face of its own, of its area, but
+        // the witness of the face matched to Oriedita face 2 lies in face 1.
+        let crossed = |f: usize| if f == 0 { Some(1) } else { backward(f) };
+        assert_eq!(
+            matched(3, 3, forward, crossed, |_, _| true),
+            Err(FacesDiffer::Unwitnessed { face: FaceId(2) })
+        );
+        // A witness in no face at all.
+        let lost = |f: usize| if f == 2 { None } else { backward(f) };
+        assert_eq!(
+            matched(3, 3, forward, lost, |_, _| true),
+            Err(FacesDiffer::Unwitnessed { face: FaceId(1) })
+        );
+    }
+
+    #[test]
+    fn counts_points_and_areas_each_refuse() {
+        assert_eq!(
+            matched(3, 4, forward, backward, |_, _| true),
+            Err(FacesDiffer::Count {
+                oriedita: 3,
+                imported: 4
+            })
+        );
+        // Two Oriedita faces in one imported face.
+        assert_eq!(
+            matched(3, 3, |k| Some(k.min(1)), backward, |_, _| true),
+            Err(FacesDiffer::Unmatched { face: FaceId(2) })
+        );
+        // A point in no imported face, or in one past the end.
+        assert_eq!(
+            matched(
+                3,
+                3,
+                |k| (k != 1).then(|| forward(k)).flatten(),
+                backward,
+                |_, _| true
+            ),
+            Err(FacesDiffer::Unmatched { face: FaceId(1) })
+        );
+        assert_eq!(
+            matched(3, 3, |_| Some(7), backward, |_, _| true),
+            Err(FacesDiffer::Unmatched { face: FaceId(0) })
+        );
+        // Another area.
+        assert_eq!(
+            matched(3, 3, forward, backward, |k, _| k != 2),
+            Err(FacesDiffer::Unmatched { face: FaceId(2) })
+        );
     }
 }

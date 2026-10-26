@@ -53,6 +53,8 @@ struct Held {
     origin: CpOrigin,
     pattern: ImportedPattern,
     completions: Completions,
+    /// What the completion may spend: the open's, or the last search's.
+    limits: Limits,
     /// Opened by [`Imports::open_session`].
     session: Option<Checking>,
     /// Opened by [`Imports::layer_opening`].
@@ -159,6 +161,7 @@ impl Imports {
             origin: file.origin(),
             pattern,
             completions,
+            limits: *limits,
             session: None,
             layer: None,
         });
@@ -212,6 +215,7 @@ impl Imports {
                 .collect(),
         };
         held.completions = completions;
+        held.limits = *limits;
         Ok(Outcome::Ok(super::wire::Searched { opened, choice }))
     }
 
@@ -319,8 +323,9 @@ impl Imports {
     /// [`Imports::layer_opening`] gave, whose digest is `digest`, in
     /// Oriedita's convention. They become the import's seeds, every pair as
     /// the dialog chose it, and with the letters they must decide every pair
-    /// (`import_order_open` otherwise); the step then lands as a pick's does,
-    /// a `cp-jump` of the stored crease pattern and that order.
+    /// (`import_order_open` otherwise), within the limits the import was
+    /// opened with; the step then lands as a pick's does, a `cp-jump` of the
+    /// stored crease pattern and that order.
     pub fn pick_layer_order(
         &self,
         bridge: &mut Bridge,
@@ -358,10 +363,8 @@ impl Imports {
         let jump = held
             .pattern
             .oriedita_face_seeds(link.faces.start(), &mapped)
-            .and_then(|seeds| {
-                held.pattern
-                    .decided_by(&seeds, &Limits::default().completion())
-            })
+            // Within what the import was opened with (or its last search), as its own picks are.
+            .and_then(|seeds| held.pattern.decided_by(&seeds, &held.limits.completion()))
             .map_err(IoRefusal::from)
             .and_then(|state| jump::order_json(&state));
         match jump {
