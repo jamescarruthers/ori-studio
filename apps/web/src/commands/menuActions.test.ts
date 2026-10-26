@@ -1154,11 +1154,12 @@ describe('the menus behind a modal dialog', () => {
    * The native File menu, which put another document under any open dialog —
    * one Layer order's Apply then wrote an old figure's order into.
    */
-  describe('File ▸ New, Open and Import (Add)', () => {
+  describe('File ▸ New, Open, Import (Add) and the examples', () => {
     // What each one reaches when it runs: the store's opener, or (New) the start screen.
     const openers = () => ({
       openProject: vi.fn().mockResolvedValue(true),
       importAddCreasePattern: vi.fn().mockResolvedValue(true),
+      loadExampleProject: vi.fn().mockResolvedValue(true),
     });
     let opened: ReturnType<typeof openers>;
     const cases = [
@@ -1172,6 +1173,12 @@ describe('the menus behind a modal dialog', () => {
         id: 'file.importAdd',
         commandId: 'file.importAdd',
         ran: () => opened.importAddCreasePattern.mock.calls.length > 0,
+      },
+      // Counted by its prefix: the id carries the example.
+      {
+        id: 'file.openExample:triad',
+        commandId: 'file.openExample',
+        ran: () => opened.loadExampleProject.mock.calls.length > 0,
       },
     ];
 

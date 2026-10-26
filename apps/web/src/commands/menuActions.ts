@@ -460,6 +460,9 @@ const FOLD_TO_DIAGRAM_ACTIONS: Partial<Record<MenuActionId, FoldSendToDiagramSco
   'fold.send-path-to-diagram': 'path',
 };
 
+/** The examples' File menu entries: data-driven, so the id carries the example (`file.openExample:<id>`). */
+const OPEN_EXAMPLE_PREFIX = 'file.openExample:';
+
 /**
  * What an open modal dialog ({@link isShortcutBarrierOpen}) holds back from the
  * menus: the actions that change the workspace behind it. Undo and redo would
@@ -469,7 +472,8 @@ const FOLD_TO_DIAGRAM_ACTIONS: Partial<Record<MenuActionId, FoldSendToDiagramSco
  * at the dialog (`handleAppKeyDown`), but a menu reaches
  * {@link handleMenuAction} with no key to stop — so the native menu ran every
  * one of these behind any modal. A file opened from the Finder is refused for
- * the same reason (`useTauriOpenedFiles`).
+ * the same reason (`useTauriOpenedFiles`), and so is an example, by its prefix
+ * ({@link isHeldBehindModal}).
  *
  * Only these. Settings, About and the exports open over a dialog on purpose;
  * `App.tsx` stacks the modals for it.
@@ -503,8 +507,10 @@ export function isMenuActionId(id: string): id is MenuActionId {
   return (MENU_ACTION_IDS as readonly string[]).includes(id);
 }
 
-function isHeldBehindModal(id: string): id is MenuActionId {
-  return isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id) && isShortcutBarrierOpen();
+function isHeldBehindModal(id: string): boolean {
+  const held =
+    id.startsWith(OPEN_EXAMPLE_PREFIX) || (isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id));
+  return held && isShortcutBarrierOpen();
 }
 
 /**
@@ -512,8 +518,8 @@ function isHeldBehindModal(id: string): id is MenuActionId {
  * True when that took a step. False for every other held action, and for Undo
  * and Redo with no history registered or nothing left in it.
  */
-function runInsteadBehindModal(id: MenuActionId): boolean {
-  const verb = MODAL_HISTORY_VERBS[id];
+function runInsteadBehindModal(id: string): boolean {
+  const verb = isMenuActionId(id) ? MODAL_HISTORY_VERBS[id] : undefined;
   return verb !== undefined && runModalHistory(verb);
 }
 
@@ -538,8 +544,6 @@ function runInsteadBehindModal(id: MenuActionId): boolean {
  * they differ only in the `CpExactSolveRunKind` each run is registered under.
  */
 export const CP_EXACT_SOLVE_REQUEST_EVENT = 'ori-studio:cp-exact-solve';
-
-const OPEN_EXAMPLE_PREFIX = 'file.openExample:';
 
 export function createMenuActionHandler(deps: MenuActionDependencies) {
   const showWorkspace = () => (deps.showWorkspace ?? showActiveWorkspace)();
