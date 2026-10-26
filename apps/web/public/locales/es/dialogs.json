@@ -667,7 +667,7 @@
       "recordUnreadable": "No se pudieron leer las restricciones guardadas de esta figura, así que Orden de capas no puede abrirlas. No se cambió nada.",
       "timedOut": "No se pudieron calcular a tiempo los órdenes de capas de esta figura.",
       "tolerance": "Algunas caras o pliegues de esta figura son demasiado pequeños o están demasiado juntos para Orden de capas. No se cambió nada.",
-      "tooDeep": "Esta figura apila demasiadas capas en un mismo lugar para Orden de capas por ahora. No se cambió nada.",
+      "tooDeep": "Esta figura apila {{depth}} capas en un mismo lugar, más de las que Orden de capas puede manejar por ahora. No se cambió nada.",
       "tooManyFaces": "Esta figura tiene {{faces}} caras, más de las {{limit}} que admite Orden de capas. No se cambió nada.",
       "unreadable": "Orden de capas no pudo leer cómo se pliega esta figura, así que no puede abrirla. No se cambió nada."
     },
