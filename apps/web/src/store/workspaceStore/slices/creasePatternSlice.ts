@@ -187,6 +187,7 @@ import {
 } from '../../../cp-workspace/folded/foldedFigureState';
 import {
   foldedFiguresAtRest,
+  foldedSelectionAtRest,
   holdFoldedFigureAtRest,
   holdFoldedPlaceholderAtRest,
 } from '../../../cp-workspace/folded/foldedFiguresAtRest';
@@ -733,7 +734,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       selection: get().oristudioCpSelection,
       annotations: input.annotations,
       foldedFigures,
-      activeFoldedFigureId: input.activeFoldedFigureId,
+      activeFoldedFigureId: foldedSelectionAtRest(input.activeFoldedFigureId, input.foldedFigures),
       // Captured on every overlay entry, not only the window ones. An
       // annotation edit that omitted them would produce an entry whose undo
       // leaves windows alone — which is right — but the field is also how a
@@ -2551,7 +2552,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // draft that took the selection was a figure selected for exactly as long
       // as the kernel took, and every selection-driven surface flashed for it.
       // History never stores the draft: an entry taken while it folds reads the list without it.
-      const draftAtRest = holdFoldedPlaceholderAtRest(figureId);
+      const draftAtRest = holdFoldedPlaceholderAtRest(figureId, get().oristudioCpActiveFoldedFigureId);
       takeCanvasSelection('none', {
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpError: null,
@@ -3696,8 +3697,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const duplicateEpoch = foldedFigureHandleEpoch();
       // The copy lands only on that placeholder, which an undo can take away.
       const landing = foldLanding(figureId, null);
-      // History never stores the placeholder: an entry taken meanwhile reads the list without it.
-      const placeholderAtRest = holdFoldedPlaceholderAtRest(figureId);
+      // History never stores the placeholder, nor stores it as the selection, which the copy
+      // takes now: an entry taken meanwhile reads the list without it, and what was selected before.
+      const placeholderAtRest = holdFoldedPlaceholderAtRest(figureId, get().oristudioCpActiveFoldedFigureId);
       takeCanvasSelection('folded-figure', {
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpActiveFoldedFigureId: figureId,

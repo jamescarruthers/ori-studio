@@ -272,7 +272,7 @@ import type {
   WorkspaceState,
 } from '../types';
 import { retainFoldedFigureHandles } from '../../../cp-workspace/folded/foldedFigureHandles';
-import { foldedFiguresAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
+import { foldedFiguresAtRest, foldedSelectionAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 import { folded3dExportHandles } from '../../../cp-workspace/folded/foldedFigureInterchange';
 import type { FoldDocument } from '../../../engine/types';
 import type {
@@ -333,7 +333,7 @@ function cpHistoryEntry(
     // including their recorded source region, which is what decides whether they
     // read as out of date (see lib/foldedFigureStaleness.ts).
     foldedFigures: rested,
-    activeFoldedFigureId,
+    activeFoldedFigureId: foldedSelectionAtRest(activeFoldedFigureId, foldedFigures),
     // Same reason as the figures above: undo restores the simulation windows the
     // crease edit was made alongside, with the provenance that decides whether
     // they read as out of date.
