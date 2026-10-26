@@ -47,6 +47,10 @@ afterEach(() => {
 });
 
 const END = { outcome: 'end', position: solutionPosition(1, 3, false), counted: true } as const;
+/** The ends a step proved: › only, ‹ only, both. */
+const NEXT = { previous: false, next: true } as const;
+const PREVIOUS = { previous: true, next: false } as const;
+const BOTH = { previous: true, next: true } as const;
 const ask = { direction: 'next', open: async () => ({ source: FAKE_LAYER_ORDER_SOURCE, record: RECORD }) } as const;
 
 async function seat(table: (typeof tables)[number], thing: Thing) {
@@ -156,7 +160,7 @@ describe('the hosts’ solutions-cursor table', () => {
       expect(cursor.closed).toBe(true);
       expect(table.heldId()).toBeNull();
       // Where its order lay stays for the readout, with the end it proved, while the thing holds what it did.
-      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: 'next' });
+      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: NEXT });
       table.settle(() => thing, 0, 'step');
       expect(table.place(thing)).not.toBeNull();
       // And goes on the cursor's terms: here, the thing holding another order.
@@ -181,7 +185,7 @@ describe('the hosts’ solutions-cursor table', () => {
       const turn = table.begin(thing, 0);
       const stepped = turn.step(ask);
       await vi.waitFor(() => expect(table.heldId()).toBe('step'));
-      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: 'next' });
+      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: NEXT });
       answer(END);
       await stepped;
       turn.end(() => thing, 0);
@@ -200,8 +204,61 @@ describe('the hosts’ solutions-cursor table', () => {
     await turn.step({ ...ask, direction: 'previous' });
     turn.end(() => thing, 0);
     const place = table.place(thing)!;
-    expect(place.ended).toBe('previous');
+    expect(place.ended).toEqual(PREVIOUS);
     expect(solutionPlaceEnds(place)).toEqual({ first: true, last: false, only: false });
+  });
+
+  it('keeps both ends a step proved from the same place, whichever came first; a step that runs out keeps them', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    const at = solutionPosition(1, 1, false);
+    gateway.open.mockReturnValueOnce(
+      scriptedSolutionCursor([
+        { outcome: 'end', position: at, counted: true },
+        { outcome: 'timed_out', stage: 'step' },
+        { outcome: 'end', position: at, counted: true },
+      ])
+    );
+    const press = async (direction: 'next' | 'previous') => {
+      const turn = table.begin(thing, 0);
+      await turn.step({ ...ask, direction });
+      turn.end(() => thing, 0);
+    };
+    await press('previous');
+    // A › that ran out proves nothing, and takes nothing back: ‹ still waits.
+    await press('next');
+    expect(table.place(thing)?.ended).toEqual(PREVIOUS);
+    expect(solutionPlaceEnds(table.place(thing)!)).toMatchObject({ first: true, last: false });
+    // A › that ends, from the same place: both wait, never one in place of the other.
+    await press('next');
+    expect(table.place(thing)?.ended).toEqual(BOTH);
+    expect(solutionPlaceEnds(table.place(thing)!)).toEqual({ first: true, last: true, only: true });
+  });
+
+  it('lets proved ends go when a step lands elsewhere', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    gateway.open.mockReturnValueOnce(
+      scriptedSolutionCursor([
+        { outcome: 'end', position: solutionPosition(2, 3, false), counted: true },
+        {
+          outcome: 'moved',
+          applied: { record: RECORD, relations: new Uint32Array(), source: FAKE_LAYER_ORDER_SOURCE },
+          position: solutionPosition(3, 3, false),
+          counted: true,
+        },
+      ])
+    );
+    const first = table.begin(thing, 0);
+    await first.step({ ...ask, direction: 'previous' });
+    first.end(() => thing, 0);
+    expect(table.place(thing)?.ended).toEqual(PREVIOUS);
+    const second = table.begin(thing, 0);
+    await second.step(ask);
+    second.landed((mark) => ({ ...mark, holds: 'b' }));
+    const moved = { id: 'step', holds: 'b' };
+    second.end(() => moved, 0);
+    expect(table.place(moved)).toEqual({ position: solutionPosition(3, 3, false), counted: true });
   });
 
   it('keeps the readout of the side shown when its thing turns over and straight back', async () => {
@@ -229,7 +286,7 @@ describe('the hosts’ solutions-cursor table', () => {
       sided.settle(() => front, 0);
       answers[0]!({ position: solutionPosition(1, 1), counted: true });
       await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(sided.place(front)).toEqual({ position: END.position, counted: true, ended: 'next' });
+      expect(sided.place(front)).toEqual({ position: END.position, counted: true, ended: NEXT });
     } finally {
       sided.drop();
     }
@@ -308,16 +365,18 @@ describe('what every host’s pager and press read', () => {
     expect(at(3, 3)).toEqual({ first: false, last: false, only: false });
   });
 
-  it('waits at a way a step proved to end, whatever the count says (E9)', () => {
-    const at = (index: number, n: number, ended: 'next' | 'previous') =>
+  it('waits at each way a step proved to end, whatever the count says (E9)', () => {
+    const at = (index: number, n: number, ended: { previous: boolean; next: boolean }) =>
       solutionPlaceEnds({ position: solutionPosition(index, n, false), counted: true, ended });
-    expect(at(3, 3, 'next')).toEqual({ first: false, last: true, only: false });
-    expect(at(2, 3, 'previous')).toEqual({ first: true, last: false, only: false });
-    expect(at(1, 3, 'previous')).toEqual({ first: true, last: false, only: false });
+    expect(at(3, 3, NEXT)).toEqual({ first: false, last: true, only: false });
+    expect(at(2, 3, PREVIOUS)).toEqual({ first: true, last: false, only: false });
+    expect(at(1, 3, PREVIOUS)).toEqual({ first: true, last: false, only: false });
     // Proved past the first found, with the count unfinished: one listed before it may yet be found.
-    expect(at(1, 1, 'next')).toEqual({ first: false, last: true, only: false });
+    expect(at(1, 1, NEXT)).toEqual({ first: false, last: true, only: false });
+    // Both ways proved: the one there is, the count unfinished.
+    expect(at(1, 1, BOTH)).toEqual({ first: true, last: true, only: true });
     // Once final, the one there is.
-    expect(solutionPlaceEnds({ position: solutionPosition(1, 1, true), counted: true, ended: 'next' })).toEqual({
+    expect(solutionPlaceEnds({ position: solutionPosition(1, 1, true), counted: true, ended: NEXT })).toEqual({
       first: true,
       last: true,
       only: true,

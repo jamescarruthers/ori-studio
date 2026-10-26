@@ -220,7 +220,11 @@ describe('the linked pose verbs', () => {
           busy: false,
           solutions: { discovered: 1, hasNext: false },
           constrained: true,
-          place: { position: { index, total: { n, exact } }, counted: true, ...(ended ? { ended } : {}) },
+          place: {
+            position: { index, total: { n, exact } },
+            counted: true,
+            ...(ended ? { ended: { previous: ended === 'previous', next: ended === 'next' } } : {}),
+          },
           record,
           stale,
         },

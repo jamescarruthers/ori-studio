@@ -371,6 +371,14 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
   }
   if (hoveredReason) return quietHint({ key: 'row_not_applied', reason: hoveredReason });
 
+  // A step that ran out (E9) is the newest thing on the line, until the next pick, Clear or step lets it
+  // go. Keep trying waits while a change to the list is in the worker: a step can't be asked until then.
+  const { step } = state.solutions;
+  if (step.kind === 'timed_out') {
+    const action = state.commit.kind === 'pending' ? null : 'keep_trying';
+    return { tone: 'quiet', action, text: { key: 'step_timed_out', direction: step.direction } };
+  }
+
   const preview = displayedPreview(state);
   if (preview) {
     const sentence = candidatesSentence(state, preview.candidates);
@@ -390,11 +398,6 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
 
   // Round3:1389-1395.
   const { sentence } = state;
-  // A step that ran out (E9), said while no sentence is under way, whose guidance comes first.
-  const { step } = state.solutions;
-  if (step.kind === 'timed_out' && sentence.subject === null && state.hover.face === null) {
-    return { tone: 'quiet', action: 'keep_trying', text: { key: 'step_timed_out', direction: step.direction } };
-  }
   const active = slotNow(sentence, state.open);
   if (active === 'subject') {
     const face = state.hover.face;
@@ -649,7 +652,16 @@ export interface LayerStepperView {
   readonly previous: boolean;
   readonly next: boolean;
   readonly busy: boolean;
+  /** Why each waits, for what it says while it does; null when it is at no end it can name. */
+  readonly waits: { readonly previous: LayerStepperWait | null; readonly next: LayerStepperWait | null };
 }
+
+/**
+ * Why a ‹ or › waits: a step is running, it is at the first or the last
+ * (`layerPositionEnds`), or at the one solution there is. While a change to
+ * the list is being checked it waits at no end, and says none.
+ */
+export type LayerStepperWait = 'stepping' | 'first' | 'last' | 'only';
 
 export interface LayerStatusView {
   /** The dot: success once a single layer order fits (Round3:200), danger while saved rows clash. */
@@ -683,8 +695,12 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
 
   const settledNow = state.settle.kind === 'settled' && state.commit.kind !== 'pending';
   const { step } = solutions;
-  // The hosts' pagers wait at the same ends (`layerPositionEnds`): ‹ stays at 1 until the total is exact (E9).
-  const ends = position ? layerPositionEnds(position, step.kind === 'end' ? step.direction : null) : null;
+  // The hosts' pagers wait at the same ends (`layerPositionEnds`): ‹ stays at 1 until the total is exact,
+  // and each way a step proved to end waits whatever the count says (E9).
+  const ends = position ? layerPositionEnds(position, solutions.ended) : null;
+  const busy = step.kind === 'pending';
+  const wait = (atEnd: boolean, end: 'first' | 'last'): LayerStepperWait | null =>
+    busy ? 'stepping' : !atEnd ? null : ends?.only ? 'only' : end;
   const stepper: LayerStepperView | null =
     position && ends
       ? {
@@ -692,7 +708,8 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
           total: solutions.runs && count ? position.total : null,
           previous: settledNow && !ends.first,
           next: settledNow && !ends.last,
-          busy: step.kind === 'pending',
+          busy,
+          waits: { previous: wait(ends.first, 'first'), next: wait(ends.last, 'last') },
         }
       : null;
 

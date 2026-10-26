@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LayerStatusText, LayerStatusView } from '../../layer-order/model/layerOrderSelectors';
+import type { LayerStatusText, LayerStatusView, LayerStepperWait } from '../../layer-order/model/layerOrderSelectors';
 import type { LayerSide } from '../../layer-order/engine/layerOrderEngine';
 import { Pager } from '../ui/Pager';
 import type { LayerOrderCopy } from './layerOrderInspectorCopy';
@@ -54,15 +54,26 @@ export const LayerOrderStatus = memo(function LayerOrderStatus({
 }: LayerOrderStatusProps) {
   const { t } = useTranslation();
   const { stepper } = status;
-  const one = stepper?.total?.exact && stepper.total.n <= 1;
-  const endHint = (end: string) =>
-    stepper?.busy
-      ? t('dialogs:layerOrder.status.stepping', 'Finding the solution…')
-      : one
-        ? side === 'back'
-          ? t('dialogs:layerOrder.status.onlyBack', 'There is one solution from the back')
-          : t('dialogs:layerOrder.status.onlyFront', 'There is one solution from the front')
-        : end;
+  // What a waiting ‹ or › says: why it waits (the model's), or, at no end it can name, its label alone.
+  const waitHint = (wait: LayerStepperWait | null): { hint?: string } => {
+    switch (wait) {
+      case null:
+        return {};
+      case 'stepping':
+        return { hint: t('dialogs:layerOrder.status.stepping', 'Finding the solution…') };
+      case 'only':
+        return {
+          hint:
+            side === 'back'
+              ? t('dialogs:layerOrder.status.onlyBack', 'There is one solution from the back')
+              : t('dialogs:layerOrder.status.onlyFront', 'There is one solution from the front'),
+        };
+      case 'first':
+        return { hint: t('dialogs:layerOrder.status.first', 'This is the first solution') };
+      case 'last':
+        return { hint: t('dialogs:layerOrder.status.last', 'This is the last solution') };
+    }
+  };
   return (
     <section className={styles.status} aria-label={t('dialogs:layerOrder.status.label', 'Solutions')}>
       <p className={styles.line} title={copy.statusTitle(status)}>
@@ -80,7 +91,7 @@ export const LayerOrderStatus = memo(function LayerOrderStatus({
           previous={{
             label: t('dialogs:layerOrder.status.previous', 'Previous solution'),
             disabled: !stepper.previous || stepper.busy,
-            hint: endHint(t('dialogs:layerOrder.status.first', 'This is the first solution')),
+            ...waitHint(stepper.waits.previous),
             run: () => {
               if (stepper.previous && !stepper.busy) onStep('previous');
             },
@@ -88,7 +99,7 @@ export const LayerOrderStatus = memo(function LayerOrderStatus({
           next={{
             label: t('dialogs:layerOrder.status.next', 'Next solution'),
             disabled: !stepper.next || stepper.busy,
-            hint: endHint(t('dialogs:layerOrder.status.last', 'This is the last solution')),
+            ...waitHint(stepper.waits.next),
             run: () => {
               if (stepper.next && !stepper.busy) onStep('next');
             },

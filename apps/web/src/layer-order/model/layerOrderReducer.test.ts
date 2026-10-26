@@ -798,7 +798,14 @@ describe('solutions: the count and the stepper', () => {
       dot: 'open',
       text: { key: 'solutions', count: { n: 4, exact: false } },
       tooltip: null,
-      stepper: { index: 2, total: { n: 4, exact: false }, previous: true, next: true, busy: false },
+      stepper: {
+        index: 2,
+        total: { n: 4, exact: false },
+        previous: true,
+        next: true,
+        busy: false,
+        waits: { previous: null, next: null },
+      },
     });
   });
 
@@ -980,6 +987,89 @@ describe('solutions: the count and the stepper', () => {
     expect(hintLine(ranOut.state)?.text).toEqual({ key: 'step_timed_out', direction: 'next' });
     const building = play(ranOut.state, { type: 'face_picked', face: 2, origin: 'pattern' });
     expect(hintLine(building.state)?.text.key).not.toBe('step_timed_out');
+  });
+
+  /** A press of ‹ or › from `from`, answered `verdict`. */
+  function pressed(from: LayerOrderDialogState, direction: 'next' | 'previous', verdict: 'end' | 'timed_out'): Played {
+    const stepping = play(from, { type: 'step', direction });
+    return play(stepping.state, { type: 'stepped', request: lastOf(stepping.effects, 'step').request, facts: { verdict } });
+  }
+
+  /** `state` counted at `index` of `n`, the count unfinished. */
+  function countingAt(state: LayerOrderDialogState, index: number, n: number): LayerOrderDialogState {
+    return dispatch(state, {
+      type: 'solutions_counted',
+      generation: state.solutions.generation,
+      by: { picture: 'front' },
+      count: count(n, n, n, false),
+      position: position(index, n, false),
+    }).state;
+  }
+
+  it('a step that runs out while a sentence is under way is the newest on the line, until the next pick or Clear', () => {
+    const subject = play(countingAt(opened().state, 2, 4), { type: 'face_picked', face: 2, origin: 'pattern' });
+    expect(hintLine(subject.state)?.text.key).not.toBe('step_timed_out');
+    const ranOut = pressed(subject.state, 'next', 'timed_out');
+    expect(hintLine(ranOut.state)).toEqual({ tone: 'quiet', action: 'keep_trying', text: { key: 'step_timed_out', direction: 'next' } });
+    // Pointing at a face doesn't take the line from it.
+    expect(hintLine(play(ranOut.state, { type: 'face_hovered', face: 3 }).state)?.text.key).toBe('step_timed_out');
+    // The next pick does, for good: a Clear later never brings the message back.
+    const object = play(ranOut.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    expect(object.state.solutions.step).toEqual({ kind: 'idle' });
+    expect(hintLine(object.state)?.text.key).not.toBe('step_timed_out');
+    const cleared = play(object.state, { type: 'sentence_cleared' });
+    expect(hintLine(cleared.state)?.text.key).not.toBe('step_timed_out');
+    // A Clear lets it go as well.
+    expect(play(ranOut.state, { type: 'sentence_cleared' }).state.solutions.step).toEqual({ kind: 'idle' });
+  });
+
+  it('keeps both ends a step proved from the order on screen: neither undoes the other (E9)', () => {
+    const counting = countingAt(opened().state, 1, 1);
+    const back = pressed(counting, 'previous', 'end').state;
+    expect(statusView(back)?.stepper).toMatchObject({ previous: false, next: true, waits: { previous: 'first', next: null } });
+    // A › that runs out proves nothing, and takes nothing back.
+    const ranOut = pressed(back, 'next', 'timed_out').state;
+    expect(statusView(ranOut)?.stepper).toMatchObject({ previous: false, next: true });
+    // A › that ends: both wait, the one solution there is, though the count is unfinished.
+    const both = pressed(ranOut, 'next', 'end').state;
+    expect(both.solutions.ended).toEqual({ previous: true, next: true });
+    expect(statusView(both)?.stepper).toMatchObject({ previous: false, next: false, waits: { previous: 'only', next: 'only' } });
+    // A slice of the count read at the same place keeps them.
+    expect(countingAt(both, 1, 1).solutions.ended).toEqual({ previous: true, next: true });
+  });
+
+  it('lets proved ends go when the order moves, is read at another place, or is stepped by something else', () => {
+    const back = pressed(countingAt(opened().state, 2, 4), 'previous', 'end');
+    expect(back.state.solutions.ended).toEqual({ previous: true, next: false });
+    // Moved: another order, nothing proved of it.
+    const stepping = play(back.state, { type: 'step', direction: 'next' });
+    const moved = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'moved', changed: changedSpots([0]), position: position(3, 4, false), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+    });
+    expect(moved.state.solutions.ended).toEqual({ previous: false, next: false });
+    expect(statusView(moved.state)?.stepper?.previous).toBe(true);
+    // Read at another index.
+    expect(countingAt(back.state, 3, 4).solutions.ended).toEqual({ previous: false, next: false });
+    // X-ray: steps by every layer order now.
+    expect(play(back.state, { type: 'xray_set', on: true }).state.solutions.ended).toEqual({ previous: false, next: false });
+  });
+
+  it('holds Keep trying back while a change to the list is in the worker, and ‹ › name no end then', () => {
+    const one = withOneConstraint();
+    const ranOut = pressed(countingAt(one.state, 2, 4), 'next', 'timed_out');
+    const removing = play(ranOut.state, { type: 'rows_removed', ids: [one.state.rows.committed[0]!.id] });
+    expect(removing.state.commit.kind).toBe('pending');
+    // Keep trying could ask nothing yet: the message stays, without it.
+    expect(hintLine(removing.state)).toEqual({ tone: 'quiet', action: null, text: { key: 'step_timed_out', direction: 'next' } });
+    expect(play(removing.state, { type: 'keep_trying' }).effects).toEqual([]);
+    // Both wait for the check, at no end: neither says "This is the first solution".
+    expect(statusView(removing.state)?.stepper).toMatchObject({
+      previous: false,
+      next: false,
+      waits: { previous: null, next: null },
+    });
   });
 });
 

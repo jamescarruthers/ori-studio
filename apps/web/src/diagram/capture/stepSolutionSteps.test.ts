@@ -67,7 +67,7 @@ vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
   ensureCpSheetIndex: vi.fn(async () => sheets),
   peekCpSheetIndex: vi.fn(() => sheets),
 }));
-const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn() }));
+const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn(), dismiss: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
 // The host engine's door: each cursor a press opens is the test's to script; a capture's restore applies.
 const hostEngine = vi.hoisted(() => ({ open: vi.fn(), resolveLayerOrder: vi.fn() }));
@@ -298,7 +298,11 @@ describe('the cursor’s life', () => {
     expect(toasts.error).not.toHaveBeenCalled();
     expect(toasts.message).not.toHaveBeenCalled();
     // The count has not settled, and still › waits there; ‹ goes back.
-    expect(pager(stepId).place).toEqual({ position: solutionPosition(2, 3, false), counted: true, ended: 'next' });
+    expect(pager(stepId).place).toEqual({
+      position: solutionPosition(2, 3, false),
+      counted: true,
+      ended: { previous: false, next: true },
+    });
     expect(pager(stepId).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
     expect(pager(stepId).previous.disabled).toBe(false);
   });
@@ -323,7 +327,8 @@ describe('the cursor’s life', () => {
     first.action.onClick();
     await vi.waitFor(() => expect(toasts.message).toHaveBeenCalledTimes(2));
     const [, second] = toasts.message.mock.calls[1]! as Said;
-    expect([first.id, second.id]).toEqual(['diagram-layer-order-step-0', 'diagram-layer-order-step-1']);
+    // Under an id of the calm kind's own: sonner would draw a message under an error's id as the error.
+    expect([first.id, second.id]).toEqual(['diagram-layer-order-step-0-timed-out', 'diagram-layer-order-step-1-timed-out']);
     second.action.onClick();
     await vi.waitFor(() => expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_2)));
     expect(cursor.triesAsked).toEqual([0, 1, 2]);
@@ -732,8 +737,11 @@ describe('a press that moves nothing writes nothing', () => {
     expect(toasts[how === 'error' ? 'message' : 'error']).not.toHaveBeenCalled();
     const [text, options] = toasts[how].mock.calls[0]! as [string, { id?: string; action?: { label: string } }];
     expect(text).toBe(said);
-    // One toast at a time for a step's presses at the same try; a Keep trying's is a fresh one.
-    expect(options.id).toBe('diagram-layer-order-step-0');
+    // One toast at a time for a step's presses at the same try (a Keep trying's is a fresh one): each kind
+    // under an id of its own, the other kind's dismissed, since sonner merges a toast into what its id held.
+    const ids = { error: 'diagram-layer-order-step-0', message: 'diagram-layer-order-step-0-timed-out' };
+    expect(options.id).toBe(ids[how]);
+    expect(toasts.dismiss).toHaveBeenCalledWith(ids[how === 'error' ? 'message' : 'error']);
     expect(options.action?.label).toBe(action);
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
     expect(analytics.trackDiagramPicturePosed).not.toHaveBeenCalled();

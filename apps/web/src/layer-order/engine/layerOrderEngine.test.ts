@@ -16,11 +16,13 @@ import {
   KEEP_TRYING_FACTOR,
   LAYER_ORDER_LIMITS,
   LAYER_ORDER_WORKER_NAMES,
+  NO_PROVED_ENDS,
   constraintSeen,
   constraintVerb,
   keepTrying,
   layerOrderWorkerRole,
   layerPositionEnds,
+  withProvedEnd,
   packConstraints,
   spotCount,
   unpackConstraints,
@@ -116,11 +118,23 @@ describe('the stepper’s ends, every pager’s', () => {
     expect(layerPositionEnds(at(4, 4, false))).toEqual({ first: false, last: false, only: false });
   });
 
-  it('wait the way a step proved to end, whatever the count says', () => {
-    expect(layerPositionEnds(at(1, 3, false), 'previous')).toEqual({ first: true, last: false, only: false });
-    expect(layerPositionEnds(at(3, 3, false), 'next')).toEqual({ first: false, last: true, only: false });
+  it('wait each way a step proved to end, whatever the count says', () => {
+    const previous = withProvedEnd(null, 'previous');
+    const next = withProvedEnd(NO_PROVED_ENDS, 'next');
+    expect(layerPositionEnds(at(1, 3, false), previous)).toEqual({ first: true, last: false, only: false });
+    expect(layerPositionEnds(at(3, 3, false), next)).toEqual({ first: false, last: true, only: false });
     // The last, proved, but not the only one: a solution listed before the first found may yet be.
-    expect(layerPositionEnds(at(1, 1, false), 'next')).toEqual({ first: false, last: true, only: false });
+    expect(layerPositionEnds(at(1, 1, false), next)).toEqual({ first: false, last: true, only: false });
+  });
+
+  it('keep both proved ends: the one solution there is, the count unfinished', () => {
+    const both = withProvedEnd(withProvedEnd(null, 'previous'), 'next');
+    expect(both).toEqual({ previous: true, next: true });
+    // Proving one way again keeps the other.
+    expect(withProvedEnd(both, 'previous')).toEqual({ previous: true, next: true });
+    expect(layerPositionEnds(at(1, 1, false), both)).toEqual({ first: true, last: true, only: true });
+    // Both ends of an order the count has found others beside: no claim of one.
+    expect(layerPositionEnds(at(2, 3, false), both)).toEqual({ first: true, last: true, only: false });
   });
 });
 

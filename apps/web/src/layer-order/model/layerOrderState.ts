@@ -26,6 +26,7 @@ import type {
   LayerOrderLimits,
   LayerPosition,
   LayerPreviewFacts,
+  LayerProvedEnds,
   LayerRefusal,
   LayerSide,
   LayerSidesStacks,
@@ -222,7 +223,7 @@ export type LayerStepState =
       readonly by: LayerStepBy;
       readonly limits: LayerOrderLimits;
     }
-  /** No solution lies that way: proved (E9), whatever the count says. */
+  /** No solution lies that way: proved (E9), whatever the count says, and kept in {@link LayerSolutionsState.ended}. */
   | { readonly kind: 'end'; readonly direction: LayerStepDirection }
   /**
    * The search for the next solution that way ran out (E9): nothing moved.
@@ -240,6 +241,13 @@ export interface LayerSolutionsState {
   readonly position: LayerPosition | null;
   readonly positionBy: string | null;
   readonly step: LayerStepState;
+  /**
+   * The ways a step proved nothing lies from the order on screen (E9), both
+   * kept: a › that runs out or ends after a ‹ that ended leaves ‹ waiting.
+   * Let go when the order moves, the generation or what it steps by changes,
+   * or the position is read at another index.
+   */
+  readonly ended: LayerProvedEnds;
 }
 
 // ---------------------------------------------------------------------------

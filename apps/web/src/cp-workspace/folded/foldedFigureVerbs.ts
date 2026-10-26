@@ -202,13 +202,19 @@ export function stepConstrainedFoldedSolution(
 }
 
 /**
- * The toast id of a step's message, by how many times the user has kept
+ * The toast ids of a step's messages, by how many times the user has kept
  * trying: presses at the same try replace one another, and each Keep trying
  * gets a fresh one. Clicking Keep trying dismisses its toast, and a toast
  * shown again under that id while it leaves is lost in its exit.
+ *
+ * A calm message (running out of time) and an error each have an id of their
+ * own: sonner keeps what an id last showed and merges a new toast into it, so
+ * a message under an id that once held an error would be drawn as the error.
+ * Showing either dismisses the other, so presses still replace one another.
  */
-function stepToastId(tries: number): string {
-  return `layer-order-step-${tries}`;
+function stepToastIds(tries: number): { readonly error: string; readonly calm: string } {
+  const error = `layer-order-step-${tries}`;
+  return { error, calm: `${error}-timed-out` };
 }
 
 /**
@@ -237,12 +243,16 @@ export function sayFoldedSolutionStep(
     label: t('dialogs:layerOrder.keepTrying', 'Keep trying'),
     onClick: keepTrying,
   };
-  const toastId = stepToastId(tries);
+  const ids = stepToastIds(tries);
+  const sayError = (text: string, action?: { label: string; onClick: () => void }) => {
+    toast.dismiss(ids.calm);
+    toast.error(text, { id: ids.error, ...(action ? { action } : {}) });
+  };
   switch (step.status) {
     case 'lost':
       if (step.cause === 'load') {
         // Only a reload retries a load that failed (`layerOrderReloadAction`).
-        toast.error(
+        sayError(
           layerOrderOffline()
             ? t(
                 'toasts:layerOrder.stepLostLoadOffline',
@@ -252,17 +262,16 @@ export function sayFoldedSolutionStep(
                 'toasts:layerOrder.stepLostLoadReload',
                 'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.'
               ),
-          { id: toastId, action: layerOrderReloadAction(t) }
+          layerOrderReloadAction(t)
         );
         return;
       }
-      toast.error(t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'), {
-        id: toastId,
-      });
+      sayError(t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'));
       return;
     case 'timed_out':
       // Running out of time is an answer, not a fault: said calmly, as the press's other expected
-      // stops are (`layerOrderPressToasts.ts`).
+      // stops are (`layerOrderPressToasts.ts`), under an id no error has held.
+      toast.dismiss(ids.error);
       toast.message(
         step.stage === 'restore'
           ? t(
@@ -270,22 +279,20 @@ export function sayFoldedSolutionStep(
               'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.'
             )
           : t('toasts:layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so the figure wasn’t changed.'),
-        { id: toastId, action: keepTryingAction }
+        { id: ids.calm, action: keepTryingAction }
       );
       return;
     case 'unrestored':
-      toast.error(
+      sayError(
         t(
           'toasts:layerOrder.stepUnrestored',
           'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.'
-        ),
-        { id: toastId }
+        )
       );
       return;
     case 'too-large':
-      toast.error(
-        t('errors:cp.layerOrderTooLarge', 'This layer order is too large to save with the figure, so it is unchanged.'),
-        { id: toastId }
+      sayError(
+        t('errors:cp.layerOrderTooLarge', 'This layer order is too large to save with the figure, so it is unchanged.')
       );
       return;
     case 'moved':

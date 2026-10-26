@@ -312,6 +312,7 @@ beforeEach(async () => {
   toasts.toast.mockClear();
   toasts.toast.error.mockClear();
   toasts.toast.message.mockClear();
+  toasts.toast.dismiss.mockClear();
   useWorkspaceStore.setState({
     activePanelId: 'crease-pattern',
     oristudioCpDocument: cpState(),
@@ -664,7 +665,11 @@ describe('a press that moves nothing', () => {
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
     expect(toasts.toast).not.toHaveBeenCalled();
     expect(toasts.toast.error).not.toHaveBeenCalled();
-    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true, ended: 'previous' });
+    expect(foldedSolutionPlace(figureNow())).toEqual({
+      position: solutionPosition(1, 3),
+      counted: true,
+      ended: { previous: true, next: false },
+    });
     expect(cycled()).toEqual([]);
   });
 
@@ -680,7 +685,7 @@ describe('a press that moves nothing', () => {
     expect(foldedSolutionPlace(figureNow())).toEqual({
       position: solutionPosition(4, 4, false),
       counted: true,
-      ended: 'next',
+      ended: { previous: false, next: true },
     });
   });
 
@@ -743,8 +748,13 @@ describe('a press that moves nothing', () => {
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
     expect(toasts.toast[how]).toHaveBeenCalledTimes(1);
     expect(toasts.toast[how === 'error' ? 'message' : 'error']).not.toHaveBeenCalled();
-    const [text, options] = toasts.toast[how].mock.calls[0] as [string, { action?: { label: string } }];
+    const [text, options] = toasts.toast[how].mock.calls[0] as [string, { id?: string; action?: { label: string } }];
     expect(text).toBe(said);
+    // Each kind under an id of its own, the other kind's dismissed: sonner merges a toast into what its id
+    // last showed, so a message under an error's id would be drawn as the error.
+    const ids = { error: 'layer-order-step-0', message: 'layer-order-step-0-timed-out' };
+    expect(options.id).toBe(ids[how]);
+    expect(toasts.toast.dismiss).toHaveBeenCalledWith(ids[how === 'error' ? 'message' : 'error']);
     // Out of time offers to keep trying, longer; a load that failed, the reload that alone retries it.
     expect(options.action?.label).toBe(offered);
     // An engine gone, a record it can't restore or an order it can't save takes the cursor with it;

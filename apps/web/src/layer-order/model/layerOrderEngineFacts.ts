@@ -24,9 +24,12 @@ import {
   constraintVerb,
   keepTrying,
   layerPositionEnds,
+  NO_PROVED_ENDS,
   unpackConstraints,
+  withProvedEnd,
   type LayerConstraint,
   type LayerOrderLimits,
+  type LayerProvedEnds,
   type LayerVerb,
 } from '../engine/layerOrderEngine';
 import {
@@ -58,6 +61,7 @@ export type {
   LayerOpenedOn,
   LayerOrderLimits,
   LayerPosition,
+  LayerProvedEnds,
   LayerRefusal,
   LayerRestoreOutcomeKind,
   LayerSavedConstraintStatus,
@@ -75,7 +79,15 @@ export type {
  * (`layer-order/layerOrderBudgets.ts`), its one source. The stepper's ends
  * are every pager's (`layerPositionEnds`), the hosts' too.
  */
-export { LAYER_ORDER_LIMITS, constraintSeen, constraintVerb, keepTrying, layerPositionEnds };
+export {
+  LAYER_ORDER_LIMITS,
+  NO_PROVED_ENDS,
+  constraintSeen,
+  constraintVerb,
+  keepTrying,
+  layerPositionEnds,
+  withProvedEnd,
+};
 
 // ---------------------------------------------------------------------------
 // The model's shapes

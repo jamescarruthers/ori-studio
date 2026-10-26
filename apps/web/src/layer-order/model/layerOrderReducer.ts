@@ -40,12 +40,15 @@ import {
 } from './layerOrderDecisions';
 import {
   LAYER_ORDER_LIMITS,
+  NO_PROVED_ENDS,
+  withProvedEnd,
   type LayerChangedSpots,
   type LayerConstraint,
   type LayerExplainFacts,
   type LayerFace,
   type LayerOpenFacts,
   type LayerOrderLimits,
+  type LayerPosition,
   type LayerPreviewFacts,
   type LayerStacks,
   type LayerStepBy,
@@ -145,7 +148,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     pointedVerb: null,
     ...NO_PREVIEWS,
     blocked: null,
-    solutions: { runs: true, generation: 0, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+    solutions: freshSolutions(true, 0),
     hover: { face: null, slot: null, row: null, reason: false },
     view: { side: init.side ?? 'front', xray: init.xray, openSpots: false },
     flash: null,
@@ -306,17 +309,11 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
           limits: LAYER_ORDER_COUNT_SLICE,
         });
       }
-      return {
-        ...state,
-        solutions: { ...solutions, count, position: action.position, positionBy: stepByKey(action.by) },
-      };
+      return { ...state, solutions: { ...positionedAt(solutions, action.position, action.by), count } };
     }
     case 'solutions_positioned':
       if (action.generation !== state.solutions.generation) return state;
-      return {
-        ...state,
-        solutions: { ...state.solutions, position: action.position, positionBy: stepByKey(action.by) },
-      };
+      return { ...state, solutions: positionedAt(state.solutions, action.position, action.by) };
     case 'stepped':
       return stepped(state, action, effects);
     case 'engine_lost': {
@@ -350,7 +347,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'sentence_cleared':
       if (!builderLive(state)) return state;
       // Clear starts afresh: a sentence built again is reported again if it is blocked.
-      return { ...withSentence(state, clearSentence(state.sentence)), blocked: null };
+      return { ...withoutStepRanOut(withSentence(state, clearSentence(state.sentence))), blocked: null };
     case 'verb_pointed':
       return state.pointedVerb === action.verb ? state : { ...state, pointedVerb: action.verb };
     case 'verb_set':
@@ -424,8 +421,35 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
 
 function withSentence(state: LayerOrderDialogState, sentence: LayerSentence): LayerOrderDialogState {
   if (sentence === state.sentence) return state;
-  // A pick closes the verb menu and lets go of the reason (Round3 `setSubject`, `setObject`).
-  return { ...state, sentence, pointedVerb: null, hover: { ...state.hover, reason: false } };
+  // A pick closes the verb menu and lets go of the reason (Round3 `setSubject`, `setObject`), and of a
+  // step's running out: the line is the sentence's now, and the message never comes back stale.
+  return withoutStepRanOut({ ...state, sentence, pointedVerb: null, hover: { ...state.hover, reason: false } });
+}
+
+/** The solutions of a new generation: nothing counted, read or proved yet. */
+function freshSolutions(runs: boolean, generation: number): LayerOrderDialogState['solutions'] {
+  return { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' }, ended: NO_PROVED_ENDS };
+}
+
+/** A step that ran out, said: let go, so the hint line is the builder's again (E9). */
+function withoutStepRanOut(state: LayerOrderDialogState): LayerOrderDialogState {
+  if (state.solutions.step.kind !== 'timed_out') return state;
+  return { ...state, solutions: { ...state.solutions, step: { kind: 'idle' } } };
+}
+
+/**
+ * The solutions with the order on screen read at `position` by `by`: the ends
+ * a step proved stay while it is read at the same place by the same thing, and
+ * go otherwise.
+ */
+function positionedAt(
+  solutions: LayerOrderDialogState['solutions'],
+  position: LayerPosition,
+  by: LayerStepBy
+): LayerOrderDialogState['solutions'] {
+  const positionBy = stepByKey(by);
+  const same = solutions.positionBy === positionBy && solutions.position?.index === position.index;
+  return { ...solutions, position, positionBy, ended: same ? solutions.ended : NO_PROVED_ENDS };
 }
 
 /** The side or X-ray changed: the stepper steps by something else now (D5), so its position is read again. */
@@ -437,7 +461,10 @@ function repositioned(
   const by = currentStepBy(next);
   if (stepByKey(by) === stepByKey(currentStepBy(before)) || next.phase.kind !== 'open') return next;
   effects.push({ type: 'solutions_position', generation: next.solutions.generation, by });
-  return { ...next, solutions: { ...next.solutions, position: null, positionBy: null, step: { kind: 'idle' } } };
+  return {
+    ...next,
+    solutions: { ...next.solutions, position: null, positionBy: null, step: { kind: 'idle' }, ended: NO_PROVED_ENDS },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -513,7 +540,7 @@ function opened(
     sentence: EMPTY_SENTENCE,
     pointedVerb: null,
     ...NO_PREVIEWS,
-    solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+    solutions: freshSolutions(runs, generation),
     hover: { face: null, slot: null, row: null, reason: false },
     flash: null,
     baseline: openedBaseline(facts, state.recordNeedsAttention),
@@ -818,7 +845,7 @@ function committed(
       sentence,
       pointedVerb: commit.via === 'add' ? null : state.pointedVerb,
       ...NO_PREVIEWS,
-      solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+      solutions: freshSolutions(runs, generation),
     },
     commit.rows,
     commit.history
@@ -1006,6 +1033,10 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
     effects.push({ type: 'open', request: id, how: 'restore', limits });
     return { ...next, settle: { kind: 'restoring', request: id, limits }, lastPreview: null };
   }
+  // A step that ran out (E9), the newest on the line, before a sentence's check: the same way again,
+  // later, going on from what it proved.
+  const ranOut = state.solutions.step;
+  if (ranOut.kind === 'timed_out') return step(state, ranOut.direction, effects, keepTryingLimits(ranOut.limits));
   const entry = displayedPreview(state);
   if (entry?.kind === 'timed_out' && quiet(state)) {
     return askPreview(state, entry.candidates, keepTryingLimits(entry.limits), effects);
@@ -1014,9 +1045,6 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
   if (entry?.kind === 'cant_fit' && entry.explain.kind === 'timed_out' && quiet(state)) {
     return askExplain(state, effects, keepTryingLimits(entry.explain.limits));
   }
-  // A step that ran out (E9): the same way again, later, going on from what it proved.
-  const ranOut = state.solutions.step;
-  if (ranOut.kind === 'timed_out') return step(state, ranOut.direction, effects, keepTryingLimits(ranOut.limits));
   return state;
 }
 
@@ -1044,9 +1072,12 @@ function stepped(
   const pending = state.solutions.step;
   if (pending.kind !== 'pending' || pending.request !== action.request) return state;
   const { facts } = action;
-  // A step that ends or runs out moves nothing, and the session keeps its preview.
+  // A step that ends or runs out moves nothing, and the session keeps its preview. An end is proved (E9):
+  // kept with any proved the other way, from the same order.
   if (facts.verdict === 'end') {
-    return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction: pending.direction } } };
+    const { direction } = pending;
+    const ended = withProvedEnd(state.solutions.ended, direction);
+    return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction }, ended } };
   }
   if (facts.verdict === 'timed_out') {
     const step = { kind: 'timed_out', direction: pending.direction, limits: pending.limits } as const;
@@ -1064,6 +1095,8 @@ function stepped(
       position: facts.position,
       positionBy: stepByKey(pending.by),
       step: { kind: 'idle' },
+      // Another order: nothing is proved of it yet.
+      ended: NO_PROVED_ENDS,
     },
   };
   return flashed(next, facts.changed, effects);
