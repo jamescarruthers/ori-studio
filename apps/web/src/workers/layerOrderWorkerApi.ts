@@ -116,6 +116,8 @@ export function createLayerOrderWorkerApi(load: LayerOrderBackendLoader): LayerO
     preview: (candidate, limits) => call((backend) => backend.preview(candidate, limits)),
     previewList: (constraints, limits) => call((backend) => backend.previewList(constraints, limits)),
     commit: (constraints, limits) => call((backend) => backend.commit(constraints, limits)),
+    order: () => call((backend) => backend.order()),
+    show: (constraints, order, limits) => call((backend) => backend.show(constraints, order, limits)),
     commitPreview: (token, constraints, limits) => call((backend) => backend.commitPreview(token, constraints, limits)),
     carried: () => call((backend) => backend.carried()),
     removeCarried: (index) => call((backend) => backend.removeCarried(index)),

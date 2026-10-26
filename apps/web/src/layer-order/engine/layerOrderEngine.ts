@@ -56,10 +56,12 @@ import type {
   LayerExplained,
   LayerOpened,
   LayerOpenedOn,
+  LayerOrderBits,
   LayerPosition,
   LayerPreviewed,
   LayerRefused,
   LayerRestored,
+  LayerShown,
   LayerSide,
   LayerSolutionCount,
   LayerStacks,
@@ -81,10 +83,12 @@ export type {
   LayerCommitted,
   LayerExplained,
   LayerOpenedOn,
+  LayerOrderBits,
   LayerPosition,
   LayerPreviewed,
   LayerRefusal,
   LayerRefused,
+  LayerShown,
   LayerRestoreOutcomeKind,
   LayerSavedConstraintStatus,
   LayerSide,
@@ -296,11 +300,20 @@ export interface LayerOrderSessionCalls {
   /** The same for any list (the dialog's rows after a clash, plus one); `cant_fit.constraints` index it. */
   previewList(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerPreviewed>;
   /**
-   * Make `constraints` the committed list (remove, undo, redo and Clear all
-   * each send the whole list). A list the order on screen still fits, as any
-   * list that only lost constraints does, keeps it exactly.
+   * Make `constraints` the committed list (remove and Clear all each send
+   * the whole list). A list the order on screen still fits, as any list that
+   * only lost constraints does, keeps it exactly.
    */
   commit(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
+  /** The order on screen, packed one bit per pair: what {@link show} puts back. */
+  order(): Promise<LayerOrderBits>;
+  /**
+   * Undo and redo: commit `constraints` and put `order` ({@link order}'s,
+   * from earlier) back on screen exactly, with no search. `refused` when it
+   * does not fit the creases and the constraints; nothing changes then. A
+   * solutions cursor counting the same constraints stays good.
+   */
+  show(constraints: readonly LayerConstraint[], order: LayerOrderBits, limits: LayerOrderLimits): Promise<LayerShown>;
   /**
    * Add: commit `constraints`, the list a preview checked, by that preview's
    * `token`. Adopted with no search (`adopted`, so it cannot time out) while
