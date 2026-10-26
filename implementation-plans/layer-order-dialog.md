@@ -530,7 +530,12 @@ disagrees, the artboard wins):
   subject, picking or removing an object, changing the verb, Clear, Add (one
   step, however many objects), a row's removal, Clear all, a solution step
   (your words, 2026-10-26: "cmd + z should undo adding a single constraint or
-  setting the subject (so basically any action)").
+  setting the subject (so basically any action)"). The view toggles (Front/Back,
+  X-ray, Undecided) and the panes' zoom are no step (my call): undo in the app
+  covers what is saved, never the view. Edit's Flip is undoable because it
+  changes the figure the file saves; here Front/Back is a lens Apply never
+  writes (spec §5, §6.2). Undo of a step steps back by what it stepped by, so
+  it brings back that side's picture (with X-ray, the very layer order).
 - Undo, redo, remove and Clear all re-solve for the fitting order closest to
   the one on screen, and flash the spots that changed (Round3:1150-1190).
 
@@ -1060,6 +1065,9 @@ Settled while building H4, for the PRs that meet it:
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
 - [x] U10: inspector (#525)
+- [x] Your feedback from trying the branch (2026-10-26): a grouped row has no
+      per-object ×, and ⌘Z undoes every inspector action, not only commits
+      (`claude/lo-inspector-undo-all`)
 - [x] H2: host engine (#512)
 - [ ] H10: Fold's Import CP chooses its order in the dialog
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
