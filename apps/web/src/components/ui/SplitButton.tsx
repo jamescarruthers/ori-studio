@@ -1,24 +1,11 @@
-import { useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { MenuContent, MenuItem, MenuItemLabel } from './Menu';
 import { ChevronDown } from 'lucide-react';
+import { ActionMenuContent, type MenuAction } from './ActionMenu';
 import { Button, type ButtonProps } from './Button';
 
-export interface SplitButtonAction {
-  /** Stable key, and the analytics-safe identifier for the action. */
-  id: string;
-  label: string;
-  /** Disabled reason, or the action's own tooltip when it is available. */
-  title?: string;
-  disabled?: boolean;
-  /**
-   * It opens a modal dialog. The menu then leaves focus where the dialog put
-   * it rather than handing it back to the caret as it closes — a restore that
-   * lands after the dialog's own, and so outside it.
-   */
-  opensDialog?: boolean;
-  onSelect: () => void;
-}
+/** An action behind the caret: a row of the menu `ActionMenuContent` draws. */
+export type SplitButtonAction = MenuAction;
 
 /**
  * A primary button with a caret beside it opening a menu of related actions.
@@ -56,9 +43,6 @@ export function SplitButton({
   /** Accessible name for the caret, e.g. "More send options". */
   menuLabel: string;
 }) {
-  // Set by the row that opened a dialog, read as the menu closes: a ref, as
-  // `onCloseAutoFocus` fires during that same close.
-  const openedDialog = useRef(false);
   const primary = (
     <Button
       size={size}
@@ -80,12 +64,7 @@ export function SplitButton({
   return (
     <div className="ui-split-button">
       {primary}
-      <DropdownMenu.Root
-        onOpenChange={(open) => {
-          // Cleared on every open, so one dialog cannot swallow the next visit's focus return.
-          if (open) openedDialog.current = false;
-        }}
-      >
+      <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           {/* No `title`: it would compete with the dropdown trigger for the
               element, the same clash `MenuIconButton` documents. */}
@@ -99,30 +78,7 @@ export function SplitButton({
             <ChevronDown size={14} />
           </Button>
         </DropdownMenu.Trigger>
-        <MenuContent
-          side="bottom"
-          align="end"
-          sideOffset={6}
-          collisionPadding={8}
-          loop
-          onCloseAutoFocus={(event) => {
-            if (openedDialog.current) event.preventDefault();
-          }}
-        >
-          {actions.map((action) => (
-            <MenuItem
-              key={action.id}
-              disabled={action.disabled}
-              title={action.title}
-              onSelect={() => {
-                if (action.opensDialog) openedDialog.current = true;
-                action.onSelect();
-              }}
-            >
-              <MenuItemLabel>{action.label}</MenuItemLabel>
-            </MenuItem>
-          ))}
-        </MenuContent>
+        <ActionMenuContent actions={actions} align="end" />
       </DropdownMenu.Root>
     </div>
   );

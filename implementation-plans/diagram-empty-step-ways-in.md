@@ -81,14 +81,20 @@ import look the same wherever they appear:
   header catalogs live there too. Icons come from `DIAGRAM_ACTION_ICONS`
   (Compass for References, the From Fold icon, lucide `Import` for File) so
   each concept keeps its one icon.
-- **`components/diagram/DiagramImportMenu.tsx`**: a `Button` with a chevron,
-  used as the `DropdownMenu.Trigger`, opening `MenuContent`/`MenuItem` from
-  `ui/Menu`. This is the same pattern as `DiagramReferencesShowMenu`. It takes
-  `size`/`variant` props and an `onChoose(id)` callback. Rows that open a
-  dialog keep focus in that dialog, which is SplitButton's `opensDialog` rule.
-  A disabled choice shows its reason as the hint, worded as the header's split
-  menu words it: "Open a crease pattern in Edit to plan its folds" and "Fold a
-  step in Fold to take it from there".
+- **`components/ui/MenuButton.tsx`** (design system, Zach 2026-10-26): a
+  labelled button with a caret opening a list of `MenuAction`s, for verbs with
+  no default (`SplitButton` when one is the default, `MenuIconButton` when an
+  icon names the set). Its menu half, `ActionMenuContent` in
+  `components/ui/ActionMenu.tsx`, is shared with `SplitButton` and owns the
+  `opensDialog` focus rule. `pointerOnly` makes it a surface's pointer
+  shortcut: out of the tab order, hidden, and handing the focus to the
+  surface (the nearest focusable ancestor) as it closes, or back to what had
+  it when there is none.
+- **`components/diagram/DiagramImportMenu.tsx`**: a `MenuButton` fed by
+  `diagramImportWays`, with each verb's icon and the analytics. A disabled
+  choice shows its reason as the hint, worded as the header's split menu words
+  it: "Open a crease pattern in Edit to plan its folds" and "Fold a step in
+  Fold to take it from there".
 - **Empty diagram** (`DiagramEmptyState`): the button order becomes **Add
   step** · **Import ▾** · **Link a pattern…** (when a pattern is open) · **Go
   to Edit** (when none is open). The three choices:
@@ -101,10 +107,10 @@ import look the same wherever they appear:
 - **Empty step card** (`DiagramStepCard`): **Import ▾** replaces
   *References…*. The other buttons stay: Upload…, Link… or Go to Edit, and "or
   a turn". Like the card's other pointer shortcuts, the trigger is
-  `tabIndex={-1}`, `aria-hidden` and `onMouseDown={keepFocus}`. When the menu
-  closes it sends focus back to what had it, or to the card when nothing did
-  or that element went with the step the choice selected; never to the hidden
-  trigger. Choices:
+  `tabIndex={-1}`, `aria-hidden` and `onMouseDown={keepFocus}`
+  (`MenuButton`'s `pointerOnly`). A press selects the card, as its other
+  shortcuts do, and when the menu closes the focus goes to the card; never to
+  the hidden trigger. Choices:
   - From File → the import dialog, anchored to *fill* this step (see below).
   - From References → `fillStepFromReferences(stepId)`.
   - From Fold → `fillStepFromFold(stepId)`.
@@ -163,6 +169,8 @@ translated for the 8 locales, stamped and checked.
 - `apps/web/src/components/diagram/DiagramEmptyState.tsx`
 - `apps/web/src/components/diagram/DiagramStepCard.tsx`, `DiagramStepsGrid.tsx`
 - `apps/web/src/components/diagram/DiagramImportMenu.tsx` (new)
+- `apps/web/src/components/ui/MenuButton.tsx`, `ActionMenu.tsx` (new),
+  `SplitButton.tsx` (its menu half now `ActionMenuContent`)
 - `apps/web/src/diagram/actions/diagramImportWays.ts` (new),
   `diagramActions.ts`, `diagramActionIcons.tsx`, `diagram/useDiagramActions.ts`
 - `apps/web/src/diagram/import/stepImportActions.ts` (new),
