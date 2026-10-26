@@ -517,6 +517,78 @@ describe('the cursor’s life', () => {
     }
   });
 
+  /** One step, then the minute: the worker has gone, and where the figure's order lies is kept. */
+  async function steppedThenRested(): Promise<ScriptedSolutionCursor> {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await showAnotherFoldedSolution(figure.id, t);
+      vi.advanceTimersByTime(FOLDED_SOLUTION_CURSOR_IDLE_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    return cursor;
+  }
+
+  it('keeps where the figure’s order lies once the minute lets go of the worker, and the next press reads it until it answers', async () => {
+    const first = await steppedThenRested();
+    expect(first.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+    // Turned over, nothing can ask where it stands on that side; turned back, it reads as it did.
+    await state().updateOristudioCpFoldedFigureModel(figureNow().id, { state: 'Back1' });
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+    await state().updateOristudioCpFoldedFigureModel(figureNow().id, { state: 'Front0' });
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+
+    let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+    const second = script(() => new Promise((resolve) => (answer = resolve)));
+    const press = showAnotherFoldedSolution(figureNow().id, t);
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    // A fresh cursor, restored from the record the figure holds, and the readout as it was meanwhile.
+    expect(gateway.open).toHaveBeenLastCalledWith(SOURCE(), solutionRecord(2));
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+    answer!(movedTo(3, 3));
+    await press;
+    expect(second.closed).toBe(false);
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(3, 3), counted: true });
+  });
+
+  it.each([
+    ['the selection moves off the figure', () => state().setOristudioCpActiveFoldedFigure(null)],
+    ['the workspace switches', () => useLayoutStore.setState({ activeWorkspace: 'diagram' })],
+    ['the Layer order dialog opens', () => useLayerOrderDialogStore.setState({ opening: { id: 99 } as never })],
+    [
+      'one of its creases moves',
+      () =>
+        useWorkspaceStore.setState({
+          oristudioCpDocument: cpState([LINES[0]!, line({ x: 1, y: 0 }, { x: 0, y: 0.9 }, 'Blue2')]),
+        }),
+    ],
+  ] as const)('forgets where the rested figure’s order lay when %s', async (_what, meanwhile) => {
+    const workspace = useLayoutStore.getState().activeWorkspace;
+    await steppedThenRested();
+    try {
+      meanwhile();
+    } finally {
+      useLayoutStore.setState({ activeWorkspace: workspace });
+      useLayerOrderDialogStore.setState({ opening: null });
+      useWorkspaceStore.setState({ oristudioCpDocument: cpState() });
+      state().setOristudioCpActiveFoldedFigure(figureNow().id);
+    }
+    // Put back as it was, the figure holds what it did; the place is not.
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+  });
+
+  it('forgets where the rested figure’s order lay on an undo, and a redo brings back no readout', async () => {
+    await steppedThenRested();
+    await state().undo();
+    await state().redo();
+    expect(figureNow()).toMatchObject({ handle: 9, layerOrder: held(solutionRecord(2)) });
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+  });
+
   it('goes to the figure last stepped: one cursor, one worker, at a time', async () => {
     const one = seed();
     const two = { ...one, id: 'generated-2', handle: 5 };

@@ -20,7 +20,9 @@
  *   figure, selecting anything else, leaving Edit for another workspace,
  *   opening the Layer order dialog, or a minute with no press
  *   ({@link FOLDED_SOLUTION_CURSOR_IDLE_MS}) closes it, and the next press
- *   restores the record again.
+ *   restores the record again. A minute with no press lets go of the worker
+ *   only: where the figure's order lies is kept for the readout, on the same
+ *   terms as the cursor was ({@link Rest}).
  * - **In step with the figure, or gone.** The cursor's session shows one
  *   order: the one its last step landed, which the figure then holds as its
  *   fold and its record. Whenever the figure holds anything else — an undo
@@ -74,19 +76,31 @@ function stepByKey(by: LayerStepBy): string {
   return by === 'layer_order' ? by : by.picture;
 }
 
-interface Held {
+/** What a cursor is kept against, and what is kept of it once it rests: the figure as the cursor last saw it. */
+interface KeptFor {
   readonly figureId: string;
   /** The generation of handles the figure's fold belongs to (`foldedFigureHandleEpoch`). */
   readonly epoch: number;
-  readonly cursor: LayerOrderSolutionCursor;
   /** The document when the cursor was made, and its creases where the figure was folded from them. */
   readonly document: OristudioCpDocumentSnapshot | null;
   readonly creases: string | null;
   /** What the figure holds that the cursor's session shows: its fold, and its record as saved. */
+  readonly handle: number | null;
+  readonly json: string;
+}
+
+/** A place, by the key of what it was read by. */
+interface KeyedPlace {
+  readonly by: string;
+  readonly value: LayerOrderSolutionPlace;
+}
+
+interface Held extends KeptFor {
+  readonly cursor: LayerOrderSolutionCursor;
   handle: number | null;
   json: string;
-  /** Where the order shown lies, by the key of what it was read by. */
-  place: { by: string; value: LayerOrderSolutionPlace } | null;
+  /** Where the order shown lies. */
+  place: KeyedPlace | null;
   /** The key a `place` was last asked for, after the figure turned over or changed its X-ray. */
   asking: string | null;
   /** A press is running: the figure is waiting on it, and holds the new fold only once it lands. */
@@ -95,7 +109,20 @@ interface Held {
   readonly unwatch: () => void;
 }
 
+/**
+ * Where the figure's order lay when its cursor went a minute with no press,
+ * and the worker went: the readout stays as it was. Let go whenever the
+ * cursor would have been ({@link settleFoldedSolutionCursor}, the workspace,
+ * the dialog), the minute aside; the next press seeds its new cursor with it.
+ */
+interface Rest extends KeptFor {
+  readonly place: KeyedPlace;
+  /** Stops watching the workspace and the dialog for it: the cursor's watch, carried over. */
+  readonly unwatch: () => void;
+}
+
 let held: Held | null = null;
+let rest: Rest | null = null;
 let idle: ReturnType<typeof setTimeout> | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
@@ -115,8 +142,29 @@ function startIdleClock(): void {
   stopIdleClock();
   idle = setTimeout(() => {
     idle = null;
-    if (held && !held.stepping) dropFoldedSolutionCursor();
+    if (held && !held.stepping) letCursorRest(held);
   }, FOLDED_SOLUTION_CURSOR_IDLE_MS);
+}
+
+/** Close an idle cursor's worker, keeping where its figure's order lies, if it knew. */
+function letCursorRest(cursor: Held): void {
+  const { place } = cursor;
+  if (!place) {
+    dropFoldedSolutionCursor();
+    return;
+  }
+  held = null;
+  const { figureId, epoch, document, creases, handle, json, unwatch } = cursor;
+  rest = { figureId, epoch, document, creases, handle, json, place, unwatch };
+  cursor.cursor.close();
+  notify();
+}
+
+/** Forget a rested place, and stop its watch. */
+function forgetRest(): void {
+  const gone = rest;
+  rest = null;
+  gone?.unwatch();
 }
 
 /** The creases `figure` was folded from, as `document` has them now; null where it has no region to look in. */
@@ -124,48 +172,71 @@ function creasesOf(document: OristudioCpDocumentSnapshot | null, figure: Oristud
   return document && figure.sourceBounds ? currentSourceFingerprint(document, figure.sourceBounds) : null;
 }
 
-/** Whether the cursor's session shows what `figure` holds. */
-function inStep(cursor: Held, figure: OristudioCpFoldedFigureEntry | undefined): boolean {
+/** Whether `figure` holds what `kept` saw it hold: the same fold, of the same generation, with the same record. */
+function holdsAsKept(kept: KeptFor, figure: OristudioCpFoldedFigureEntry | undefined): boolean {
   return (
     figure !== undefined &&
-    figure.id === cursor.figureId &&
-    foldedFigureHandleEpoch() === cursor.epoch &&
-    figure.handle === cursor.handle &&
+    figure.id === kept.figureId &&
+    foldedFigureHandleEpoch() === kept.epoch &&
+    figure.handle === kept.handle &&
     figure.layerOrder?.kind === 'record' &&
-    figure.layerOrder.json === cursor.json &&
-    cursor.cursor.alive()
+    figure.layerOrder.json === kept.json
   );
 }
 
+/** Whether the cursor's session shows what `figure` holds. */
+function inStep(cursor: Held, figure: OristudioCpFoldedFigureEntry | undefined): boolean {
+  return holdsAsKept(cursor, figure) && cursor.cursor.alive();
+}
+
 /** Whether the creases the cursor's figure was folded from are as they were when it was made. */
-function creasesHeld(cursor: Held, document: OristudioCpDocumentSnapshot | null, figure: OristudioCpFoldedFigureEntry): boolean {
+function creasesHeld(cursor: KeptFor, document: OristudioCpDocumentSnapshot | null, figure: OristudioCpFoldedFigureEntry): boolean {
   if (document === cursor.document) return true;
   // With no region to look in, any edit may have been to its creases.
   if (cursor.creases === null || !document) return false;
   return creasesOf(document, figure) === cursor.creases;
 }
 
-/** Close the cursor, with its worker. Idempotent. */
+/**
+ * The figure `kept` is for, while `figures`, `document` and the selected
+ * figure (when given) still keep it: the figure there, holding what `holds`
+ * asks, its creases as they were, and the one selected. Null once any isn't.
+ */
+function keptFigure<K extends KeptFor>(
+  kept: K,
+  holds: (kept: K, figure: OristudioCpFoldedFigureEntry) => boolean,
+  figures: readonly OristudioCpFoldedFigureEntry[],
+  document: OristudioCpDocumentSnapshot | null,
+  selected: string | null | undefined
+): OristudioCpFoldedFigureEntry | null {
+  const figure = figures.find((candidate) => candidate.id === kept.figureId);
+  if (!figure || !holds(kept, figure) || !creasesHeld(kept, document, figure)) return null;
+  return selected === undefined || selected === kept.figureId ? figure : null;
+}
+
+/** Close the cursor, with its worker, and forget where its figure's order lay. Idempotent. */
 export function dropFoldedSolutionCursor(): void {
   stopIdleClock();
-  if (!held) return;
+  if (!held && !rest) return;
+  forgetRest();
   const gone = held;
   held = null;
-  gone.unwatch();
-  gone.cursor.close();
+  gone?.unwatch();
+  gone?.cursor.close();
   notify();
 }
 
 /**
  * Where the order `figure` shows lies among the solutions that fit its
- * record, by what its stepper steps through now: known only while a cursor
- * is in step with it and has answered for that. Null otherwise — before the
- * first press, after an undo, once the figure turned over until it is asked
- * again. Reads the table only, so any render may ask.
+ * record, by what its stepper steps through now: known once a cursor in step
+ * with it has answered for that, and still after the cursor rested, while
+ * the figure holds what it did. Null otherwise — before the first press,
+ * after an undo, once the figure turned over until it is asked again. Reads
+ * the table only, so any render may ask.
  */
 export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): LayerOrderSolutionPlace | null {
-  if (!held || !inStep(held, figure) || !held.place) return null;
-  return held.place.by === stepByKey(foldedFigureStepBy(figure)) ? held.place.value : null;
+  const known = held ? (inStep(held, figure) ? held.place : null) : rest && holdsAsKept(rest, figure) ? rest.place : null;
+  return known && known.by === stepByKey(foldedFigureStepBy(figure)) ? known.value : null;
 }
 
 /**
@@ -181,15 +252,15 @@ export function settleFoldedSolutionCursor(
   document: OristudioCpDocumentSnapshot | null,
   selected?: string | null
 ): void {
+  if (!held) {
+    // A rested place goes on the same terms, but has no one to ask again.
+    if (rest && !keptFigure(rest, holdsAsKept, figures, document, selected)) dropFoldedSolutionCursor();
+    return;
+  }
   const cursor = held;
-  if (!cursor || cursor.stepping) return;
-  const figure = figures.find((candidate) => candidate.id === cursor.figureId);
-  if (
-    !figure ||
-    !inStep(cursor, figure) ||
-    !creasesHeld(cursor, document, figure) ||
-    (selected !== undefined && selected !== cursor.figureId)
-  ) {
+  if (cursor.stepping) return;
+  const figure = keptFigure(cursor, inStep, figures, document, selected);
+  if (!figure) {
     dropFoldedSolutionCursor();
     return;
   }
@@ -305,6 +376,8 @@ export function beginFoldedSolutionStep(
   if (held && (held.figureId !== figure.id || !inStep(held, figure) || !creasesHeld(held, document, figure))) {
     dropFoldedSolutionCursor();
   }
+  // A rested place for another figure, or for what this one no longer holds, is let go too.
+  if (rest && (!holdsAsKept(rest, figure) || !creasesHeld(rest, document, figure))) dropFoldedSolutionCursor();
   let mine: Held | null = held;
   if (mine) mine.stepping = true;
   stopIdleClock();
@@ -322,6 +395,9 @@ export function beginFoldedSolutionStep(
           return { outcome: 'cancelled' };
         }
         const json = figure.layerOrder?.kind === 'record' ? figure.layerOrder.json : '';
+        // Where the figure's order lay, if a rested cursor knew: read until this one answers.
+        const known = rest && holdsAsKept(rest, figure) ? rest.place : null;
+        forgetRest();
         mine = {
           figureId: figure.id,
           epoch: foldedFigureHandleEpoch(),
@@ -330,7 +406,7 @@ export function beginFoldedSolutionStep(
           creases: creasesOf(document, figure),
           handle: figure.handle,
           json,
-          place: null,
+          place: known,
           asking: null,
           stepping: true,
           unwatch: watchWhileKept(),
