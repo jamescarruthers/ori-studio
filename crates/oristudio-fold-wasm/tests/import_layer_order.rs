@@ -16,9 +16,22 @@
 //! - a pick that is not the dialog's is a caller's mistake, and relations
 //!   that clash with the creases are a refusal that lands nothing;
 //! - an import whose faces are not Edit's says so, and keeps its chooser.
+//!
+//! With `H10_IMPORT_CORPUS_DIR` set, every `<case>/truth.fold` under it (the
+//! cpoogle layout) that imports with more than one order is opened onto the
+//! dialog, the dialog's session opened on it, and its untouched Apply landed:
+//! one row per case (the opening's time, whether the dialog held the default
+//! order whole, whether the Apply landed the default pick), then a summary.
+//! Run it in release:
+//!
+//! ```sh
+//! H10_IMPORT_CORPUS_DIR=/path/to/cpoogle \
+//!   cargo test -p oristudio-fold-wasm --release --test import_layer_order -- --nocapture corpus
+//! ```
 #![cfg(not(target_arch = "wasm32"))]
 
 use std::collections::BTreeSet;
+use std::time::Instant;
 
 use oristudio_cp::folding::HierarchyRelation;
 use oristudio_fold::complete::CompletionLimits;
@@ -493,4 +506,140 @@ fn an_import_whose_faces_are_not_edits_keeps_its_chooser() {
             Ok(Outcome::Ok(_))
         ));
     }
+}
+
+/// What became of one corpus design (see the module docs).
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum CorpusRow {
+    /// Import CP refused it, or it has one order: the dialog is never asked.
+    NotAsked(&'static str),
+    /// The opening refused: the import keeps its chooser.
+    Fallback(String),
+    /// The dialog's own open refused (the user would see why, and Cancel).
+    DialogRefused(String),
+    /// Opened; whether the dialog held the default whole, and whether its
+    /// untouched Apply landed the default pick.
+    Opened { held: bool, exact: bool },
+}
+
+#[test]
+fn corpus() {
+    let Some(dir) = std::env::var_os("H10_IMPORT_CORPUS_DIR") else {
+        return;
+    };
+    let mut cases: Vec<_> = std::fs::read_dir(&dir)
+        .expect("corpus dir")
+        .filter_map(|entry| entry.ok().map(|e| e.path().join("truth.fold")))
+        .filter(|path| path.exists())
+        .collect();
+    cases.sort();
+    let mut rows = Vec::new();
+    let mut openings_ms = Vec::new();
+    for path in &cases {
+        let name = path
+            .parent()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let bytes = std::fs::read(path).expect("truth.fold");
+        let mut bridge = Bridge::new();
+        let mut imports = Imports::new();
+        let row = (|| {
+            let opened = match imports.open(
+                &bridge,
+                CpFile::of(CpFormat::Fold),
+                &bytes,
+                Target::Empty {
+                    start_side: StartSide::Front,
+                },
+                &Limits::default(),
+            ) {
+                Ok(Outcome::Ok(opened)) => opened,
+                _ => return CorpusRow::NotAsked("import refused"),
+            };
+            let choice = vec![0; opened.components.len()];
+            if opened.count.exact
+                && opened
+                    .components
+                    .iter()
+                    .all(|c| c.orders <= 1 && !c.truncated)
+            {
+                return CorpusRow::NotAsked("one order");
+            }
+            let started = Instant::now();
+            let opening = match imports.layer_opening(opened.import, &choice) {
+                Ok(Outcome::Ok(opening)) => opening,
+                Ok(Outcome::Refused(refusal)) => {
+                    return CorpusRow::Fallback(json!(refusal)["refusal"]["reason"].to_string());
+                }
+                Err(error) => return CorpusRow::Fallback(error.code().to_string()),
+            };
+            openings_ms.push(started.elapsed().as_secs_f64() * 1000.0);
+            let mut layers = LayerSessions::new();
+            let shown = flat(&oristudio_fold::steer::scene_relations(&opening.shown));
+            let opened_dialog = match layers.open_showing(&opening.source, &shown, &generous()) {
+                Ok(Opening::Opened(opened)) => opened,
+                Ok(Opening::Refused(refusal)) => {
+                    let named = format!("{refusal:?}");
+                    return CorpusRow::DialogRefused(
+                        named
+                            .split([' ', '(', '{'])
+                            .next()
+                            .unwrap_or_default()
+                            .to_string(),
+                    );
+                }
+                Err(error) => return CorpusRow::DialogRefused(format!("{error:?}")),
+            };
+            let held = opened_dialog.opened_on == OpenedOnWire::Held { ignored: 0 };
+            let relations = layers
+                .oriedita_relations(opened_dialog.session)
+                .expect("relations");
+            let default = match imports.pick(&mut bridge, opened.import, &choice) {
+                Ok(Outcome::Ok(landed)) => landed,
+                _ => return CorpusRow::Opened { held, exact: false },
+            };
+            let applied = imports.pick_layer_order(
+                &mut bridge,
+                opened.import,
+                &opening.source.digest,
+                &relations,
+            );
+            let exact = matches!(applied, Ok(Outcome::Ok(ref landed)) if landed.op == default.op);
+            CorpusRow::Opened { held, exact }
+        })();
+        println!("{name}\t{row:?}");
+        rows.push(row);
+    }
+    openings_ms.sort_by(f64::total_cmp);
+    let at = |q: f64| {
+        openings_ms
+            .get(((openings_ms.len() as f64 - 1.0) * q).round() as usize)
+            .copied()
+            .unwrap_or(0.0)
+    };
+    let mut tally: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for row in &rows {
+        let key = match row {
+            CorpusRow::Fallback(reason) => format!("Fallback({reason})"),
+            CorpusRow::DialogRefused(code) => format!("DialogRefused({code})"),
+            other => format!("{other:?}"),
+        };
+        *tally.entry(key).or_default() += 1;
+    }
+    println!("{} designs: {tally:?}", rows.len());
+    println!(
+        "opening ms: p50 {:.0}, p95 {:.0}, max {:.0} ({} opened)",
+        at(0.5),
+        at(0.95),
+        at(1.0),
+        openings_ms.len()
+    );
+    assert!(
+        rows.iter().all(|row| !matches!(
+            row,
+            CorpusRow::Opened { held: false, .. } | CorpusRow::Opened { exact: false, .. }
+        )),
+        "every opening holds the default whole and its untouched Apply lands it"
+    );
 }
