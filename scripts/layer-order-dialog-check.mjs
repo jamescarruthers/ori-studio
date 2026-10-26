@@ -2721,7 +2721,10 @@ async function reopenSaved(page, url, theme, name) {
  * on the creases as they are now and draws the order that fits; then a record
  * whose constraints clash keeps the picture, flagged, with Review… (D10,
  * D14); Layer order… on the stale figure says Apply also refolds (D12); the
- * flag survives a reload with no worker. Then a book fold whose crease gains
+ * flag survives a reload with no worker. Then a released build's refold
+ * after an edit, simulated: the reopened record shows "Not applied", with
+ * Review…, whose Apply takes it up, and Dismiss, one entry an undo takes
+ * back. Then a book fold whose crease gains
  * a fold angle: Refold shows it in 3D, its record kept and waiting (D13),
  * through a reload and the idle 3D rehydrate, with no worker.
  */
@@ -2863,15 +2866,38 @@ function editRefoldCases(theme) {
       throw new Error(`an untouched Apply is not the plain Refold: ${JSON.stringify({ untouched, untouchedLabel })}`);
     }
 
-    // An older build folds a constrained figure again (its snapshot loses `shown_order`): the record detaches,
-    // flagged "Not applied" with Review…, from saved data alone; Review… and an Apply take it up again.
+    // A released build edits a crease inside a constrained figure and refolds it, as it can: its Refold
+    // knows no record, re-baselines the figure on the new creases and writes its own snapshot (no
+    // `shown_order`), and it carries the bag as it came. Reopened here, the record detaches, flagged
+    // "Not applied" with Review… and Dismiss, from saved data alone; Review… and an Apply take it up
+    // again, and Dismiss lets it go, as one entry an undo takes back.
     await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
     const detachedId = await foldWholeAndSelect(page);
     await zoomOutToFigure(page);
     await chosenOrder(page, detachedId);
     if (!(await applyChosenOrder(page, detachedId))) throw new Error('Apply wrote nothing');
+    const ours = JSON.parse(await savedProject(page));
+    await page.evaluate((detachedId) => {
+      const store = window.__treemakerWorkspaceStore;
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === detachedId ? { ...entry, layerOrder: undefined } : entry)),
+      });
+    }, detachedId);
+    await splitCornerFace(page);
+    await pressFigureVerb(page, 'Refold');
     const olderBuilds = JSON.parse(await savedProject(page));
-    delete olderBuilds.workspace.creasePattern.viewState.foldedFigures[0].snapshot.shown_order;
+    const olderFigure = olderBuilds.workspace.creasePattern.viewState.foldedFigures[0];
+    delete olderFigure.snapshot.shown_order;
+    olderBuilds.workspace.creasePattern.extensions = ours.workspace.creasePattern.extensions;
+    const oursFigure = ours.workspace.creasePattern.viewState.foldedFigures[0];
+    const linesIn = (file) => file.workspace.creasePattern.creasePattern.document.crease_pattern.line_segments.length;
+    console.log(
+      `[${tag}] an older build's refold after an edit: lines ${linesIn(ours)} → ${linesIn(olderBuilds)}, ` +
+        `fingerprint changed ${oursFigure.sourceFingerprint !== olderFigure.sourceFingerprint}, the bag carried as it came`
+    );
+    if (oursFigure.sourceFingerprint === olderFigure.sourceFingerprint) throw new Error('the older build’s refold kept the fingerprint');
     const watchDetached = watchLayerOrderLoads(page);
     await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
     await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
@@ -2885,15 +2911,26 @@ function editRefoldCases(theme) {
     await page.waitForTimeout(1500);
     if (watchDetached.loaded().length > 0) throw new Error(`the detached figure loaded ${watchDetached.loaded().join(', ')}`);
     watchDetached.stop();
-    const detachedState = await page.evaluate(() => {
-      const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0];
-      return { own: figure.layerOrder?.kind ?? null, detached: figure.detachedLayerOrder?.record.constraints.length ?? null };
+    const detachedState = await page.evaluate(async () => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      const figure = state.oristudioCpFoldedFigures[0];
+      const { isFoldedFigureStale } = await import('/src/cp-workspace/folded/foldedFigureStaleness.ts');
+      return {
+        own: figure.layerOrder?.kind ?? null,
+        detached: figure.detachedLayerOrder?.record.constraints.length ?? null,
+        stale: isFoldedFigureStale(state.oristudioCpDocument.document, figure),
+      };
     });
     const detachedSheet = page.locator('[data-property-sheet]');
     const detachedSubtitle = await detachedSheet.locator('[data-property-sheet-subtitle]').innerText();
     const chip = await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Not applied' }).innerText();
-    console.log(`[${tag}] detached by an older build: ${JSON.stringify(detachedState)}; Properties "${detachedSubtitle}"; chip "${chip}"; nothing loaded`);
-    if (detachedState.own !== null || detachedState.detached === null) throw new Error(`the record is not shown detached: ${JSON.stringify(detachedState)}`);
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    console.log(
+      `[${tag}] detached by an older build: ${JSON.stringify(detachedState)}; Properties "${detachedSubtitle}" with Review… and Dismiss; chip "${chip}"; nothing loaded`
+    );
+    if (detachedState.own !== null || detachedState.detached === null || detachedState.stale) {
+      throw new Error(`the record is not shown detached on an up-to-date figure: ${JSON.stringify(detachedState)}`);
+    }
     await record(`edit-refold-${tag}-detached`, detachedShots);
 
     await detachedSheet.getByRole('button', { name: 'Review…' }).click();
@@ -2921,6 +2958,31 @@ function editRefoldCases(theme) {
     console.log(`[${tag}] Review… and an untouched Apply took it up: the bag holds ${Object.keys(takenUp.figures ?? {}).length} record, ${takenUp.detached?.length ?? 0} detached`);
     if (!takenUp.figures || takenUp.detached) throw new Error(`the save kept the detached entry: ${JSON.stringify(takenUp)}`);
     await record(`edit-refold-${tag}-detached-taken`, await figureShots(page));
+
+    // The Apply undone, the flag is back; Dismiss lets it go as one entry, and an undo takes that back.
+    const flagShown = () =>
+      page.evaluate(() => {
+        const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0];
+        return figure.layerOrder == null && figure.detachedLayerOrder != null && figure.detachedLayerOrder.settled == null;
+      });
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    if (!(await flagShown())) throw new Error('the undone Apply did not bring the flag back');
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).click();
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'detached', timeout: 10000 });
+    const dismissedLabel = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.at(-1)?.label);
+    const dismissedBag = JSON.parse(await savedProject(page)).workspace.creasePattern.extensions['oristudio.foldedFigureLayerOrders'] ?? null;
+    const dismissedShots = await figureShots(page);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    const backAfterUndo = await flagShown();
+    console.log(
+      `[${tag}] Dismiss: "${dismissedLabel}", the bag after it ${JSON.stringify(dismissedBag)}; undone, the flag is back ${backAfterUndo}`
+    );
+    if (dismissedLabel !== 'Dismiss layer constraints' || dismissedBag !== null || !backAfterUndo) {
+      throw new Error(`Dismiss did not let the record go as one entry: ${JSON.stringify({ dismissedLabel, dismissedBag, backAfterUndo })}`);
+    }
+    await record(`edit-refold-${tag}-detached-dismissed`, dismissedShots);
 
     // A book fold whose crease gains a fold angle: Refold shows it in 3D, its record kept and waiting (D13).
     const book = [
