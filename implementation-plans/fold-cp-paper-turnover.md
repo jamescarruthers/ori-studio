@@ -12,8 +12,9 @@ Use the renderer's existing sheet-fill channel beneath the crease strokes.
 Keep the CP side as view state, independent of the folding sequence's Turn over
 step and starting side. Mirror the pane's model-to-screen transform about the
 sheet's horizontal midpoint so picking, hover and tool overlays stay aligned.
-Reverse M/V appearance for both ordinary and instruction creases, retaining
-Edit's line styles and widths. Compose the existing viewport toolbar control
+Reverse M/V appearance for both ordinary and instruction creases, using the
+paper style's pens for all creases. Show the current side with a white front
+or grey back paper-face icon, and label the action with the side it will show. Compose the existing viewport toolbar control
 on desktop and its overflow menu on phones; record an enum-only analytics event.
 
 ## Affected Areas
@@ -32,6 +33,10 @@ on desktop and its overflow menu on phones; record an enum-only analytics event.
 - [x] Test asymmetric sheets, reverse creases, picking/overlays, and repeat turnover.
 - [x] Run web lint, typecheck, unit tests, i18n checks and browser verification.
 - [x] Open a draft PR against main and leave a local testing server running.
+
+- [x] Apply the paper pens to every CP crease, including step instructions.
+- [x] Replace turnover arrows with front/back paper-face icons and descriptive labels.
+- [x] Validate the follow-up and update the draft PR.
 
 Draft PR: https://github.com/zacharyfmarion/ori-studio/pull/544.
 
@@ -60,3 +65,20 @@ Rust workspace/oracle tests and native desktop checks are out of scope: this
 change is shared frontend presentation and view state, with no engine,
 file-format or shell changes. Production bundling is unchanged, so a web
 production build is unnecessary.
+
+The paper-pen and icon follow-up uses the shared paper painter for crease
+colors, point widths, centered dashes, and auxiliary visibility, independent
+of Edit's viewport styling. Instructions use the diagram-crease pens, and
+viewing the back exchanges the complete M/V pens. The icon shows the current
+side (white front, grey back); its label names the side the action will show.
+Translations and paper help text match both controls.
+
+Follow-up validation passed: web lint, typecheck (using the already rebuilt
+WASM dependencies), i18n check, and 303 tests in 44 files covering the Fold
+canvas, camera, tools, and CP imports. Browser checks covered custom pen
+widths/dashes and paper colors, turnover without changing sequence data,
+light/dark themes, and the phone overflow control, with no page errors.
+Screenshots are in `artifacts/fold-cp-pens-*.png`. The complete web suite above
+was run for the initial implementation; the follow-up uses focused coverage
+because it changes only Fold presentation. The same native/build exclusions
+apply.

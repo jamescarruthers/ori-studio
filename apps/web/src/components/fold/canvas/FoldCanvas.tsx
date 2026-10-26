@@ -189,7 +189,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const foldedTint = resolvingOrder ? orderTint : joinFills(paint.folded.tint, swivelMarks.tint);
   // The CP's own viewing side, independent of the folded form's Turn over step.
   const cpView = useFoldCreasePatternView(summary?.sheet, style);
-  const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name, cpView.side);
+  const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, style, cpView.side);
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
   const sheetKey = summary ? summary.sheet.map(([x, y]) => `${x},${y}`).join(';') : 'none';
   const framingKey = `${sequenceId}:${sheetKey}`;

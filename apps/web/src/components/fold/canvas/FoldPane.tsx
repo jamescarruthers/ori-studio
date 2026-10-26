@@ -50,11 +50,11 @@ export interface FoldPaneProps {
   /** The surface the style is read through, and the per-face overrides (a refusal's faces). The `fold` policy by default. */
   ink?: FoldedSceneInk;
   /**
-   * A crease pattern drawn as Edit draws one (`useFoldCreasePatternStrokes`):
+   * A crease pattern drawn in the paper style (`useFoldCreasePatternStrokes`):
    * its lines on the crease channel, its instruction on the preview channel
-   * under the tool's feedback, and every stroke measured from its crease
-   * width. Absent, the pane draws no creases of its own and measures the
-   * feedback from the edge pen.
+   * under the tool's feedback, and every stroke measured in points. Absent,
+   * the pane draws no creases of its own and measures the feedback from the
+   * default edge width.
    */
   creases?: FoldCreasePatternStrokes | null;
   /** The unfolded sheet, in model space, drawn beneath its creases and feedback. */
@@ -113,9 +113,9 @@ export interface FoldPaneProps {
  * Both panes are this component, and differ in what they are handed: the
  * folded form is a paper scene, painted through the shared painter on the
  * folded channel in the user's paper style (D11); the crease pattern is drawn
- * as Edit's canvas draws one — its creases on the crease channel in Edit's
- * inks, over its paper-colored sheet (`sheetFill`). It publishes into no store
- * and registers no singleton; the canvas that mounts it holds the camera
+ * on the crease channel in the paper's pens, over its paper-colored sheet
+ * (`sheetFill`). It publishes into no store and registers no singleton;
+ * the canvas that mounts it holds the camera
  * verbs through the handle.
  */
 export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function FoldPane(props, ref) {
@@ -170,7 +170,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       sameHit: sameFoldHit,
       onPick,
       strokeWidths: ({ ratio, widthBoost }) => ({
-        // A crease pattern's crease width, as Edit's canvas draws it; the edge pen's otherwise.
+        // The crease pattern's widths are points, as the paper painter supplies them.
         strokeWidthPx: foldPaneStrokeWidthPx(creases, { ratio, widthBoost }),
         // A stroke multiplier on the folded channel is pt: device px per pt
         // is the unit, as Edit's canvas draws its figures.

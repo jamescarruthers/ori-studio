@@ -147,16 +147,22 @@ describe("the Fold canvas", () => {
       const canvas = mount();
       const before = useWorkspaceStore.getState().foldSequences;
       const tool = foldTools().store.getState();
-      const button = canvas.querySelector<HTMLButtonElement>('button[aria-label="Turn CP over"]')!;
+      const button = canvas.querySelector<HTMLButtonElement>('button[aria-label="Show back of crease pattern"]')!;
       const cp = () => canvas.querySelector('[data-testid="fold-crease-pattern-canvas"]');
       const folded = canvas.querySelector('[data-testid="fold-folded-canvas"]')?.getAttribute('aria-label');
       expect(button.hasAttribute('data-active')).toBe(false);
+      expect(button.getAttribute('aria-label')).toBe('Show back of crease pattern');
+      expect(button.querySelector('[data-paper-side="front"] rect')?.getAttribute('fill')).toBe('#ffffff');
       expect(cp()?.getAttribute('aria-label')).toContain('front up');
       act(() => button.click());
       expect(button.hasAttribute('data-active')).toBe(true);
+      expect(button.getAttribute('aria-label')).toBe('Show front of crease pattern');
+      expect(button.querySelector('[data-paper-side="back"] rect')?.getAttribute('fill')).toBe('#b3b3b3');
       expect(cp()?.getAttribute('aria-label')).toContain('back up');
       act(() => button.click());
       expect(button.hasAttribute('data-active')).toBe(false);
+      expect(button.getAttribute('aria-label')).toBe('Show back of crease pattern');
+      expect(button.querySelector('[data-paper-side="front"] rect')?.getAttribute('fill')).toBe('#ffffff');
       expect(cp()?.getAttribute('aria-label')).toContain('front up');
       expect(canvas.querySelector('[data-testid="fold-folded-canvas"]')?.getAttribute('aria-label')).toBe(folded);
       expect(useWorkspaceStore.getState().foldSequences).toBe(before);
@@ -240,7 +246,7 @@ describe("the Fold canvas", () => {
     act(() => {
       button("More view controls")?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
     });
-    const turn = [...document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')].find((row) => row.textContent === 'Turn CP over');
+    const turn = [...document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')].find((row) => row.textContent === 'Show back of crease pattern');
     expect(turn?.getAttribute('aria-checked')).toBe('false');
     act(() => turn?.click());
     expect(turn?.getAttribute('aria-checked')).toBe('true');

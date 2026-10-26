@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlipHorizontal2, Layers, PenLine } from 'lucide-react';
+import { Layers, PenLine } from 'lucide-react';
 import type { LayerSpreadToggle } from '../../../cp-workspace/folded/layerSpreadControls';
 import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/ViewportToolbar';
+import { FoldCpSideIcon } from './FoldCpSideIcon';
 import { FoldFlatCreasesIcon } from './FoldFlatCreasesIcon';
 
 /**
@@ -57,11 +58,10 @@ export function FoldViewportToolbar({
         {
           kind: 'action',
           id: 'turn-cp-over',
-          label: t('panels:fold.canvas.turnCpOver', 'Turn CP over'),
-          title: cpSide === 'front'
-            ? t('panels:fold.canvas.showCpBack', 'Show the back of the crease pattern: turn left to right and reverse mountain/valley creases')
-            : t('panels:fold.canvas.showCpFront', 'Show the front of the crease pattern'),
-          icon: <FlipHorizontal2 size={14} />,
+          label: cpSide === 'front'
+            ? t('panels:fold.canvas.showCpBack', 'Show back of crease pattern')
+            : t('panels:fold.canvas.showCpFront', 'Show front of crease pattern'),
+          icon: <FoldCpSideIcon side={cpSide} size={14} />,
           checked: cpSide === 'back',
           pinned: true,
           onPhone: 'collapse',
@@ -73,7 +73,7 @@ export function FoldViewportToolbar({
           label: t('panels:fold.canvas.stepCreases', 'Step creases'),
           title: t(
             'panels:fold.canvas.stepCreasesTitle',
-            'Draw the creases the step on show made in bold, as its instruction'
+            'Draw this step’s creases with the paper’s instruction pens'
           ),
           icon: <PenLine size={14} />,
           checked: display.stepCreases,

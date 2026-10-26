@@ -1868,14 +1868,13 @@
       "flatCreasesTitle": "Desenhar os vincos planos no papel: pré-vincos e dobras desfeitas",
       "folded": "Dobrado",
       "foldedLabel": "A forma dobrada. Clique em seus pontos e vincos para posicionar uma dobra; arraste para mover, role para dar zoom.",
-      "showCpBack": "Mostrar o verso do padrão de vincos: virar da esquerda para a direita e inverter os vincos de montanha e vale",
+      "showCpBack": "Mostrar o verso do padrão de vincos",
       "showCpFront": "Mostrar a frente do padrão de vincos",
       "spreadLayers": "Separar camadas",
       "spreadLayersTitle": "Separa as camadas dobradas, como um diagrama as desenha, neste passo e nos seguintes",
       "stepCreases": "Vincos do passo",
-      "stepCreasesTitle": "Desenhar em negrito os vincos feitos pelo passo mostrado, como sua instrução",
-      "toolbar": "Visualização da dobra",
-      "turnCpOver": "Virar o CP"
+      "stepCreasesTitle": "Desenhar os vincos desta etapa com as canetas de instrução do papel",
+      "toolbar": "Visualização da dobra"
     },
     "collapse": {
       "changed": "Há uma atualização disponível. Este passo ainda usa a versão salva do CP.",
@@ -1916,7 +1915,7 @@
       "sheetStartsOver_many": "Uma nova folha inicial recomeça a sequência: seus {{count}} passos são apagados. Desfazer os traz de volta.",
       "sheetStartsOver_other": "Uma nova folha inicial recomeça a sequência: seus {{count}} passos são apagados. Desfazer os traz de volta.",
       "start": "Início",
-      "startHelp": "Qual lado do papel fica voltado para você antes da primeira dobra. Use Virar o CP na barra de ferramentas da tela para ver qualquer lado do padrão de vincos.",
+      "startHelp": "Qual lado do papel fica voltado para você antes da primeira dobra. Use o botão da face do papel na barra da tela para ver os dois lados do padrão de vincos.",
       "style": "Estilo",
       "styleHint": "O papel, as canetas e os vincos de diagrama com que esta sequência é desenhada. Um estilo das Configurações é copiado para a sequência quando você o escolhe."
     },

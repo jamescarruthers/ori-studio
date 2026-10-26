@@ -80,7 +80,7 @@ export function FoldPaperPane({
           label={t('panels:fold.paper.start', 'Start')}
           help={t(
             'panels:fold.paper.startHelp',
-            'Which side of the paper faces you before the first fold. Use Turn CP over on the canvas toolbar to view either side of the crease pattern.'
+            'Which side of the paper faces you before the first fold. Use the paper face button on the canvas toolbar to view either side of the crease pattern.'
           )}
           value={startSide}
           disabled={readOnly}

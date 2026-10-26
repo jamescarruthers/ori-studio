@@ -212,7 +212,7 @@ describe('the Fold panes’ opening camera', () => {
     const frontFill = sheetFills.get(cp)!;
     expect(frontFill.count).toBe(6);
     expect(front.view.ex[0]).toBeGreaterThan(0);
-    const turn = host!.querySelector<HTMLButtonElement>('button[aria-label="Turn CP over"]')!;
+    const turn = host!.querySelector<HTMLButtonElement>('button[aria-label="Show back of crease pattern"]')!;
     act(() => turn.click());
     const back = frames.get(cp)!;
     expect(back.view.ex[0]).toBe(-front.view.ex[0]);
