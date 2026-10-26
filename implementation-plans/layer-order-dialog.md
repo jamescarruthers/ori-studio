@@ -836,14 +836,32 @@ Settled while building H4, for the PRs that meet it:
   creases in 3D again on the reused id inherits the record, flagged as
   waiting; flat figures have the snapshot check for that, 3D ones have no
   flat snapshot.
-- **Detached by an older build** (the Refusals board's frame), built in H4:
-  saved entries carry a `sourceKey` (the source fingerprint alone); an
-  `order-not-given` record whose figure is still there, flat and folded
-  from the same creases is shown for review ("Not applied", Review…),
-  never used to fold, its entry kept in `detached[]` until an Apply takes
-  it up. A reused id folded from other creases shows nothing, and
-  `figure-missing` entries stay in the bag, unshown. Entries saved before
-  the key existed (dev builds only) are never shown.
+- **Detached by an older build** (the Refusals board's frame), built in H4.
+  A released build detaches a record only by editing the creases and
+  refolding, which changes the source fingerprint, so the figure is
+  recognised by what every build's Refold keeps instead:
+  - **The refold key.** Saved entries carry a `refoldKey`, a hash of the id,
+    the title, the placement, the starting face and the region (rounded).
+    An `order-not-given` record whose figure is still there, flat, with
+    that key is shown for review ("Not applied", Review…, Dismiss), never
+    used to fold. The dialog restores it on the figure as folded now, so a
+    row whose faces are gone reads as not applied.
+  - **Through this build.** The figure holds it through a Refold, a move or
+    a rename, and the save keys its entry to the figure as it is then.
+  - **Settled.** An Apply takes it up and Dismiss lets it go, each one undo
+    entry; the save then drops its entry from `detached[]`, and an undo
+    keeps it.
+  - **Deleted.** The save marks an `order-not-given` entry whose figure is
+    gone `figure-missing`, so a figure folded on the reused id is never
+    shown it. `figure-missing` entries stay in the bag, unshown.
+  - **Blind spots, display only.** A figure the older build moved or
+    renamed shows nothing. One it deleted and folded again from the same
+    region, unmoved, on the reused id with the same title, is shown the
+    record. Entries saved before the key existed (dev builds only) are
+    never shown.
+  - **Dismiss** is on the Properties pane's notice only: the toolbar's chip
+    is one button, and a second would need a rule in the shared
+    `.cp-folded-figure-toolbar` block.
 - **A 3D figure whose creases fold flat again,** and whose record a
   refold on them could not draw, is a stale figure on flat creases:
   flagged, opened on them, refolded flat by its Apply.
