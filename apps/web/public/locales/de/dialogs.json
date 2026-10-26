@@ -629,7 +629,6 @@
       "clashesCreases": "Widerspricht den Falten",
       "clashWithin": "{{sentence}} passen nicht alle zusammen.",
       "noOverlap": "Nicht angewendet: ihre Flächen überlappen sich nicht mehr.",
-      "objectGone": "Nicht angewendet: die Fläche {{verb}} {{subject}} gibt es nicht mehr.",
       "objectGoneAgainst": "Nicht angewendet: die Fläche, zu der {{subject}} geordnet war, gibt es nicht mehr.",
       "sameFace": "Nicht angewendet: ihre beiden Flächen sind jetzt eine.",
       "subjectGone": "Nicht angewendet: die Fläche {{verb}} {{objects}} gibt es nicht mehr.",

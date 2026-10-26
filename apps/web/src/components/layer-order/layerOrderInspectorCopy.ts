@@ -157,13 +157,8 @@ export function layerOrderCopy(
           });
         }
         if (value.gone === 'object' && view.subject !== null) {
-          // The gone face named from where it stood (A5): "the face behind D", for "D in front of …".
-          if (view.verb !== null) {
-            return t('dialogs:layerOrder.reason.objectGone', 'Not applied: the face {{verb}} {{subject}} no longer exists.', {
-              verb: verb(view.verb === 'in_front_of' ? 'behind' : 'in_front_of'),
-              subject: letter(view.subject),
-            });
-          }
+          // A row's verb is read from its object's side, which a gone object no longer has: it is
+          // named as it was ordered, "D against …".
           return t(
             'dialogs:layerOrder.reason.objectGoneAgainst',
             'Not applied: the face {{subject}} was ordered against no longer exists.',

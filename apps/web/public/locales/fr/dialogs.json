@@ -647,7 +647,6 @@
       "clashesCreases": "En conflit avec les plis",
       "clashWithin": "{{sentence}} ne peuvent pas toutes tenir ensemble.",
       "noOverlap": "Non appliquée : ses faces ne se chevauchent plus.",
-      "objectGone": "Non appliquée : la face {{verb}} {{subject}} n’existe plus.",
       "objectGoneAgainst": "Non appliquée : la face par rapport à laquelle {{subject}} était ordonnée n’existe plus.",
       "sameFace": "Non appliquée : ses deux faces n’en font plus qu’une.",
       "subjectGone": "Non appliquée : la face {{verb}} {{objects}} n’existe plus.",

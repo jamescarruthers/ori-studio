@@ -647,7 +647,6 @@
       "clashesCreases": "Entra en conflicto con los pliegues",
       "clashWithin": "{{sentence}} no caben todas juntas.",
       "noOverlap": "No aplicada: sus caras ya no se solapan.",
-      "objectGone": "No aplicada: la cara {{verb}} {{subject}} ya no existe.",
       "objectGoneAgainst": "No aplicada: la cara respecto a la que se ordenó {{subject}} ya no existe.",
       "sameFace": "No aplicada: sus dos caras ahora son una sola.",
       "subjectGone": "No aplicada: la cara {{verb}} {{objects}} ya no existe.",

@@ -611,7 +611,6 @@
       "clashesCreases": "折り線と衝突します",
       "clashWithin": "{{sentence}} はすべて同時には収まりません。",
       "noOverlap": "未適用: その面はもう重なっていません。",
-      "objectGone": "未適用: {{subject}} の{{verb}}にあった面はもうありません。",
       "objectGoneAgainst": "未適用: {{subject}} の基準だった面はもうありません。",
       "sameFace": "未適用: 2 つの面が 1 つになりました。",
       "subjectGone": "未適用: {{objects}} の{{verb}}にあった面はもうありません。",

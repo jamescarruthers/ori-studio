@@ -647,7 +647,6 @@
       "clashesCreases": "Entra em conflito com os vincos",
       "clashWithin": "{{sentence}} não cabem todas juntas.",
       "noOverlap": "Não aplicada: as faces dela não se sobrepõem mais.",
-      "objectGone": "Não aplicada: a face {{verb}} {{subject}} não existe mais.",
       "objectGoneAgainst": "Não aplicada: a face em relação à qual {{subject}} foi ordenada não existe mais.",
       "sameFace": "Não aplicada: as duas faces dela agora são uma só.",
       "subjectGone": "Não aplicada: a face {{verb}} {{objects}} não existe mais.",

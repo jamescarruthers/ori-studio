@@ -611,7 +611,6 @@
       "clashesCreases": "접는 선과 충돌합니다",
       "clashWithin": "{{sentence}}은(는) 모두 함께 성립할 수 없습니다.",
       "noOverlap": "적용 안 됨: 면들이 더 이상 겹치지 않습니다.",
-      "objectGone": "적용 안 됨: {{subject}} {{verb}} 있던 면이 더 이상 없습니다.",
       "objectGoneAgainst": "적용 안 됨: {{subject}}의 기준이던 면이 더 이상 없습니다.",
       "sameFace": "적용 안 됨: 두 면이 이제 하나가 되었습니다.",
       "subjectGone": "적용 안 됨: {{objects}} {{verb}} 있던 면이 더 이상 없습니다.",

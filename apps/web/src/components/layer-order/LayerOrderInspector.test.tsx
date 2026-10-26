@@ -478,14 +478,7 @@ describe('the constraints list', () => {
     expect(button('Remove a face that no longer exists behind D')).toBeDefined();
   });
 
-  it('names an object that no longer exists from where it stood (A5), when its side is known', () => {
-    const copy = layerOrderCopy(i18n.t, 'en', LETTERS);
-    const gone = (verb: 'in_front_of' | 'behind' | null) =>
-      copy.reason({ key: 'face_gone', sentence: { subject: 3, verb, objects: [null] }, gone: 'object' });
-    expect(gone('in_front_of')).toBe('Not applied: the face behind D no longer exists.');
-    expect(gone('behind')).toBe('Not applied: the face in front of D no longer exists.');
-    // A gone face's side was never saved, so a restore's row reads "D against …": said as it was ordered.
-    expect(gone(null)).toBe('Not applied: the face D was ordered against no longer exists.');
+  it('names an object that no longer exists as it was ordered, since its side went with it', () => {
     const facts = openFactsOf({
       restore: {
         outcome: { kind: 'applied' },

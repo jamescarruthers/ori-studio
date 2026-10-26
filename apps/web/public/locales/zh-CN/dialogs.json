@@ -611,7 +611,6 @@
       "clashesCreases": "与折痕冲突",
       "clashWithin": "{{sentence}} 无法同时满足。",
       "noOverlap": "未应用：它的面已不再重叠。",
-      "objectGone": "未应用：在 {{subject}} {{verb}}的面已不存在。",
       "objectGoneAgainst": "未应用：{{subject}} 所参照的面已不存在。",
       "sameFace": "未应用：它的两个面现在是同一个面。",
       "subjectGone": "未应用：在 {{objects}} {{verb}}的面已不存在。",

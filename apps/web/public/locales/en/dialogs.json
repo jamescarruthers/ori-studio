@@ -629,7 +629,6 @@
       "clashesCreases": "Clashes with the creases",
       "clashWithin": "{{sentence}} can’t all fit together.",
       "noOverlap": "Not applied: its faces no longer overlap.",
-      "objectGone": "Not applied: the face {{verb}} {{subject}} no longer exists.",
       "objectGoneAgainst": "Not applied: the face {{subject}} was ordered against no longer exists.",
       "sameFace": "Not applied: its two faces are one face now.",
       "subjectGone": "Not applied: the face {{verb}} {{objects}} no longer exists.",
