@@ -2287,14 +2287,8 @@ function paneCases(theme) {
       const dialog = await openPanesDialog(page, figure.title);
       const facts = await inspectorFacts(page);
       const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
-      // At Fit both panes take one scale (Round3's fitAll): their readouts agree.
-      const readouts = await Promise.all(
-        ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
-      );
-      console.log(`[${tag}] ${figure.name} at Fit: ${readouts.join(' and ')}`);
-      if (Math.abs(Number.parseFloat(readouts[0]) - Number.parseFloat(readouts[1])) > 1) {
-        throw new Error(`${figure.name}: the panes' readouts disagree at Fit (${readouts.join(', ')})`);
-      }
+      // At Fit each pane fills itself with its own content, about 70% (your call, 2026-10-26).
+      await fitFills(page, dialog, `[${tag}] ${figure.name}`);
       console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'subjects'))}`);
       await record(shot('front'), await panesShot(page));
       await viewTool(dialog, 'Back');
@@ -4405,19 +4399,30 @@ function patternChangedToast(page) {
   return page.locator('[data-sonner-toast]').filter({ hasText: PATTERN_CHANGED });
 }
 
-/** Forget the last error, so the next one is known to be new. */
+/** Forget the last error, and close every toast, so the next one is known to be new. */
 async function clearCpError(page) {
-  await page.evaluate(() => window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null }));
+  await page.evaluate(() => {
+    window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null });
+    for (const close of document.querySelectorAll('[data-sonner-toast] [data-close-button]')) close.click();
+  });
+  await page.waitForFunction(
+    (text) => ![...document.querySelectorAll('[data-sonner-toast]')].some((toast) => toast.textContent.includes(text)),
+    PATTERN_CHANGED,
+    { timeout: 10000 }
+  );
 }
 
-/** The press said its crease pattern changed: in the store, and on a toast. */
+/**
+ * The press said its crease pattern changed, on a toast, as the app's
+ * ordinary message: no fault, so neither an error toast nor an error in the
+ * store for `GlobalToasts` to show as one.
+ */
 async function saidPatternChanged(page) {
-  await page.waitForFunction(
-    (text) => window.__treemakerWorkspaceStore.getState().oristudioCpError === text,
-    PATTERN_CHANGED,
-    { timeout: 30000 }
-  );
-  await patternChangedToast(page).first().waitFor({ state: 'visible', timeout: 30000 });
+  const toast = patternChangedToast(page).first();
+  await toast.waitFor({ state: 'visible', timeout: 30000 });
+  const kind = await toast.getAttribute('data-type');
+  const error = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().error);
+  if (kind === 'error' || error) throw new Error(`the press said its crease pattern changed as an error (${kind}, ${JSON.stringify(error)})`);
 }
 
 /** One crease deleted, as Delete does on a selected crease. */
@@ -4649,6 +4654,297 @@ function editSelectionCases(theme) {
     if (!(await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).isDisabled())) throw new Error('not held on 3D creases');
     await record(`selection-${tag}-3d`, await selectionToolbarShots(page));
   };
+}
+
+// ---------------------------------------------------------------------------
+// A document of many crease patterns: the dialog shows the one the fold came from
+
+/**
+ * A document of many small crease patterns, as `.cp` text: kabuto
+ * (`tests/fixtures/flat-folder/kabuto.fold`) laid out `columns` by `rows`,
+ * 40 units each, 60 apart, each with an aux line across it, as a sheet of a
+ * designer's patterns is. Built here: nobody's file.
+ */
+async function manyKabutosCp(columns, rows) {
+  const fold = JSON.parse(await readFile(path.join(repoRoot, 'tests/fixtures/flat-folder/kabuto.fold'), 'utf8'));
+  const TYPE = { B: 1, M: 2, V: 3, F: 4 };
+  const lines = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const ox = (column - columns / 2) * 60;
+      const oy = (row - rows / 2) * 60;
+      const at = ([x, y]) => [ox + x * 40, oy + y * 40];
+      fold.edges_vertices.forEach(([a, b], edge) => {
+        const type = TYPE[fold.edges_assignment[edge]];
+        if (!type) return;
+        lines.push(`${type} ${at(fold.vertices_coords[a]).join(' ')} ${at(fold.vertices_coords[b]).join(' ')}`);
+      });
+      lines.push(`4 ${ox} ${oy + 12} ${ox + 40} ${oy + 12}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+/** Edit on {@link manyKabutosCp}, in `theme`; the sheet nearest the middle of the canvas, and how many there are. */
+async function openManyPatterns(page, url, theme, { columns = 10, rows = 10 } = {}) {
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+  await openTextInEdit(page, await manyKabutosCp(columns, rows), 'many-kabutos.cp', theme);
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+    const regions = sheetRegions(await ensureCpSheetIndex(store.getState().oristudioCpDocument.document));
+    const centre = ({ bounds }) => ({ x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 });
+    const middle = regions.map(centre).reduce((sum, c) => ({ x: sum.x + c.x / regions.length, y: sum.y + c.y / regions.length }), { x: 0, y: 0 });
+    const away = (region) => Math.hypot(centre(region).x - middle.x, centre(region).y - middle.y);
+    const sheet = regions.reduce((best, region) => (away(region) < away(best) ? region : best));
+    window.__layerOrderCheck = { ...(window.__layerOrderCheck ?? {}), sheet: sheet.id };
+    return { sheets: regions.length, sheet: sheet.id, lineIds: [...sheet.lineIds], bounds: sheet.bounds };
+  });
+}
+
+/** The region the open dialog was asked with, against its source: how much of the document it draws. */
+function openedRegion(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const { ringsBounds } = await import('/src/layer-order/panes/layerPaneFigure.ts');
+    const request = useLayerOrderDialogStore.getState().opening?.request;
+    if (!request) return null;
+    return {
+      surface: request.surface,
+      paper: request.region ? ringsBounds(request.region.paper) : null,
+      regionAux: request.region?.auxSegments.length ?? null,
+      documentAux: request.source.auxSegments.length,
+      creases: request.source.segments.length,
+    };
+  });
+}
+
+/**
+ * How much of a pane its content fills, in the pane's own pixels, across the
+ * side that limits it: Fit fills 70% of it. Fit centres the content,
+ * so its extent is the pane less twice its margin, read where nothing floats
+ * over it: from the top, and from the nearer side, over the rows the zoom bar
+ * along the foot leaves clear (a tall figure runs on under the bar). Ink is
+ * any pixel unlike the pane's ground, read off its corner.
+ */
+async function paneFill(page, dialog, pane) {
+  const canvas = dialog.locator(`[data-testid="layer-order-${pane}-canvas"]`);
+  const bar = dialog.getByRole('toolbar', { name: pane === 'pattern' ? 'Crease pattern view' : 'Folded figure view' });
+  await page.mouse.move(1, 1);
+  const shot = await steadyShot(page, canvas, { masked: false });
+  const [box, barBox] = [await canvas.boundingBox(), await bar.boundingBox()];
+  // The bar's rows, and its shadow's, in the shot's pixels.
+  const clear = barBox ? { from: barBox.y - box.y - 24, to: barBox.y + barBox.height - box.y + 24 } : { from: Infinity, to: -Infinity };
+  return page.evaluate(
+    async ({ data, clear }) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const context = Object.assign(document.createElement('canvas'), { width: image.width, height: image.height }).getContext('2d');
+      context.drawImage(image, 0, 0);
+      const { data: rgba } = context.getImageData(0, 0, image.width, image.height);
+      // Not the pane's own rim: the rule between the panes runs along one side.
+      const RIM = 3;
+      const ground = (RIM + 3) * image.width * 4 + (RIM + 3) * 4;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      for (let y = RIM; y < image.height - RIM; y += 1) {
+        if (y >= clear.from && y <= clear.to) continue;
+        for (let x = RIM; x < image.width - RIM; x += 1) {
+          const k = (y * image.width + x) * 4;
+          const unlike = Math.abs(rgba[k] - rgba[ground]) + Math.abs(rgba[k + 1] - rgba[ground + 1]) + Math.abs(rgba[k + 2] - rgba[ground + 2]);
+          if (unlike < 30) continue;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+        }
+      }
+      const side = Math.min(minX, image.width - 1 - maxX);
+      const width = image.width - 2 * side;
+      const height = image.height - 2 * minY;
+      const fill = Math.max(width / image.width, height / image.height);
+      return { pane: [image.width, image.height], content: [width, height], fill: Math.round(fill * 1000) / 1000 };
+    },
+    { data: shot.toString('base64'), clear }
+  );
+}
+
+/** What Fit fills of a pane: `PaperPane`'s share, as every surface fits (`DEFAULT_FIT_SHARE`). */
+const FIT_FILL = 0.7;
+
+/** Fit both panes, then how much each fills; throws unless each fills about {@link FIT_FILL}. */
+async function fitFills(page, dialog, what) {
+  await dialog.getByRole('button', { name: 'Fit both views' }).first().click();
+  const fills = { pattern: await paneFill(page, dialog, 'pattern'), folded: await paneFill(page, dialog, 'folded') };
+  const readouts = await Promise.all(
+    ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
+  );
+  console.log(`  ${what} at Fit: crease pattern ${JSON.stringify(fills.pattern)} at ${readouts[0]}, folded ${JSON.stringify(fills.folded)} at ${readouts[1]}`);
+  for (const [pane, { fill }] of Object.entries(fills)) {
+    if (Math.abs(fill - FIT_FILL) > 0.03 && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+      throw new Error(`${what}: the ${pane} pane fills ${fill} of itself at Fit, not about ${FIT_FILL}`);
+    }
+  }
+  return fills;
+}
+
+/**
+ * A face picked on the crease-pattern pane lights the same face on the
+ * folded pane: the first subject on offer, from its menu, then cleared and
+ * picked again by a click inside its ring on the crease pattern. Its face.
+ */
+async function patternPickLightsFolded(page, dialog, what) {
+  await subjectSlot(dialog).focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu', { name: 'Subjects' });
+  await menu.waitFor({ state: 'visible', timeout: 10000 });
+  await menu.getByRole('menuitemradio').first().click();
+  await menu.waitFor({ state: 'detached', timeout: 10000 });
+  const letter = (await subjectSlot(dialog).getAttribute('aria-label'))?.match(/face ([^.\s]+)\./)?.[1];
+  const face = Number(await dialog.locator('[data-layer-order-marks="pattern"] [data-layer-order-ring]').first().getAttribute('data-layer-order-ring'));
+  if (!letter || !Number.isInteger(face)) throw new Error(`${what}: no subject to pick`);
+  await pickSubjectOnPane(page, dialog, 'pattern', letter, face);
+  const lit = await dialog.locator(`[data-layer-order-marks="folded"] [data-layer-order-ring="${face}"]`).count();
+  if (lit === 0) throw new Error(`${what}: ${letter} picked on the crease pattern lights nothing on the folded figure`);
+  console.log(`  ${what}: ${letter} (face ${face}) picked on the crease pattern, ringed on the folded figure`);
+  return { letter, face };
+}
+
+/** The dialog's request and panes for one host: its region, a shot, Fit's fill, a pick's alignment; then Cancel. */
+async function checkRegionDialog(page, record, shot, what) {
+  const dialog = await readyDialog(page);
+  const region = await openedRegion(page);
+  console.log(`  ${what}: ${JSON.stringify(region)}`);
+  if (!region?.paper && !process.env.LAYER_ORDER_CHECK_LENIENT) throw new Error(`${what}: the request names no region`);
+  await page.waitForTimeout(500);
+  await record(shot, await panesShot(page));
+  await fitFills(page, dialog, what);
+  const picked = await patternPickLightsFolded(page, dialog, what);
+  await record(`${shot}-picked`, await panesShot(page));
+  await dialog.getByRole('button', { name: `Clear ${picked.letter} from the subject` }).click();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialog.waitFor({ state: 'detached', timeout: 30000 });
+}
+
+/**
+ * A document of a hundred patterns (panes-fit), in one theme: each host opens
+ * the dialog on the pattern in the middle, and the crease-pattern pane shows
+ * that pattern alone, framed on its paper, the folded pane the figure, each
+ * filling about 70% at Fit; a face picked on the crease pattern lights the
+ * same face on the folded figure. Fold with layer order… on the selection
+ * (H5); Layer order… on a figure folded from it (H3); a Diagram step linked
+ * to it (H7); and Pose on that step (H8).
+ */
+function manyPatternCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    const middle = await openManyPatterns(page, url, theme);
+    console.log(`[${tag}] ${middle.sheets} patterns; the middle one is sheet ${middle.sheet}, ${middle.lineIds.length} lines`);
+    if (middle.sheets !== 100) throw new Error(`the document holds ${middle.sheets} patterns, not 100`);
+
+    // Fold with layer order… on the middle pattern, selected (H5).
+    await page.evaluate(async (lines) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { emptyOristudioCpSelection } = await import('/src/lib/creasePatternViewport.ts');
+      store.getState().setOristudioCpSelection({ ...emptyOristudioCpSelection(), lines });
+    }, middle.lineIds);
+    const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+    await toolbar.waitFor({ state: 'visible', timeout: 30000 });
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    await checkRegionDialog(page, record, `many-${tag}-selection`, `[${tag}] Fold with layer order… (H5)`);
+
+    // A figure folded from it, then its Layer order… (H3).
+    const figureId = await page.evaluate(async (lineIds) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+      await foldedFigureGesture.run('verb', 'Fold model', () => store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds }));
+      const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+      if (!figure || figure.status !== 'ready') throw new Error('the fold made no figure');
+      store.getState().setOristudioCpActiveFoldedFigure(figure.id);
+      return figure.id;
+    }, middle.lineIds);
+    await page.evaluate(async (id) => {
+      const { openFoldedFigureLayerOrder } = await import('/src/cp-workspace/folded/openFoldedFigureLayerOrder.ts');
+      const { default: i18n } = await import('/src/i18n/index.ts');
+      void openFoldedFigureLayerOrder(id, i18n.t);
+    }, figureId);
+    await checkRegionDialog(page, record, `many-${tag}-figure`, `[${tag}] Layer order… on a figure (H3)`);
+
+    // A Diagram step linked to it, folded flat: the Step pane's Edit… (H7).
+    await page.evaluate(async (sheetId) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+      const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+      const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+      const { linkDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      useLayoutStore.getState().activateWorkspace('diagram');
+      const sheet = sheetRegions(await ensureCpSheetIndex(store.getState().oristudioCpDocument.document))[sheetId];
+      const stepId = store.getState().addDiagramStep();
+      if (!(await linkDiagramStep(stepId, sheet, 'folded'))) throw new Error('the pattern did not link');
+      store.getState().openDiagramStep(stepId);
+      window.__layerOrderStep = stepId;
+    }, middle.sheet);
+    await captured(page);
+    await page.evaluate(async () => {
+      const { openDiagramStepLayerOrder } = await import('/src/diagram/capture/stepLayerOrderActions.ts');
+      void openDiagramStepLayerOrder(window.__layerOrderStep);
+    });
+    await checkRegionDialog(page, record, `many-${tag}-step`, `[${tag}] a Diagram step (H7)`);
+
+    // Pose on that step: its toolbar's Edit order… (H8).
+    await reopenDetail(page);
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await checkRegionDialog(page, record, `many-${tag}-pose`, `[${tag}] Pose (H8)`);
+  };
+}
+
+/**
+ * Creases Oriedita's search can't order (`oriedita/failing_global_flat_fold.ori`):
+ * a plain Fold draws them see-through, and Fold with layer order… refuses
+ * them in D3's words, not as creases with no flat folded form, and as the
+ * app's ordinary message, not an "Ori Studio error": no fault. The toasts
+ * each leaves, read and shot.
+ */
+async function unorderedCreasesToast(page, url, record) {
+  await openFileInEdit(page, url, 'tests/fixtures/oriedita/failing_global_flat_fold.ori', null);
+  await selectWholeSheet(page);
+  const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+  await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+  const toast = page.locator('[data-sonner-toast]').first();
+  await toast.waitFor({ state: 'visible', timeout: 120000 });
+  const pressed = (await toast.innerText()).replace(/\s+/g, ' ').trim();
+  const kind = await toast.getAttribute('data-type');
+  const storeError = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().error);
+  console.log(`Fold with layer order… on them: “${pressed}”, a ${kind} toast; the store's error: ${JSON.stringify(storeError)}`);
+  if ((kind === 'error' || storeError || !/couldn’t be determined/.test(pressed)) && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+    throw new Error('the press refuses unordered creases as an error, or in other words than D3’s');
+  }
+  await record('unordered-press', { page: await page.screenshot({ animations: 'disabled' }) });
+  await page.evaluate(() => {
+    for (const close of document.querySelectorAll('[data-sonner-toast] [data-close-button]')) close.click();
+    window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null });
+  });
+  await page.waitForTimeout(600);
+  // The same creases, plainly folded.
+  const plain = await page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const count = store.getState().oristudioCpDocument.summary.line_segments;
+    const lineIds = Array.from({ length: count }, (_, i) => i + 1);
+    const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+    await foldedFigureGesture.run('verb', 'Fold model', () => store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds }));
+    const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+    return { figure: figure?.status ?? null, style: figure?.displayStyle ?? null, outcome: figure?.snapshot?.outcome ?? null, error: store.getState().oristudioCpError };
+  });
+  await page.waitForTimeout(600);
+  const toasts = await page.locator('[data-sonner-toast]').allInnerTexts();
+  console.log(`plain Fold on them: ${JSON.stringify(plain)}; toasts: ${JSON.stringify(toasts)}`);
+  await record('unordered-plain-fold', { page: await page.screenshot({ animations: 'disabled' }) });
+  if (/no flat folded form/.test(pressed) && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+    throw new Error('the press says “no flat folded form” of creases a plain Fold draws');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -4927,6 +5223,9 @@ const CASES = [
   { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
   { name: 'diagram-solutions', run: diagramSolutionCases(null) },
   { name: 'diagram-solutions-horizon', run: diagramSolutionCases('Horizon') },
+  { name: 'many-patterns', run: manyPatternCases(null) },
+  { name: 'many-patterns-horizon', run: manyPatternCases('Horizon') },
+  { name: 'unordered-toast', run: unorderedCreasesToast },
 ];
 
 // ---------------------------------------------------------------------------

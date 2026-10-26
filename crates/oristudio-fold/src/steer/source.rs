@@ -36,8 +36,9 @@
 //! corner of the paper or a selection with no crease into it, decision D4),
 //! an overlap the tolerance cannot decide, a tolerance failure (a face or
 //! crease too thin, a crease off its face, an overlap Oriedita's subfaces
-//! see and the solver's view does not), the face and stacking caps, and a
-//! wireframe Edit could not draw either.
+//! see and the solver's view does not), the face cap and the dialog's own
+//! stacking cap ([`LAYER_ORDER_MAX_STACKED_TRIPLES`]), and a wireframe Edit
+//! could not draw either.
 //!
 //! # Fold-only pairs
 //!
@@ -56,7 +57,7 @@ use oristudio_cp::session::{EngineError, FoldSource};
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
     Ambiguity, ConstraintProblem, Edge, EdgeKind, Face, FacePair, FoldedView, LayerOrder,
-    LayerOrderError, Letter, MAX_FACES, MAX_STACKED_TRIPLES,
+    LayerOrderError, Letter, MAX_FACES,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -64,6 +65,54 @@ use thiserror::Error;
 use crate::complete::{self, CompletionLimits, CompletionRefusal, CompletionSession, FixedPair};
 use crate::numerics::TOL;
 use crate::pattern::FaceId;
+
+/// The most [`StackDepth::triples`](oristudio_layer_order::StackDepth) the
+/// Layer order dialog's source takes: the dialog's own cap, and so the host
+/// engine's, which restores what the dialog saves on the same source. It is
+/// higher than Fold's
+/// ([`MAX_STACKED_TRIPLES`](oristudio_layer_order::MAX_STACKED_TRIPLES),
+/// 12,000,000), which the Fold workspace keeps: Fold's is set so that a
+/// step replays in about 3 s, while the dialog opens one figure, behind
+/// "Working out the layer orders…" with Cancel, against a 30 s deadline, and
+/// a host's restore has 30 s too (`LAYER_ORDER_LIMITS`,
+/// `apps/web/src/layer-order/engine/layerOrderEngine.ts`). A count, not a
+/// clock, as Fold's is, so a figure is refused, or not, alike on every
+/// machine.
+///
+/// Chosen from the eight cpoogle designs Fold's cap refuses, the only real
+/// designs over it, measured on 2026-10-26 with this cap lifted, through the
+/// built Fold bridge in Node 22, making the calls the dialog's worker and the
+/// host engine make (census 2's harness, `scripts/layer-order-census.mjs`),
+/// one design at a time on an Apple Silicon Mac that was running other work
+/// (load 7–17 on 10 cores). Open is `layer_open_showing` on Edit's order,
+/// building the source included; previews are 13 single flips; restore is a
+/// fresh instance restoring the record the dialog saved; memory is each
+/// instance's wasm memory at its peak. The designs at 19.0 and 51.4 million
+/// were run three times each; each figure is the slowest of its runs:
+///
+/// | triples | deepest | faces | open | previews p50 / max | restore | memory, dialog / host |
+/// | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+/// | 12.6 M | 204 | 1,990 | 5.3 s | 48 / 203 ms | 5.2 s | 157 / 154 MiB |
+/// | 12.8 M | 324 | 1,110 | 4.6 s | 258 / 504 ms | 4.3 s | 101 / 99 MiB |
+/// | 17.9 M | 302 | 1,056 | 3.5 s | 4 / 4 ms | 3.3 s | 109 / 107 MiB |
+/// | 19.0 M | 261 | 1,524 | 18.6 s | 83 / 118 ms | 19.8 s | 143 / 140 MiB |
+/// | 51.4 M | 320 | 3,449 | 38.6 s | 134 / 215 ms | 37.3 s | 361 / 353 MiB |
+/// | 67.9 M | 370 | 3,224 | 54.5 s | 339 ms / 1.5 s | none: its record is over budget | 391 MiB |
+/// | 68.3 M | 604 | 3,119 | 50.1 s | 809 / 887 ms | 65.4 s | 269 / 262 MiB |
+/// | 79.8 M | 358 | 3,332 | 60.8 s | 380 ms / 3.1 s | 81.3 s | 418 / 408 MiB |
+///
+/// Previews stay quick at every depth, and memory stays far under wasm32's
+/// 4 GB with Fold's own instance live too (it refuses these designs at import,
+/// holding 8–29 MiB). What grows with the triples is the open and the
+/// restore, the completion session's deduction and first order, and both
+/// swing with the machine's load: the design at 19.0 million opened in
+/// 11–19 s and restored in 12–20 s over its runs, the slowest at load 13.
+/// The four designs up to 19.0 million open and restore within the
+/// deadlines on every run. The next, at 51.4 million, opened in 33–39 s and
+/// restored in 30–37 s, past both deadlines on every run, and the three
+/// above it take 50–81 s. No real design lies between the two, so the cap
+/// sits just above the last one that fits.
+pub const LAYER_ORDER_MAX_STACKED_TRIPLES: u64 = 20_000_000;
 
 /// How crease-pattern coordinates map to the solver's: y up, the paper's
 /// longer side 1, the corner of its bounding box with the least x and the
@@ -153,8 +202,8 @@ pub enum SourceRefusal {
     #[serde(rename = "source_too_many_faces")]
     #[error("the fold has {face_count} faces, over the {limit} cap")]
     TooManyFaces { face_count: usize, limit: usize },
-    /// Stacked too deep to order in time
-    /// ([`oristudio_layer_order::MAX_STACKED_TRIPLES`]).
+    /// Stacked too deep to order in time ([`LAYER_ORDER_MAX_STACKED_TRIPLES`],
+    /// the dialog's own cap); `deepest` is what the dialog's notice names.
     #[serde(rename = "source_stacked_too_deep")]
     #[error("the fold stacks {deepest} faces deep, {triples} triples over the {limit} cap")]
     StackedTooDeep {
@@ -303,7 +352,7 @@ impl LayerSource {
         let (edges, edge_lines) = read.folds()?;
         let view =
             FoldedView::new(read.faces()?, edges).map_err(|e| view_refusal(e, &edge_lines))?;
-        let problem = ConstraintProblem::build_within(&view, MAX_STACKED_TRIPLES)
+        let problem = ConstraintProblem::build_within(&view, LAYER_ORDER_MAX_STACKED_TRIPLES)
             .map_err(|e| view_refusal(e, &edge_lines))?;
         if !problem.ambiguities().is_empty() {
             return Err(SourceRefusal::AmbiguousOverlap {

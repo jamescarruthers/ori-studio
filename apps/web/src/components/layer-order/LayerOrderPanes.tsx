@@ -34,8 +34,8 @@ import styles from './LayerOrderPanes.module.css';
  * - **What a press does** is the inspector's: a pick, a hover or a press on
  *   no paper goes out as an event, with its pane and whether a pointer or a
  *   finger made it. A double tap fits.
- * - **Zoom.** Each pane has its own zoom bar; its Fit frames both, at one
- *   scale (Round3's `fitAll`). On a phone (`phonePane`), one pane at a time,
+ * - **Zoom.** Each pane has its own zoom bar; its Fit frames both, each
+ *   filling its pane with its own content. On a phone (`phonePane`), one pane at a time,
  *   switched from the title row, and nothing floats over it: pinch zooms, a
  *   double tap fits (D6). Both panes stay mounted, the other one hidden, so a
  *   switch keeps each pane's camera and makes no new canvas.

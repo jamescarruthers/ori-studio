@@ -103,7 +103,8 @@ function refusalText(t: TFunction, refusal: LayerRefusal, { letters, name }: Lay
     case 'source_stacked_too_deep':
       return t(
         'dialogs:layerOrder.refused.tooDeep',
-        'This figure stacks too many layers in one place for Layer order to work with yet. Nothing was changed.'
+        'This figure stacks {{depth}} layers in one place, more than Layer order can work with yet. Nothing was changed.',
+        { depth: refusal.deepest }
       );
     case 'source_too_many_faces':
       return t(

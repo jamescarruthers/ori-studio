@@ -34,6 +34,7 @@ import {
   type StepCaptureStart,
 } from '../../store/workspaceStore/diagramCapture';
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
+import { layerOrderRegionOf } from '../../cp-workspace/regions/layerOrderRegion';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
 import {
   solutionPressOf,
@@ -738,7 +739,8 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
             store.get().oristudioCpViewport,
             render,
             folded,
-            stepLayerOrderOf(linked.layerOrder)
+            stepLayerOrderOf(linked.layerOrder),
+            layerOrderRegionOf(document, choice.creases)
           ),
           frame: folded.frame,
           render,

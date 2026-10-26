@@ -110,8 +110,8 @@ export interface UseCpSurfaceOptions<Hit> {
   /**
    * How much of the canvas `contentBounds` fills at a fit, across its
    * shorter side: {@link DEFAULT_FIT_SHARE} unless a surface frames its
-   * content its own way (the Layer order dialog's panes, Round3's `fitAll`).
-   * The line boost past the fit zoom is measured from it too.
+   * content its own way. The line boost past the fit zoom is measured from
+   * it too.
    */
   fitShare?: number;
   /** The camera refits when this changes (a new document), never on an edit. */

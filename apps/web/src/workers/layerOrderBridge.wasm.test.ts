@@ -468,4 +468,69 @@ describe.skipIf(!available)('the Fold bridge’s layer calls, in Node', () => {
     expect(bridge.layer_constraints(session)).toEqual(first);
     engine.free();
   });
+
+  /** A stacking cap as the engine declares it: `name` in `file` under `crates/`. */
+  function capOf(file: string, name: string): number {
+    const text = readFileSync(resolve(ROOT, '../../crates', file), 'utf8');
+    return Number(new RegExp(`pub const ${name}: u64 = ([\\d_]+);`).exec(text)?.[1]?.replaceAll('_', ''));
+  }
+
+  const choose3 = (d: number) => (d * (d - 1) * (d - 2)) / 6;
+  /** The fewest layers one stack needs to hold more than `cap` triples. */
+  function deepestOver(cap: number): number {
+    let d = 3;
+    while (choose3(d) <= cap) d += 1;
+    return d;
+  }
+
+  /** `strips` vertical strips folded back and forth along creases of alternating letters: one stack, `strips` deep. */
+  function accordionCp(strips: number): string {
+    const x = (k: number) => -200 + (400 * k) / strips;
+    const lines = ['1 200 -200 200 200', '1 -200 200 -200 -200'];
+    for (let k = 0; k < strips; k += 1) lines.push(`1 ${x(k)} -200 ${x(k + 1)} -200`, `1 ${x(k)} 200 ${x(k + 1)} 200`);
+    for (let k = 1; k < strips; k += 1) lines.push(`${k % 2 === 0 ? 2 : 3} ${x(k)} -200 ${x(k)} 200`);
+    return `${lines.join('\n')}\n`;
+  }
+
+  function accordionSource(strips: number): OristudioCpFoldSource {
+    const document = cp.load_cp(accordionCp(strips), '');
+    const summary = cp.document_summary(document) as OristudioCpDocumentSummary;
+    const lines = Array.from({ length: summary.line_segments }, (_, index) => index + 1);
+    const source = cp.fold_source_of_selection(document, lines, 1) as OristudioCpFoldSource;
+    cp.free_document(document);
+    return source;
+  }
+
+  it('takes stacks deeper than Fold’s cap, up to its own, and says how deep one past it stacks', () => {
+    const dialogCap = capOf('oristudio-fold/src/steer/source.rs', 'LAYER_ORDER_MAX_STACKED_TRIPLES');
+    const foldCap = capOf('oristudio-layer-order/src/problem.rs', 'MAX_STACKED_TRIPLES');
+    expect(foldCap).toBe(12_000_000);
+    expect(dialogCap).toBeGreaterThan(foldCap);
+    const engine = new fold.FoldEngine();
+    const bridge: LayerOrderBridge = engine;
+
+    // One layer past the deepest stack Fold takes: the source is built and
+    // admitted (an open given no time runs out only after building it),
+    // while Fold's Import CP refuses the same pattern by its counts.
+    const between = deepestOver(foldCap);
+    expect(choose3(between)).toBeLessThanOrEqual(dialogCap);
+    expect(bridge.layer_open(accordionSource(between), { deadlineMs: 0 })).toMatchObject({
+      status: 'refused',
+      refusal: { code: 'session_timed_out', limit: 'deadline' },
+    });
+    const bytes = new TextEncoder().encode(accordionCp(between));
+    expect(engine.import_cp({ format: 'cp', sample: false }, bytes, { kind: 'empty' }, undefined)).toMatchObject({
+      status: 'refused',
+      refusal: { code: 'import_stacked_too_deep', deepest: between, triples: choose3(between), limit: foldCap },
+    });
+
+    // One layer past the dialog's own: refused with how deep it stacks.
+    const over = deepestOver(dialogCap);
+    expect(bridge.layer_open(accordionSource(over))).toEqual({
+      status: 'refused',
+      refusal: { code: 'source_stacked_too_deep', deepest: over, triples: choose3(over), limit: dialogCap },
+    });
+    expect(bridge.layer_live()).toBe(0);
+    engine.free();
+  });
 });

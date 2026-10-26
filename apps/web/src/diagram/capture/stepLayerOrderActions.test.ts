@@ -114,6 +114,9 @@ describe('opening the Layer order dialog on a step', () => {
     expect(request.name).toBe('Step 1');
     // The surface the dialog's analytics count it under.
     expect(request.surface).toBe('diagram_step');
+    // The step's sheet alone, as its crease-pattern picture draws it: the left square's
+    // paper and its aux line (10), nothing of the right square.
+    expect(request.region).toEqual({ paper: left!.boundary, auxSegments: [cpDocument().crease_pattern.line_segments[9]] });
     // Folded for the request and freed; nothing written for a Cancel.
     expect(bindings.runtime!.free).toHaveBeenCalledWith(7);
     expect(state().diagramHistory.past).toHaveLength(entries);
