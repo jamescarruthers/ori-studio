@@ -6,7 +6,8 @@ import {
   type LayerSpreadControls,
 } from '../../cp-workspace/folded/layerSpreadControls';
 import type { LayerOrderSolutionPlace } from '../../layer-order/host/hostEngineGateway';
-import { solutionPlaceEnds } from '../../layer-order/host/solutionCursorTable';
+import { solutionPlaceEnds, solutionsHeldByConflict } from '../../layer-order/host/solutionCursorTable';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { layerOrderCount, solutionPlaceCount, type LayerOrderSolutions } from '../../lib/layerOrderPlace';
 import { defaultCaptureCamera } from '../capture/captureFolded';
 import {
@@ -110,6 +111,11 @@ export interface DiagramLinkedPoseState {
    * when both are offered, from saved data alone.
    */
   place?: LayerOrderSolutionPlace | null;
+  /**
+   * A constrained step's record's saved summary (D10): one saying its
+   * constraints clash holds ‹ › until they are reviewed. From saved data.
+   */
+  attention?: LayerOrderAttention | null;
 }
 
 /**
@@ -283,15 +289,26 @@ export function buildDiagramLinkedPoseActions(
       : t('panels:diagram.pose.lastSolution', 'This is its last layer order');
   // A layer order chosen in the dialog is the record's (H9, D9): ‹ › step through the solutions that fit it,
   // in a fixed order with ends, which every pager waits at — the Step pane's too — once a press has found
-  // them; before one has, both are offered, from saved data alone.
+  // them; before one has, both are offered, from saved data alone. Saved as clashing, they wait for Review…
+  // (D10). Said in the cursor's words, which Edit's ‹ › use too: its place is among the solutions that fit,
+  // counted by the pictures of a side, never the fold's layer orders.
+  const conflict = state.constrained === true && solutionsHeldByConflict(state.attention);
   const ends = state.constrained && state.place ? solutionPlaceEnds(state.place) : null;
-  const previousHeld = state.constrained ? ends?.first === true : render.mode === 'folded-flat' && render.foldCase <= 1;
-  const solutionNextHeld = state.constrained ? ends?.last === true : nextHeld;
-  const solutionNextHint = state.constrained
-    ? ends?.only
-      ? t('panels:diagram.pose.onlySolution', 'This fold has one layer order')
-      : t('panels:diagram.pose.lastSolution', 'This is its last layer order')
-    : nextHint;
+  const conflictHint = t('panels:foldedFigureActions.layerOrderConflict', 'Its layer constraints clash. Review… them first');
+  const previousHeld = state.constrained
+    ? conflict || ends?.first === true
+    : render.mode === 'folded-flat' && render.foldCase <= 1;
+  const previousHint = !state.constrained
+    ? t('panels:diagram.pose.firstSolution', 'This is its first layer order')
+    : conflict
+      ? conflictHint
+      : t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution');
+  const solutionNextHeld = state.constrained ? conflict || ends?.last === true : nextHeld;
+  const solutionNextHint = !state.constrained
+    ? nextHint
+    : conflict
+      ? conflictHint
+      : t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution');
 
   switch (render.mode) {
     case 'defox': return modes;
@@ -314,7 +331,7 @@ export function buildDiagramLinkedPoseActions(
         // constrained step's, through the solutions that fit, never wrap.
         action('previous-solution', t('panels:diagram.pose.previousSolution', 'Previous Layer Order'), {
           disabled: previousHeld,
-          hint: t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
+          hint: previousHint,
         }),
         action('next-solution', t('panels:diagram.pose.nextLayerOrder', 'Next Layer Order'), {
           disabled: solutionNextHeld,

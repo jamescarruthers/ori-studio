@@ -71,7 +71,7 @@ import type { ProjectDocumentCommit } from './projectDocumentHistory';
 import { landSeededFrame, type LandedFirstFrame } from '../../diagram/zoom/zoomFrames';
 import { trackSeeded } from './diagramZoom';
 import { releaseSimulatorClient, retainSimulatorClient } from './simulatorRuntime';
-import { stopFoldRun, withFoldInFlight } from './foldRuns';
+import { stopFoldRun, withFoldInFlight, type FoldRunControls, type FoldRunOptions } from './foldRuns';
 import { isFoldCancellation, oristudioCpError } from './oristudioCpRuntime';
 import type { WorkspaceState } from './types';
 import { bytesToBase64 } from '../../lib/base64';
@@ -257,20 +257,28 @@ export function endStepCapture(store: DiagramCaptureStore, stepId: string): void
  * "Folding…" toast, stoppable there and from the step's card, and abandoned if
  * the engine is lost, since a call on a dead worker never settles (D4). The
  * run's stop signal reaches `work` too, for what it runs outside the kernel
- * (a Layer order resolve).
+ * (a Layer order resolve or step), and its `controls` say when a Stop can
+ * reach it (`foldRuns.ts`; `options.stoppable` for work that starts outside
+ * the kernel, which a Stop always reaches by terminating its worker).
  */
 export function runStepFold<T>(
   store: DiagramCaptureStore,
   start: StepCaptureStart,
   kind: DiagramCaptureRequest['kind'],
-  work: (runtime: CpCaptureRuntime, stop: AbortSignal) => Promise<T>
+  work: (runtime: CpCaptureRuntime, stop: AbortSignal, controls: FoldRunControls) => Promise<T>,
+  options?: FoldRunOptions
 ): Promise<T> {
   const { stepId } = start.guard;
   return abandonOnEngineLoss(
-    withFoldInFlight(store, kind, (runId, stop) => {
-      if (Object.hasOwn(store.get().diagramCaptures, stepId)) setRun(store, stepId, { runId });
-      return work(createCpCaptureRuntime(runId, start.auxHandle), stop);
-    })
+    withFoldInFlight(
+      store,
+      kind,
+      (runId, stop, controls) => {
+        if (Object.hasOwn(store.get().diagramCaptures, stepId)) setRun(store, stepId, { runId });
+        return work(createCpCaptureRuntime(runId, start.auxHandle), stop, controls);
+      },
+      options
+    )
   );
 }
 

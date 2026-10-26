@@ -196,8 +196,13 @@ describe('the linked pose verbs', () => {
     expect(actions.find((action) => action.id === 'turn-over')?.disabled).toBe(false);
   });
 
-  it('holds a constrained step’s ‹ › at the ends its solutions cursor found, on every pager (H9)', () => {
-    const constrained = (index: number, n: number, exact: boolean, stopsAtLast = false) => {
+  it('holds a constrained step’s ‹ › at the ends its solutions cursor found, on every pager, in its words (H9)', () => {
+    const constrained = (
+      index: number,
+      n: number,
+      exact: boolean,
+      { stopsAtLast = false, attention = null }: { stopsAtLast?: boolean; attention?: DiagramLinkedPoseState['attention'] } = {}
+    ) => {
       const actions = buildDiagramLinkedPoseActions(
         {
           render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 },
@@ -206,6 +211,7 @@ describe('the linked pose verbs', () => {
           solutions: { discovered: 1, hasNext: false },
           constrained: true,
           place: { position: { index, total: { n, exact } }, counted: true },
+          attention,
         },
         { t, pose: vi.fn() },
         { stopsAtLast }
@@ -213,16 +219,24 @@ describe('the linked pose verbs', () => {
       const verb = (id: string) => actions.find((action) => action.id === id)!;
       return { previous: verb('previous-solution'), next: verb('next-solution') };
     };
-    expect(constrained(1, 3, false).previous).toMatchObject({ disabled: true, hint: 'This is its first layer order' });
+    // The solutions that fit, counted by the pictures of a side: never the fold's layer orders.
+    expect(constrained(1, 3, false).previous).toMatchObject({ disabled: true, hint: 'This is its first solution' });
     expect(constrained(1, 3, false).next.disabled).toBe(false);
     // Not final: the count may find more, so › goes on looking.
     expect(constrained(3, 3, false).next.disabled).toBe(false);
     // The Step pane's never wraps on a constrained step (its unconstrained one does, D23): final, it waits.
     for (const stopsAtLast of [false, true]) {
-      expect(constrained(3, 3, true, stopsAtLast).next).toMatchObject({ disabled: true, hint: 'This is its last layer order' });
-      expect(constrained(3, 3, true, stopsAtLast).previous.disabled).toBe(false);
+      expect(constrained(3, 3, true, { stopsAtLast }).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+      expect(constrained(3, 3, true, { stopsAtLast }).previous.disabled).toBe(false);
     }
-    expect(constrained(1, 1, true).next).toMatchObject({ disabled: true, hint: 'This fold has one layer order' });
+    // One picture from this side is not one layer order: no "This fold has one layer order".
+    expect(constrained(1, 1, true).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+    // Saved as clashing (D10): both wait for Review…, wherever a press last stood.
+    for (const verb of Object.values(constrained(2, 3, false, { attention: { reason: 'conflict', count: 1 } }))) {
+      expect(verb).toMatchObject({ disabled: true, hint: 'Its layer constraints clash. Review… them first' });
+    }
+    // Any other summary leaves them be: a press restores it and says what it found.
+    expect(constrained(2, 3, false, { attention: { reason: 'timeout', count: 1 } }).next.disabled).toBe(false);
   });
 
   it('reads out where a constrained step stands once a press asked, and nothing at rest (H9, D11)', () => {

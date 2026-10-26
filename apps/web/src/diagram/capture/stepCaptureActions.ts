@@ -475,49 +475,95 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
  * `load`, by `isLayerOrderLoadFailure`), which a connection may settle; or it
  * stopped or did not start, said neutrally, since that may be a defect.
  */
-export function sayLayerOrderLost(offline: boolean): void {
+export function sayLayerOrderLost(offline: boolean, id?: string): void {
   const t = i18n.t;
-  toast.error(
-    offline
-      ? t(
-          'toasts:diagram.layerOrder.lostLoad',
-          'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'
-        )
-      : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.')
-  );
+  const said = offline
+    ? t(
+        'toasts:diagram.layerOrder.lostLoad',
+        'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'
+      )
+    : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.');
+  // A step's ‹ › share one toast (`sayStepSolutionPress`); a capture's stands alone.
+  if (id === undefined) toast.error(said);
+  else toast.error(said, { id });
 }
+
+/** The toast id a step's ‹ › messages share, so a Keep trying replaces the one it came from. */
+const STEP_SOLUTION_TOAST_ID = 'diagram-layer-order-step';
 
 /**
  * What a constrained step's ‹ or › that moved nothing says, if anything
- * (layer order H9), as Edit's figures say it (`sayFoldedSolutionStep`) in the
- * Diagram's words: the engine didn't load or stopped, the check ran out of
- * time, or the step's constraints need attention. An end, a Stop, or a step
- * that moved on says nothing — the pager shows where it stands, and the rest
- * the user did — but an end the count has not settled yet says another press
- * may find one.
+ * (layer order H9), by its cause, as Edit's figures say it
+ * (`sayFoldedSolutionStep`) in the Diagram's words:
+ *
+ * - the engine didn't load (offline: check the connection) or stopped;
+ * - the record couldn't be checked in time (D10), or no next solution was
+ *   found within the step's deadline (an end the count hasn't reached yet,
+ *   or a step that ran out): each with Keep trying (`keepTrying`), which
+ *   asks again on the same worker with longer limits;
+ * - the next solution is too large to save with the step, or the engine
+ *   refused the step's creases;
+ * - its constraints clash with its pattern as it is now. Said so it reads
+ *   without a flag: a step whose creases changed since it was last captured
+ *   carries none until a Refresh, and a step flagged as clashing never gets
+ *   here (its ‹ › wait for Review…).
+ *
+ * An end that is final, a Stop, a step that moved on, or one that can't step
+ * now says nothing: the pager shows where it stands, and the rest the user
+ * did or already sees. An order that can't be drawn said so through the
+ * capture.
  */
-export function sayStepSolutionPress(press: LayerOrderSolutionPress): void {
+export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying: () => void): void {
   const t = i18n.t;
+  const id = STEP_SOLUTION_TOAST_ID;
+  const notFoundInTime = () =>
+    toast.error(
+      t('toasts:diagram.layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so this step wasn’t changed.'),
+      { id, action: { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying } }
+    );
   switch (press.status) {
     case 'lost':
-      sayLayerOrderLost(press.cause === 'load');
+      sayLayerOrderLost(press.cause === 'load', id);
       return;
     case 'timed_out':
+      if (press.stage === 'step') {
+        notFoundInTime();
+        return;
+      }
       toast.error(
-        t('toasts:diagram.layerOrder.stepTimedOut', 'Another solution couldn’t be found in time, so this step wasn’t changed.')
+        t(
+          'toasts:diagram.layerOrder.stepCheckTimedOut',
+          'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.'
+        ),
+        { id, action: { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying } }
+      );
+      return;
+    case 'end':
+      // Not final: the search for the next ran out before the count got there.
+      if (!press.final) notFoundInTime();
+      return;
+    case 'too-large':
+      toast.error(
+        t(
+          'toasts:diagram.layerOrder.stepTooLarge',
+          'The next layer order is too large to save with this step, so it wasn’t changed.'
+        ),
+        { id }
       );
       return;
     case 'unrestored':
       toast.error(
-        t(
-          'toasts:diagram.layerOrder.stepUnrestored',
-          'This step’s layer constraints need attention, so it can’t step through its solutions. Edit its layer order to review them.'
-        )
+        press.why === 'clash'
+          ? t(
+              'toasts:diagram.layerOrder.stepClash',
+              'This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.'
+            )
+          : t(
+              'toasts:diagram.layerOrder.stepRefused',
+              'Layer order can’t step through this step’s solutions, so it wasn’t changed.'
+            ),
+        { id }
       );
-      return;
-    case 'end':
-      // Not final: the count goes on with each press, so another may find one.
-      if (!press.final) toast.message(t('toasts:layerOrder.stepNotFoundYet', 'No other solution found yet. Try again to keep looking.'));
       return;
     case 'moved':
     case 'not-drawn':

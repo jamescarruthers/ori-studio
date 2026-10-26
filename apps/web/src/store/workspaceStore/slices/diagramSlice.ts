@@ -116,14 +116,16 @@ function hasAnnotation(document: DiagramDocument | null, stepId: string | null, 
  */
 export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get, api) => {
   // A constrained step's solutions cursor (layer order H9) steps only the
-  // record the step holds: an undo, an Apply, a Show as, a Delete, an edit to
-  // the pattern's lines or the diagram closing lets it go, with its worker
-  // (`stepSolutionCursor.ts`). Nothing to do while no cursor is kept.
+  // record the step holds, and only while the step is in hand: an undo, an
+  // Apply, a Show as, a Delete, another step selected or the diagram closing
+  // lets it go, with its worker (`stepSolutionCursor.ts`). Nothing to do
+  // while no cursor is kept.
   stopSettlingStepSolutionCursor?.();
   stopSettlingStepSolutionCursor = api.subscribe((state, previous) => {
     if (
       state.diagram === previous.diagram &&
       state.diagramLoadId === previous.diagramLoadId &&
+      state.diagramSelectedStepId === previous.diagramSelectedStepId &&
       state.oristudioCpDocument === previous.oristudioCpDocument
     ) {
       return;

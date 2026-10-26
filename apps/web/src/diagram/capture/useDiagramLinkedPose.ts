@@ -227,12 +227,25 @@ export function useDiagramLinkedPose(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [constrained, source, stepId, cursorVersion]
   );
+  // Its record's saved summary: a clash holds ‹ › until Review… (D10), from saved data.
+  const attention = layerOrderSummaryOf(source)?.attention ?? null;
   const poseState = useMemo(
     (): DiagramLinkedPoseState | null =>
       render
-        ? { render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView: liveView !== null, constrained, place }
+        ? {
+            render,
+            readOnly,
+            busy,
+            solutions,
+            seeThrough,
+            mirrorAxes,
+            liveView: liveView !== null,
+            constrained,
+            place,
+            attention,
+          }
         : null,
-    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained, place]
+    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained, place, attention]
   );
   const [actions, toolbar] = useMemo(() => {
     if (!poseState || !controller) return [[], []];

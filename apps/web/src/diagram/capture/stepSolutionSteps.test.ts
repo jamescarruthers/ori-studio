@@ -32,6 +32,9 @@ import {
   type ScriptedSolutionCursor,
   type ScriptedSolutionStep,
 } from '../../layer-order/host/solutionCursorTable.fixtures';
+import { SOLUTION_CURSOR_IDLE_MS } from '../../layer-order/host/solutionCursorTable';
+import { useLayerOrderDialogStore } from '../../layer-order/dialog/layerOrderDialogStore';
+import { useLayoutStore } from '../../store/layoutStore';
 import { createPoseController, type PoseController } from './poseController';
 import { linkDiagramStep, refreshDiagramStep, showLinkedStepAs } from './stepCaptureActions';
 import { dropStepSolutionCursor, stepSolutionCursorStep, stepSolutionPlace } from './stepSolutionCursor';
@@ -74,13 +77,13 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
   ...analytics,
 }));
-/** A browser that can stop a fold: the run's Stop reaches its signal. */
-const cancellation = vi.hoisted(() => ({ next: 0 }));
+/** A browser that can stop a kernel fold, unless a test says it can't: the run's Stop reaches its signal. */
+const cancellation = vi.hoisted(() => ({ next: 0, available: true }));
 vi.mock('../../lib/foldCancellation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/foldCancellation')>()),
   beginFoldRun: () => ++cancellation.next,
   cancelFoldRun: () => {},
-  foldCancellationAvailable: () => true,
+  foldCancellationAvailable: () => cancellation.available,
 }));
 
 const sheets = twoSquaresIndex();
@@ -138,8 +141,11 @@ function runtime(): CpCaptureRuntime {
   });
 }
 
-/** A step linked to the left square, folded flat, then given a record as an Apply leaves it (and a file opens it). */
-async function constrainedStep(): Promise<string> {
+/**
+ * A step linked to the left square, folded flat, then given a record as an
+ * Apply leaves it (and a file opens it), selected, as a step open in Pose is.
+ */
+async function constrainedStep(json = JSON_AT_REST): Promise<string> {
   const stepId = state().addDiagramStep()!;
   await state().captureDiagramStep(stepId, {
     scope: { kind: 'segment', region: regionReferenceFor(left!) },
@@ -147,7 +153,8 @@ async function constrainedStep(): Promise<string> {
     kind: 'diagram-capture',
     label: 'Link pattern',
   });
-  useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, JSON_AT_REST) });
+  useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, json) });
+  state().selectDiagramStep(stepId);
   return stepId;
 }
 
@@ -169,6 +176,7 @@ function pager(stepId: string) {
       solutions: { discovered: 1, hasNext: false },
       constrained: source.layerOrder !== undefined,
       place: stepSolutionPlace(stepId, source),
+      attention: stepLayerOrderOf(source.layerOrder)?.record.attention ?? null,
     },
     { t, pose: vi.fn() }
   );
@@ -184,6 +192,7 @@ function poseOf(stepId: string): PoseController {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  cancellation.available = true;
   cursors = [];
   nextHandle = ORDERED_HANDLE;
   setFoldedFigureHandleFree(() => {});
@@ -244,16 +253,18 @@ describe('the cursor’s life', () => {
     await pose.run({ verb: 'next-solution' });
     await pose.run({ verb: 'next-solution' });
     expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_3));
-    // The last, once the count is final: › waits there, saying why; it does not wrap round.
-    expect(pager(stepId).next).toMatchObject({ disabled: true, hint: 'This is its last layer order' });
+    // The last, once the count is final: › waits there, saying why in the cursor's words (the solutions
+    // that fit, never the fold's layer orders); it does not wrap round.
+    expect(pager(stepId).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
     // Pressed at the end anyway (a surface that keeps it focusable): nothing written, nothing said.
     await pose.run({ verb: 'next-solution' });
     expect(labelsSince(entries)).toEqual(['Show another solution', 'Show another solution']);
     expect(toasts.message).not.toHaveBeenCalled();
+    expect(toasts.error).not.toHaveBeenCalled();
     await pose.run({ verb: 'previous-solution' });
     await pose.run({ verb: 'previous-solution' });
     expect(sourceOf(stepId).layerOrder).toBe(kept(STEP_LAYER_ORDER_IN_SOURCE));
-    expect(pager(stepId).previous).toMatchObject({ disabled: true, hint: 'This is its first layer order' });
+    expect(pager(stepId).previous).toMatchObject({ disabled: true, hint: 'This is its first solution' });
     expect(labelsSince(entries)).toEqual([
       'Show another solution',
       'Show another solution',
@@ -266,16 +277,39 @@ describe('the cursor’s life', () => {
     expect(analytics.trackDiagramPicturePosed).toHaveBeenLastCalledWith('previous_solution', 'flat', { constrained: true });
   });
 
-  it('says another press may find one at an end the count has not settled, and writes nothing', async () => {
+  it('says it couldn’t find another in time at an end the count has not settled, with Keep trying, and writes nothing', async () => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
-    script(end(1, 1, false));
+    const cursor = script(end(1, 1, false), moved(ORDER_2, 2, 2));
     const entries = state().diagramHistory.past.length;
     await pose.run({ verb: 'next-solution' });
     expect(state().diagramHistory.past).toHaveLength(entries);
-    expect(toasts.message).toHaveBeenCalledWith('No other solution found yet. Try again to keep looking.');
+    const [said, options] = toasts.error.mock.calls[0]! as [string, { action: { label: string; onClick: () => void } }];
+    expect(said).toBe('Couldn’t find another solution in time, so this step wasn’t changed.');
     // Not final: › goes on looking.
     expect(pager(stepId).next.disabled).toBe(false);
+    // Keep trying: the same direction again, on the same worker, with longer limits.
+    expect(options.action.label).toBe('Keep trying');
+    options.action.onClick();
+    await vi.waitFor(() => expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_2)));
+    expect(cursor.triesAsked).toEqual([0, 1]);
+    expect(cursor.asked.map((asked) => asked.direction)).toEqual(['next', 'next']);
+    expect(hostEngine.open).toHaveBeenCalledOnce();
+  });
+
+  it('holds ‹ › on a step saved as clashing, pointing at Review…, and a press asks nothing of the engine', async () => {
+    const clashing = stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention: { reason: 'conflict', count: 1 } });
+    const stepId = await constrainedStep(clashing);
+    for (const verb of [pager(stepId).previous, pager(stepId).next]) {
+      expect(verb).toMatchObject({ disabled: true, hint: 'Its layer constraints clash. Review… them first' });
+    }
+    // A surface that keeps it focusable, pressed anyway: nothing made, nothing written, nothing said.
+    const entries = state().diagramHistory.past.length;
+    await poseOf(stepId).run({ verb: 'next-solution' });
+    expect(hostEngine.open).not.toHaveBeenCalled();
+    expect(state().diagramHistory.past).toHaveLength(entries);
+    expect(toasts.error).not.toHaveBeenCalled();
+    expect(toasts.message).not.toHaveBeenCalled();
   });
 
   it('is let go on an undo of a step, which shows the order before; redo brings the step back, and the next press makes a fresh one', async () => {
@@ -384,21 +418,73 @@ describe('the cursor’s life', () => {
     expect(stepSolutionCursorStep()).toBeNull();
   });
 
-  it('is let go when the pattern’s lines change, and kept through a pattern edit that changes no line', async () => {
+  it('is kept through a custom colour on its creases, and let go as a press finds them changed', async () => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
-    const cursor = script(end(1, 3, false));
+    const cursor = script(end(1, 3, false), end(1, 3, false));
     await pose.run({ verb: 'next-solution' });
-    // A new snapshot with the same lines (another field changed): kept.
-    useWorkspaceStore.setState({
-      oristudioCpDocument: { handle: 1, document: { ...document }, geometry: null } as unknown as OristudioCpDocumentState,
-    });
+    const shown = (edited: typeof document) =>
+      useWorkspaceStore.setState({
+        oristudioCpDocument: { handle: 1, document: edited, geometry: null } as unknown as OristudioCpDocumentState,
+      });
+    // One of the step's creases drawn in a colour of its own: its geometry and kind are as they were.
+    shown(cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, customized: 1, customized_color: { red: 1, green: 2, blue: 3 } } : cp)));
     expect(cursor.closed).toBe(false);
-    const edited = cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, color: 'Blue2' } : cp));
-    useWorkspaceStore.setState({
-      oristudioCpDocument: { handle: 1, document: edited, geometry: null } as unknown as OristudioCpDocumentState,
-    });
+    await pose.run({ verb: 'next-solution' });
+    expect(hostEngine.open).toHaveBeenCalledOnce();
+    expect(cursor.asked).toHaveLength(2);
+    // That crease turned from a mountain to a valley: the next press finds it, and makes a fresh cursor on it.
+    shown(cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, color: 'Blue2' } : cp)));
+    const fresh = script(end(1, 3, false));
+    await pose.run({ verb: 'next-solution' });
     expect(cursor.closed).toBe(true);
+    expect(hostEngine.open).toHaveBeenCalledTimes(2);
+    expect(fresh.asked).toHaveLength(1);
+  });
+
+  it('is let go, with its worker, when another step is selected, the workspace switches or the dialog opens', async () => {
+    for (const meanwhile of [
+      () => state().selectDiagramStep(null),
+      () => useLayoutStore.setState({ activeWorkspace: useLayoutStore.getState().activeWorkspace === 'edit' ? 'diagram' : 'edit' }),
+      () => useLayerOrderDialogStore.setState({ opening: { id: 99 } as never }),
+    ]) {
+      const workspace = useLayoutStore.getState().activeWorkspace;
+      useWorkspaceStore.setState({ diagram: null });
+      const stepId = await constrainedStep();
+      const pose = poseOf(stepId);
+      const cursor = script(end(1, 3, false));
+      await pose.run({ verb: 'next-solution' });
+      expect(cursor.closed).toBe(false);
+      try {
+        meanwhile();
+        expect(cursor.closed).toBe(true);
+        expect(stepSolutionCursorStep()).toBeNull();
+      } finally {
+        useLayoutStore.setState({ activeWorkspace: workspace });
+        useLayerOrderDialogStore.setState({ opening: null });
+        pose.dispose();
+        controller = null;
+      }
+    }
+  });
+
+  it('is let go after a minute with no press, and kept through presses', async () => {
+    const stepId = await constrainedStep();
+    const pose = poseOf(stepId);
+    const cursor = script(end(1, 3, false), end(1, 3, false));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await pose.run({ verb: 'next-solution' });
+      vi.advanceTimersByTime(SOLUTION_CURSOR_IDLE_MS - 1000);
+      await pose.run({ verb: 'next-solution' });
+      vi.advanceTimersByTime(SOLUTION_CURSOR_IDLE_MS - 1000);
+      expect(cursor.closed).toBe(false);
+      vi.advanceTimersByTime(1000);
+      expect(cursor.closed).toBe(true);
+      expect(stepSolutionCursorStep()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('is let go when the step is deleted, and when the diagram closes or another opens', async () => {
@@ -485,18 +571,41 @@ describe('what it steps from', () => {
 });
 
 describe('a press that moves nothing writes nothing', () => {
+  // By cause (H6's review): each its own words; running out of time offers Keep trying and keeps the cursor.
   it.each([
-    ['lost offline', { outcome: 'lost', cause: 'load' }, 'error', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.', true],
-    ['lost', { outcome: 'lost', cause: 'crashed' }, 'error', 'Layer order stopped unexpectedly, so this step wasn’t changed.', true],
-    ['timed out', { outcome: 'timed_out' }, 'error', 'Another solution couldn’t be found in time, so this step wasn’t changed.', false],
+    ['lost offline', { outcome: 'lost', cause: 'load' }, 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.', false, true],
+    ['lost', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so this step wasn’t changed.', false, true],
     [
-      'unrestored',
-      { outcome: 'unrestored', why: 'clash' },
-      'error',
-      'This step’s layer constraints need attention, so it can’t step through its solutions. Edit its layer order to review them.',
+      'its record not checked in time',
+      { outcome: 'timed_out', stage: 'restore' },
+      'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.',
+      true,
+      false,
+    ],
+    [
+      'the next not found in time',
+      { outcome: 'timed_out', stage: 'step' },
+      'Couldn’t find another solution in time, so this step wasn’t changed.',
+      true,
+      false,
+    ],
+    ['too large', { outcome: 'too_large' }, 'The next layer order is too large to save with this step, so it wasn’t changed.', false, true],
+    [
+      'refused',
+      { outcome: 'unrestored', why: 'refused' },
+      'Layer order can’t step through this step’s solutions, so it wasn’t changed.',
+      false,
       true,
     ],
-  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, kind, said, spent) => {
+    [
+      // A step whose creases changed since its last capture carries no flag yet: said so it reads without one.
+      'clashing',
+      { outcome: 'unrestored', why: 'clash' },
+      'This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.',
+      false,
+      true,
+    ],
+  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, said, keepTrying, spent) => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
     const cursor = script(answer as LayerOrderSolutionStep);
@@ -509,11 +618,50 @@ describe('a press that moves nothing writes nothing', () => {
     expect(state().dirty).toBe(false);
     expect(pictureOf(stepId)).toBe(picture);
     expect(sourceOf(stepId).layerOrder).toBe(JSON_AT_REST);
-    expect(toasts[kind]).toHaveBeenCalledWith(said);
+    expect(toasts.error).toHaveBeenCalledOnce();
+    const [text, options] = toasts.error.mock.calls[0]! as [string, { id?: string; action?: { label: string } }];
+    expect(text).toBe(said);
+    // One toast at a time for a step's presses: a Keep trying replaces the one it came from.
+    expect(options.id).toBe('diagram-layer-order-step');
+    expect(options.action?.label).toBe(keepTrying ? 'Keep trying' : undefined);
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
     expect(analytics.trackDiagramPicturePosed).not.toHaveBeenCalled();
-    // A lost or unrestored session is gone; a check that ran out of time keeps its cursor for the next press.
+    // A lost, refused or unrestored session is gone; one that ran out of time is kept for Keep trying.
     expect(cursor.closed).toBe(spent);
+  });
+
+  it('says nothing for a press whose step moved on while it ran (an undo)', async () => {
+    const stepId = await constrainedStep();
+    const pose = poseOf(stepId);
+    let answer: (step: LayerOrderSolutionStep) => void = () => {};
+    const cursor = script(() => new Promise((resolve) => (answer = resolve)));
+    const pressed = pose.run({ verb: 'next-solution' });
+    await vi.waitFor(() => expect(cursor.asked).toHaveLength(1));
+    // Another record lands meanwhile (an undo of an Apply, say), then the engine runs out of time.
+    const other = stepLayerOrderJson({ ...STEP_LAYER_ORDER, constraints: [[1, 0, 1]] });
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, other) });
+    answer({ outcome: 'timed_out', stage: 'step' });
+    await pressed;
+    expect(toasts.error).not.toHaveBeenCalled();
+    expect(toasts.message).not.toHaveBeenCalled();
+    expect(sourceOf(stepId).layerOrder).toBe(other);
+  });
+
+  it('stops the engine’s half of a press even where the kernel’s fold can’t be stopped', async () => {
+    cancellation.available = false;
+    const stepId = await constrainedStep();
+    const pose = poseOf(stepId);
+    // Held already in the record's order, so the press folds nothing of its own: all of it is the engine's.
+    await pose.run({ verb: 'rotate-right' });
+    const cursor = script(
+      ({ signal }) =>
+        new Promise((resolve) => signal?.addEventListener('abort', () => resolve({ outcome: 'cancelled' }), { once: true }))
+    );
+    const pressed = pose.run({ verb: 'next-solution' });
+    await vi.waitFor(() => expect(cursor.asked).toHaveLength(1));
+    expect(state().stopDiagramCapture(stepId)).toBe(true);
+    await pressed;
+    expect(cursor.closed).toBe(true);
   });
 
   it('a Stop ends the step through the capture’s fold run, quietly, and the cursor with it', async () => {

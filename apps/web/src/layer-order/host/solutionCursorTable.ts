@@ -43,7 +43,7 @@
  */
 import type { LayerPosition, LayerStepBy } from '../engine/layerOrderEngine';
 import { onLayerOrderDialogOpen } from '../dialog/layerOrderDialogGateway';
-import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import {
   openLayerOrderSolutionCursor,
@@ -373,6 +373,17 @@ export function solutionPlaceEnds(place: LayerOrderSolutionPlace): { first: bool
   const { index, total } = place.position;
   const last = total.exact && index >= total.n;
   return { first: index <= 1, last, only: last && total.n <= 1 };
+}
+
+/**
+ * Whether a record's saved summary says its constraints clash (D10,
+ * `attention.reason === 'conflict'`, written by a refold or a capture after an
+ * edit): no order fits them all, so there is no solution to step to until
+ * they are reviewed, and every host's ‹ › wait, pointing at Review…. Read
+ * from saved data alone.
+ */
+export function solutionsHeldByConflict(attention: LayerOrderAttention | null | undefined): boolean {
+  return attention?.reason === 'conflict';
 }
 
 /**

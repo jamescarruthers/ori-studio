@@ -11,6 +11,7 @@
 import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import { solutionsHeldByConflict } from '../../layer-order/host/solutionCursorTable';
 import { isFolded3dFigure } from './foldedFigureCapabilities';
 import { foldedFigureHasLayerOrder } from './foldedFigureState';
 
@@ -69,10 +70,11 @@ export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntr
  * Whether a constrained figure's saved constraints clash, as its record says
  * since an edit (D10, `attention.reason === 'conflict'`): no order fits them
  * all, so there is no solution to step to until they are reviewed, and its
- * ‹ › wait. Read from saved data alone.
+ * ‹ › wait. Read from saved data alone, by every host's rule
+ * (`solutionsHeldByConflict`).
  */
 export function foldedFigureSolutionsHeldByConflict(figure: OristudioCpFoldedFigureEntry): boolean {
-  return foldedFigureLayerOrderRecord(figure)?.attention?.reason === 'conflict';
+  return solutionsHeldByConflict(foldedFigureLayerOrderRecord(figure)?.attention);
 }
 
 /**

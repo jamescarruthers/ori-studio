@@ -35,7 +35,12 @@ import {
 } from '../../store/workspaceStore/diagramCapture';
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
-import { solutionPressOf, type LayerOrderSolutionPress } from '../../layer-order/host/solutionCursorTable';
+import {
+  solutionPressOf,
+  solutionsHeldByConflict,
+  type LayerOrderSolutionPress,
+} from '../../layer-order/host/solutionCursorTable';
+import { foldCancellationAvailable } from '../../lib/foldCancellation';
 import type { LayerOrderRequestSurface } from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderRecordToSource } from '../../lib/layerOrder/paperFrame';
 import { captureModel, withSheetPaper } from './captureFolded';
@@ -584,7 +589,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
    * A step no longer constrained, or whose creases fold in 3D now, takes the
    * verb as any pose does.
    */
-  const stepSolution = async (verb: 'next-solution' | 'previous-solution'): Promise<void> => {
+  const stepSolution = async (verb: 'next-solution' | 'previous-solution', tries = 0): Promise<void> => {
     const direction = verb === 'next-solution' ? 'next' : 'previous';
     endPreview();
     const outcome = await capturing(
@@ -598,27 +603,43 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
           return posed(begun, linked, document, choice.creases, { verb }, {});
         }
         if (route.kind === 'none') return { status: 'missing' };
+        // Saved as clashing (D10): no solution fits them all until they are reviewed; the pager waits, saying so.
+        if (solutionsHeldByConflict(saved.record.attention)) return { press: { status: 'blocked' } };
         const render = linked.render;
-        const turn = beginStepSolutionStep(stepId, linked, { loadId: begun.guard.loadId, document });
+        const turn = beginStepSolutionStep(stepId, linked, { loadId: begun.guard.loadId, document, lineIds });
         try {
-          const answer = await runStepFold(store, begun, 'diagram-capture', (runtime, stop) =>
-            turn.step({
-              direction,
-              signal: stop,
-              open: async () => {
-                const folded = session.holdsFlat(document, lineIds, saved.json)
-                  ? await session.heldFlatSource()
-                  : await stepFoldSource(runtime, lineIds, captureModel(document, render.side));
-                return {
-                  source: folded.source,
-                  record: layerOrderRecordToSource(saved.record, folded.frame),
-                  frame: folded.frame,
-                };
-              },
-            })
+          // The engine's half can always be stopped, since stopping it terminates its worker; a fold of
+          // the creases to open the cursor on, only where the kernel's cancel transport reaches.
+          const answer = await runStepFold(
+            store,
+            begun,
+            'diagram-capture',
+            (runtime, stop, controls) =>
+              turn.step({
+                direction,
+                signal: stop,
+                tries,
+                open: async () => {
+                  if (session.holdsFlat(document, lineIds, saved.json)) {
+                    const held = await session.heldFlatSource();
+                    return { source: held.source, record: layerOrderRecordToSource(saved.record, held.frame), frame: held.frame };
+                  }
+                  controls.stoppable(foldCancellationAvailable());
+                  const folded = await stepFoldSource(runtime, lineIds, captureModel(document, render.side));
+                  controls.stoppable(true);
+                  return {
+                    source: folded.source,
+                    record: layerOrderRecordToSource(saved.record, folded.frame),
+                    frame: folded.frame,
+                  };
+                },
+              }),
+            { stoppable: true }
           );
           const frame = turn.frame();
           if (answer.outcome !== 'moved' || !frame) {
+            // Undone, redone, relinked or deleted while it ran: nothing to say about a step that has moved on.
+            if (currentLinkedSource(stepId) !== linked) return { press: { status: 'stopped' } };
             return { press: answer.outcome === 'moved' ? { status: 'stopped' } : solutionPressOf(answer, direction) };
           }
           const landed = await posed(
@@ -642,7 +663,8 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     );
     showPreview(false);
     if (!outcome) return;
-    if ('press' in outcome) sayStepSolutionPress(outcome.press);
+    // Keep trying asks again with the same direction, on the same worker, with longer limits.
+    if ('press' in outcome) sayStepSolutionPress(outcome.press, () => void stepSolution(verb, tries + 1));
     // As `pose` says it: a see-through fold says so only as it is first folded.
     else if (!(outcome.status === 'captured' && outcome.noLayerOrder)) sayCaptureOutcome(outcome);
   };
