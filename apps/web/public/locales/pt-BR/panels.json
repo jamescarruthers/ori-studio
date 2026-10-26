@@ -1570,7 +1570,6 @@
       "front": "Frente",
       "lastSolution": "Esta é a última ordem de camadas",
       "layerOrder": "Ordem de camadas",
-      "layerOrderConstrained": "Percorra as soluções em Ordem das camadas…",
       "layerOrderNone": "Nenhuma",
       "layerOrderOf": "{{number}} de {{total}}",
       "layerOrderOfMore": "{{number}} de {{total}}+",

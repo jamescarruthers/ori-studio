@@ -1523,7 +1523,6 @@
       "front": "Vorderseite",
       "lastSolution": "Das ist die letzte Lagenfolge",
       "layerOrder": "Lagenfolge",
-      "layerOrderConstrained": "Lösungen in Lagenreihenfolge… durchgehen",
       "layerOrderNone": "Keine",
       "layerOrderOf": "{{number}} von {{total}}",
       "layerOrderOfMore": "{{number}} von {{total}}+",

@@ -1476,7 +1476,6 @@
       "front": "正面",
       "lastSolution": "这是最后一种层序",
       "layerOrder": "层序",
-      "layerOrderConstrained": "请在“层叠顺序…”中逐个查看解",
       "layerOrderNone": "无",
       "layerOrderOf": "{{number}} / {{total}}",
       "layerOrderOfMore": "{{number}} / {{total}}+",

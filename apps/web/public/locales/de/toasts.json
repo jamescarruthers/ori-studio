@@ -62,7 +62,9 @@
       "lostLoad": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde dieser Schritt nicht geändert. Prüfe deine Verbindung und versuche es dann erneut.",
       "refused": "Diese Lagenreihenfolge konnte nicht gezeichnet werden, daher wurde nichts geändert.",
       "removed_one": "Die Lagenvorgabe des Schritts gehörte zu seinem alten Muster und wurde entfernt. Mit Rückgängig kommt sie zurück.",
-      "removed_other": "Die {{count}} Lagenvorgaben des Schritts gehörten zu seinem alten Muster und wurden entfernt. Mit Rückgängig kommen sie zurück."
+      "removed_other": "Die {{count}} Lagenvorgaben des Schritts gehörten zu seinem alten Muster und wurden entfernt. Mit Rückgängig kommen sie zurück.",
+      "stepTimedOut": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde dieser Schritt nicht geändert.",
+      "stepUnrestored": "Die Lagenvorgaben dieses Schritts brauchen Aufmerksamkeit, daher kann er seine Lösungen nicht durchgehen. Bearbeite seine Lagenreihenfolge, um sie zu prüfen."
     },
     "placementsReflowed_one": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "placementsReflowed_other": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",

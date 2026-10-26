@@ -66,7 +66,9 @@
       "refused": "Não foi possível desenhar esta ordem das camadas, então nada foi alterado.",
       "removed_one": "A restrição de camadas do passo era do padrão antigo, então foi removida. Desfazer a traz de volta.",
       "removed_many": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta.",
-      "removed_other": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta."
+      "removed_other": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta.",
+      "stepTimedOut": "Não foi possível encontrar outra solução a tempo, então este passo não foi alterado.",
+      "stepUnrestored": "As restrições de camadas deste passo precisam de atenção, então ele não pode percorrer suas soluções. Edite a ordem das camadas dele para revisá-las."
     },
     "placementsReflowed_one": "{{count}} passos movidos voltaram às suas células",
     "placementsReflowed_many": "{{count}} passos movidos voltaram às suas células",

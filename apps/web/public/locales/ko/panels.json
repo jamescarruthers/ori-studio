@@ -1476,7 +1476,6 @@
       "front": "앞면",
       "lastSolution": "마지막 층 순서입니다",
       "layerOrder": "층 순서",
-      "layerOrderConstrained": "해는 겹침 순서…에서 넘겨 보세요",
       "layerOrderNone": "없음",
       "layerOrderOf": "{{number}} / {{total}}",
       "layerOrderOfMore": "{{number}} / {{total}}+",

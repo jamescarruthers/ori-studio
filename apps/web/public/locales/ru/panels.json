@@ -1617,7 +1617,6 @@
       "front": "Лицевая",
       "lastSolution": "Это последний порядок слоёв",
       "layerOrder": "Порядок слоёв",
-      "layerOrderConstrained": "Решения перебираются в «Порядок слоёв…»",
       "layerOrderNone": "Нет",
       "layerOrderOf": "{{number}} из {{total}}",
       "layerOrderOfMore": "{{number}} из {{total}}+",

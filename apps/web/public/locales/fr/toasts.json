@@ -66,7 +66,9 @@
       "refused": "Cet ordre des couches n’a pas pu être dessiné, rien n’a donc été modifié.",
       "removed_one": "La contrainte de couches de l’étape concernait son ancien patron, elle a donc été retirée. Annuler la rétablit.",
       "removed_many": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit.",
-      "removed_other": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit."
+      "removed_other": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit.",
+      "stepTimedOut": "Aucune autre solution n’a pu être trouvée à temps, cette étape n’a donc pas été modifiée.",
+      "stepUnrestored": "Les contraintes de couches de cette étape demandent votre attention, elle ne peut donc pas parcourir ses solutions. Modifiez son ordre des couches pour les vérifier."
     },
     "placementsReflowed_one": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_many": "{{count}} étapes déplacées ont retrouvé leur cellule",

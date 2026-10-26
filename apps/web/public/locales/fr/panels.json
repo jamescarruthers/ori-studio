@@ -1570,7 +1570,6 @@
       "front": "Recto",
       "lastSolution": "C’est son dernier ordre des couches",
       "layerOrder": "Ordre des couches",
-      "layerOrderConstrained": "Parcourez les solutions dans Ordre des couches…",
       "layerOrderNone": "Aucun",
       "layerOrderOf": "{{number}} sur {{total}}",
       "layerOrderOfMore": "{{number}} sur {{total}}+",

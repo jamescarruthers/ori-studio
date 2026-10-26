@@ -1476,7 +1476,6 @@
       "front": "表",
       "lastSolution": "これが最後の重なり順です",
       "layerOrder": "重なり順",
-      "layerOrderConstrained": "解の切り替えは「重なり順…」で行います",
       "layerOrderNone": "なし",
       "layerOrderOf": "{{number}} / {{total}}",
       "layerOrderOfMore": "{{number}} / {{total}}+",

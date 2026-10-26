@@ -1570,7 +1570,6 @@
       "front": "Anverso",
       "lastSolution": "Es su último orden de capas",
       "layerOrder": "Orden de capas",
-      "layerOrderConstrained": "Recorre las soluciones en Orden de capas…",
       "layerOrderNone": "Ninguno",
       "layerOrderOf": "{{number}} de {{total}}",
       "layerOrderOfMore": "{{number}} de {{total}}+",

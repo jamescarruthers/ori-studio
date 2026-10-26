@@ -66,7 +66,9 @@
       "refused": "No se pudo dibujar este orden de capas, así que no se cambió nada.",
       "removed_one": "La restricción de capas del paso era de su patrón anterior, así que se quitó. Deshacer la recupera.",
       "removed_many": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera.",
-      "removed_other": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera."
+      "removed_other": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera.",
+      "stepTimedOut": "No se pudo encontrar otra solución a tiempo, así que este paso no cambió.",
+      "stepUnrestored": "Las restricciones de capas de este paso necesitan atención, así que no puede recorrer sus soluciones. Edita su orden de capas para revisarlas."
     },
     "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",

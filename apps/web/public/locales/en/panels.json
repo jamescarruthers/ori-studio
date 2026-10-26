@@ -1523,7 +1523,6 @@
       "front": "Front",
       "lastSolution": "This is its last layer order",
       "layerOrder": "Layer order",
-      "layerOrderConstrained": "Step through solutions in Layer order…",
       "layerOrderNone": "None",
       "layerOrderOf": "{{number}} of {{total}}",
       "layerOrderOfMore": "{{number}} of {{total}}+",
