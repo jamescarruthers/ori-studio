@@ -30,7 +30,14 @@ export function LayerOrderInspector({ state, dispatch, copy, letters, hint }: La
   return (
     <>
       {status && (
-        <LayerOrderStatus status={status} copy={copy} counting={state.solutions.runs} side={state.view.side} onStep={onStep} />
+        <LayerOrderStatus
+          status={status}
+          copy={copy}
+          counting={state.solutions.runs}
+          countDone={state.solutions.count?.done === true}
+          side={state.view.side}
+          onStep={onStep}
+        />
       )}
       <LayerOrderBuilder state={state} dispatch={dispatch} copy={copy} letters={letters} hint={hint} />
       <LayerOrderConstraintList state={state} dispatch={dispatch} copy={copy} />

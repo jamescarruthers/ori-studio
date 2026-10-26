@@ -138,6 +138,13 @@ describe('the status and its stepper', () => {
     expect(byRole(host, 'group', 'Solution shown').textContent).toBe('2 of 4+');
   });
 
+  it('announces a count that stopped at its cap as its lower bound, once it has stopped', () => {
+    const capped = { front: { n: 1000, exact: false }, back: { n: 1000, exact: false }, orders: { n: 1000, exact: false }, done: true };
+    draw(counted(opened(), capped, position(2, 1000, false)));
+    expect(status().textContent).toBe('At least 1000 solutions');
+    expect(spoken().textContent).toBe('At least 1000 solutions');
+  });
+
   it('names the solution shown, with no total, when the count is skipped (D7)', () => {
     const state = opened().state;
     draw({

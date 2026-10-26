@@ -11,17 +11,20 @@ export interface LayerOrderStatusProps {
   readonly copy: LayerOrderCopy;
   /** The count runs (D7): "Counting solutions…" until it has a number. */
   readonly counting: boolean;
+  /** The count has finished: exact, or stopped at its cap with a lower bound ("at least N"). */
+  readonly countDone: boolean;
   readonly side: LayerSide;
   readonly onStep: (direction: 'previous' | 'next') => void;
 }
 
 /**
- * What the status says to a screen reader: the count once it settles, and
- * "Counting solutions…" while it runs, so the running number ("at least N",
- * growing slice by slice) is never queued up line after line.
+ * What the status says to a screen reader: the count once it has finished,
+ * exact or a lower bound at its cap ("at least N"), and "Counting solutions…"
+ * while it runs, so the running number, growing slice by slice, is never
+ * queued up line after line.
  */
-function spokenStatus(text: LayerStatusText): LayerStatusText {
-  if ((text.key === 'solutions' || text.key === 'layer_orders') && !text.count.exact) return { key: 'none' };
+function spokenStatus(text: LayerStatusText, countDone: boolean): LayerStatusText {
+  if ((text.key === 'solutions' || text.key === 'layer_orders') && !text.count.exact && !countDone) return { key: 'none' };
   return text;
 }
 
@@ -40,7 +43,14 @@ function spokenStatus(text: LayerStatusText): LayerStatusText {
  * Memoised by value: the model builds a new view each render, and a pane
  * hover changes none of it.
  */
-export const LayerOrderStatus = memo(function LayerOrderStatus({ status, copy, counting, side, onStep }: LayerOrderStatusProps) {
+export const LayerOrderStatus = memo(function LayerOrderStatus({
+  status,
+  copy,
+  counting,
+  countDone,
+  side,
+  onStep,
+}: LayerOrderStatusProps) {
   const { t } = useTranslation();
   const { stepper } = status;
   const one = stepper?.total?.exact && stepper.total.n <= 1;
@@ -60,7 +70,7 @@ export const LayerOrderStatus = memo(function LayerOrderStatus({ status, copy, c
           {copy.status(status.text, counting)}
         </span>
         <span className={styles.spoken} role="status">
-          {copy.status(spokenStatus(status.text), counting)}
+          {copy.status(spokenStatus(status.text, countDone), counting && !countDone)}
         </span>
       </p>
       {stepper && (
@@ -94,6 +104,7 @@ function sameStatusProps(a: LayerOrderStatusProps, b: LayerOrderStatusProps): bo
   return (
     a.copy === b.copy &&
     a.counting === b.counting &&
+    a.countDone === b.countDone &&
     a.side === b.side &&
     a.onStep === b.onStep &&
     JSON.stringify(a.status) === JSON.stringify(b.status)
