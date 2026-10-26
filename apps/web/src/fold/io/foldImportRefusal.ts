@@ -212,6 +212,7 @@ function engineWords(t: TFunction, refusal: FoldEngineRefused['refusal']): { tit
     case 'import_order_broken':
     case 'import_internal':
     case 'fold_export_too_large':
+    case 'import_layer_unavailable': // Never shown: the import keeps its own chooser then.
       return {
         title: t('dialogs:foldImport.refusal.failed.title', 'Could not import'),
         text: t('dialogs:foldImport.refusal.failed.text', 'This crease pattern could not be imported.'),
