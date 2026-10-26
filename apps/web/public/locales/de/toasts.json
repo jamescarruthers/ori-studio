@@ -153,10 +153,12 @@
   "layerOrder": {
     "stepCheckTimedOut": "Die Lagenvorgaben dieses Modells konnten nicht rechtzeitig geprüft werden, daher wurde es nicht geändert.",
     "stepLost": "Die Lagenreihenfolge wurde unerwartet beendet, daher wurde das Modell nicht geändert.",
-    "stepLostLoad": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde das Modell nicht geändert. Prüfe deine Verbindung und versuche es dann erneut.",
+    "stepLostLoadOffline": "Die Lagenreihenfolge konnte offline nicht geladen werden, daher wurde das Modell nicht geändert. Stelle die Verbindung wieder her und lade Ori Studio dann neu, um es erneut zu versuchen.",
+    "stepLostLoadReload": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde das Modell nicht geändert. Lade Ori Studio neu, um es erneut zu versuchen.",
     "stepNotFoundInTime": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde das Modell nicht geändert.",
     "stepUnrestored": "Die Lagenvorgaben dieses Modells müssen geprüft werden, daher kann es keine Lösungen durchgehen. Öffne „Lagenreihenfolge…“, um sie zu prüfen.",
-    "unavailable": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
+    "unavailableOffline": "Lagenreihenfolge konnte offline nicht geladen werden. Stelle die Verbindung wieder her und lade Ori Studio dann neu, um es erneut zu versuchen.",
+    "unavailableReload": "Lagenreihenfolge konnte nicht geladen werden. Lade Ori Studio neu, um es erneut zu versuchen."
   },
   "paperExport": {
     "saved": "{{name}} exportiert"

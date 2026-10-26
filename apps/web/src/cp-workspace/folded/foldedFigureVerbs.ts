@@ -6,6 +6,7 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import { toast } from 'sonner';
 import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, track } from '../../analytics';
+import { layerOrderOffline, layerOrderReloadAction } from '../../layer-order/engine/layerOrderLoadFailure';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { OristudioCpFigureSolutionStep } from '../../store/workspaceStore/types';
 import type { FoldedFigureCamera } from './folded3dCamera';
@@ -157,7 +158,8 @@ function stepToastId(tries: number): string {
 /**
  * What a constrained step that moved nothing says, if anything:
  *
- * - the engine didn't load (offline: check the connection) or stopped;
+ * - the engine didn't load, with Reload, the only retry there is (offline:
+ *   reconnect first), or it stopped;
  * - the record couldn't be checked in time (D10), or no next solution was
  *   found within the step's deadline (an end the count hasn't reached yet,
  *   or a step that ran out): each with Keep trying, which asks again with a
@@ -182,15 +184,25 @@ export function sayFoldedSolutionStep(
   const toastId = stepToastId(tries);
   switch (step.status) {
     case 'lost':
-      toast.error(
-        step.cause === 'load'
-          ? t(
-              'toasts:layerOrder.stepLostLoad',
-              'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.'
-            )
-          : t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'),
-        { id: toastId }
-      );
+      if (step.cause === 'load') {
+        // Only a reload retries a load that failed (`layerOrderReloadAction`).
+        toast.error(
+          layerOrderOffline()
+            ? t(
+                'toasts:layerOrder.stepLostLoadOffline',
+                'Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+              )
+            : t(
+                'toasts:layerOrder.stepLostLoadReload',
+                'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.'
+              ),
+          { id: toastId, action: layerOrderReloadAction(t) }
+        );
+        return;
+      }
+      toast.error(t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'), {
+        id: toastId,
+      });
       return;
     case 'timed_out':
       toast.error(

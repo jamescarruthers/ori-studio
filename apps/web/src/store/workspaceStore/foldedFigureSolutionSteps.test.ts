@@ -621,55 +621,55 @@ describe('a press that moves nothing', () => {
 
   it.each([
     [
-      'offline: the engine didn’t load',
+      'an engine that didn’t load',
       { outcome: 'lost', cause: 'load' },
-      'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.',
+      'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.',
       true,
-      false,
+      'Reload',
     ],
     [
       'a lost engine',
       { outcome: 'lost', cause: 'crashed' },
       'Layer order stopped unexpectedly, so the figure wasn’t changed.',
       true,
-      false,
+      undefined,
     ],
     [
       'a restore out of time (D10)',
       { outcome: 'timed_out', stage: 'restore' },
       'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.',
       false,
-      true,
+      'Keep trying',
     ],
     [
       'a step out of time',
       { outcome: 'timed_out', stage: 'step' },
       'Couldn’t find another solution in time, so the figure wasn’t changed.',
       false,
-      true,
+      'Keep trying',
     ],
     [
       'an end the count hasn’t reached',
       { outcome: 'end', position: solutionPosition(4, 4, false), counted: true },
       'Couldn’t find another solution in time, so the figure wasn’t changed.',
       false,
-      true,
+      'Keep trying',
     ],
     [
       'a record that needs attention',
       { outcome: 'unrestored', why: 'clash' },
       'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.',
       true,
-      false,
+      undefined,
     ],
     [
       'a solution too large to save',
       { outcome: 'too_large' },
       'This layer order is too large to save with the figure, so it is unchanged.',
       true,
-      false,
+      undefined,
     ],
-  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, retries) => {
+  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, offered) => {
     const figure = seed();
     const cursor = script(answer as LayerOrderSolutionStep);
     await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
@@ -679,12 +679,27 @@ describe('a press that moves nothing', () => {
     expect(toasts.toast.error).toHaveBeenCalledTimes(1);
     const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
     expect(text).toBe(said);
-    // Out of time offers to keep trying, longer; nothing else does.
-    expect(options.action?.label).toBe(retries ? 'Keep trying' : undefined);
+    // Out of time offers to keep trying, longer; a load that failed, the reload that alone retries it.
+    expect(options.action?.label).toBe(offered);
     // An engine gone, a record it can't restore or an order it can't save takes the cursor with it;
     // running out of time keeps it for Keep trying.
     expect(cursor.closed).toBe(spent);
     expect(foldedSolutionCursorFigure()).toBe(spent ? null : figure.id);
+  });
+
+  it('on an engine that didn’t load offline says to reconnect before the Reload', async () => {
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    onTestFinished(() => onLine.mockRestore());
+    const figure = seed();
+    script({ outcome: 'lost', cause: 'load' });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(toasts.toast.error).toHaveBeenCalledTimes(1);
+    const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
+    expect(text).toBe(
+      'Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+    );
+    expect(options.action?.label).toBe('Reload');
   });
 
   it('keeps trying, longer each time, on the same cursor, when asked', async () => {

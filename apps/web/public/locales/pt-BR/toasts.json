@@ -171,10 +171,12 @@
   "layerOrder": {
     "stepCheckTimedOut": "Não foi possível verificar a tempo as restrições de camadas deste modelo, então ele não foi alterado.",
     "stepLost": "A ordem das camadas parou inesperadamente, então o modelo não foi alterado.",
-    "stepLostLoad": "Não foi possível carregar a ordem das camadas, então o modelo não foi alterado. Verifique sua conexão e tente novamente.",
+    "stepLostLoadOffline": "Não foi possível carregar a ordem das camadas offline, então o modelo não foi alterado. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "stepLostLoadReload": "Não foi possível carregar a ordem das camadas, então o modelo não foi alterado. Recarregue o Ori Studio para tentar novamente.",
     "stepNotFoundInTime": "Não foi possível encontrar outra solução a tempo, então o modelo não foi alterado.",
     "stepUnrestored": "As restrições de camadas deste modelo precisam de atenção, então ele não pode percorrer as soluções. Abra “Ordem das camadas…” para revisá-las.",
-    "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
+    "unavailableOffline": "Ordem das camadas não carregou offline. Reconecte-se e recarregue o Ori Studio para tentar de novo.",
+    "unavailableReload": "Ordem das camadas não carregou. Recarregue o Ori Studio para tentar de novo."
   },
   "paperExport": {
     "saved": "{{name}} exportado"
