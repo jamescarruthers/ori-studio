@@ -30,6 +30,16 @@
   white-space: nowrap;
 }
 
+/* What a screen reader hears: the settled count, never the running one. Drawn nowhere. */
+.spoken {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .dot {
   flex: none;
   width: 6px;

@@ -1,4 +1,4 @@
-import { useId, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerEvent } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronDown, CircleAlert, LoaderCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,32 @@ function namedMenu(label: string) {
 }
 
 /**
+ * A menu's open state, refused while its control is disabled: Radix opens on
+ * a key whatever `aria-disabled` says, and a menu asked for then would
+ * otherwise open by itself once the control came alive. Going disabled
+ * closes it and forgets it was asked for.
+ */
+function useMenuOpen(enabled: boolean): readonly [boolean, (next: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (!enabled) setOpen(false);
+  }
+  const request = useCallback((next: boolean) => setOpen(next && enabled), [enabled]);
+  return [open && enabled, request];
+}
+
+/**
+ * Before a control that holds the focus goes (a chip removed, a slot
+ * cleared), hand the focus to a neighbour that stays, so it never drops to
+ * the page outside the dialog.
+ */
+function handFocus(from: Element, to: Element | null | undefined) {
+  if (to instanceof HTMLElement && from.contains(document.activeElement)) to.focus();
+}
+
+/**
  * "Add a constraint" (A3's sentence, A5's compound objects; `Round4-States`'
  * hint line): `[subject] [verb ▾] [objects]` on one line, in the locale's
  * order, then the reserved hint line, then Clear and Add.
@@ -49,32 +75,58 @@ function namedMenu(label: string) {
  *   and the field's one × clearing them all (D21). A press on a slot makes it
  *   the one the next pick fills; from the keyboard, Enter or ↓ on it opens a
  *   menu of the faces it can take, by letter: the subject's is a choice of
- *   one, the objects' a set of checkboxes that stays open (A5).
+ *   one, the objects' a set of checkboxes that stays open (A5). A menu builds
+ *   its rows only while it is open: the subject's can list every face.
  * - **The verb menu** previews the verb under the pointer or the focus on the
- *   folded figure, and picking one previews it at once (Round3:457; D6).
+ *   folded figure, and leaving it lets go (Round3:455-457); from the keyboard
+ *   it opens on the verb already picked (Round3:929-935).
  * - **The hint line** keeps its two lines whatever it says, so Clear and Add
  *   never move; a can't-fit's reason is in the danger tone, and pointing at
  *   it strengthens the clash's tints. A check that ran out offers Keep trying
- *   in the same line (D8).
+ *   in the same line (D8). Its text is in a polite live region, and a danger
+ *   reason in an alert.
  */
 export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintContext }: LayerOrderBuilderProps) {
   const { t } = useTranslation();
   const titleId = useId();
-  const hintId = useId();
-  const [verbOpen, setVerbOpen] = useState(false);
-  const [subjectsOpen, setSubjectsOpen] = useState(false);
-  const [objectsOpen, setObjectsOpen] = useState(false);
+  const politeId = useId();
+  const alertId = useId();
+  const subjectRef = useRef<HTMLButtonElement>(null);
+  const fieldRef = useRef<HTMLButtonElement>(null);
+  const verbMenuRef = useRef<HTMLDivElement>(null);
 
   const live = builderLive(state);
   const { sentence, open } = state;
   const { subject, objects, verb } = sentence;
   const active = slotNow(sentence, open);
   const stuck = subject !== null && openPartners(open, subject).length === 0;
+  const objectsDisabled = !live || subject === null || stuck;
+  const [subjectsOpen, setSubjectsOpen] = useMenuOpen(live);
+  const [verbOpen, setVerbOpen] = useMenuOpen(live);
+  const [objectsOpen, setObjectsOpen] = useMenuOpen(!objectsDisabled);
+  // The verb menu opens on the verb already picked (Round3:929-935): Radix focuses its first row, so
+  // once it has, the focus moves to the checked one, and nothing is previewed on the way.
+  const verbOpening = useRef(false);
+  useEffect(() => {
+    if (!verbOpen) return;
+    const frame = requestAnimationFrame(() => {
+      verbMenuRef.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')?.focus();
+      verbOpening.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [verbOpen]);
+
   const marks = paneMarks(state);
   const clashObjects = new Set(marks.clashObjects);
-  const byLetter = (faces: readonly LayerFace[]) => (letters ? [...faces].sort(letters.compare) : [...faces]);
-  const subjects = live ? byLetter(facesWithChoices(open)) : [];
-  const offered = live && subject !== null ? byLetter(openPartners(open, subject)) : [];
+  // The open facts change on an open or a commit, not on a hover: the lists follow them.
+  const subjects = useMemo(
+    () => (subjectsOpen ? sortedBy(letters, facesWithChoices(open)) : []),
+    [subjectsOpen, letters, open]
+  );
+  const offered = useMemo(
+    () => (objectsOpen && subject !== null ? sortedBy(letters, openPartners(open, subject)) : []),
+    [objectsOpen, letters, open, subject]
+  );
 
   const add = addState(state);
   const hint = hintLine(state);
@@ -110,9 +162,10 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       onPointerEnter={() => dispatch({ type: 'slot_hovered', slot: 'subject' })}
       onPointerLeave={() => dispatch({ type: 'slot_hovered', slot: null })}
     >
-      <DropdownMenu.Root modal={false} open={subjectsOpen && live} onOpenChange={setSubjectsOpen}>
+      <DropdownMenu.Root modal={false} open={subjectsOpen} onOpenChange={setSubjectsOpen}>
         <DropdownMenu.Trigger asChild>
           <button
+            ref={subjectRef}
             type="button"
             className={styles.slotMain}
             aria-label={subjectAria}
@@ -152,7 +205,11 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           aria-label={t('dialogs:layerOrder.builder.clearSubject', 'Clear {{face}} from the subject', { face: subjectLetter })}
           title={t('dialogs:layerOrder.builder.clearSubject', 'Clear {{face}} from the subject', { face: subjectLetter })}
           aria-disabled={!live || undefined}
-          onClick={() => dispatch({ type: 'slot_cleared', slot: 'subject' })}
+          onClick={(event) => {
+            if (!live) return;
+            handFocus(event.currentTarget, subjectRef.current);
+            dispatch({ type: 'slot_cleared', slot: 'subject' });
+          }}
         >
           <X size={12} aria-hidden="true" />
         </button>
@@ -165,8 +222,9 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       key="verb"
       // Non-modal (Round3): a press anywhere else closes it, and that press still acts.
       modal={false}
-      open={verbOpen && live}
+      open={verbOpen}
       onOpenChange={(next) => {
+        if (next) verbOpening.current = true;
         setVerbOpen(next);
         if (!next) dispatch({ type: 'verb_pointed', verb: null });
       }}
@@ -182,14 +240,23 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           <ChevronDown size={12} aria-hidden="true" className={styles.verbChevron} />
         </button>
       </DropdownMenu.Trigger>
-      <MenuContent align="start" {...namedMenu(t('dialogs:layerOrder.builder.verbMenu', 'Verb'))}>
+      <MenuContent
+        ref={verbMenuRef}
+        align="start"
+        {...namedMenu(t('dialogs:layerOrder.builder.verbMenu', 'Verb'))}
+        // Leaving the menu lets go of the verb it previewed (Round3 `verbRowLeave`).
+        onPointerLeave={() => dispatch({ type: 'verb_pointed', verb: null })}
+      >
         <MenuRadioGroup value={verb} onValueChange={(value) => dispatch({ type: 'verb_set', verb: value as typeof verb })}>
           {LAYER_VERBS.map((option) => (
             <MenuRadioItem
               key={option}
               value={option}
-              // Pointing at a verb, or reaching it from the keyboard, previews it (Round3:457, 893).
-              onFocus={() => dispatch({ type: 'verb_pointed', verb: option })}
+              // Pointing at a verb, or reaching it from the keyboard, previews it (Round3:457, 893); not
+              // the row the menu's own focus lands on as it opens, which moves on to the verb picked.
+              onFocus={() => {
+                if (!verbOpening.current) dispatch({ type: 'verb_pointed', verb: option });
+              }}
             >
               <MenuItemIcon>{option === verb && <Check size={14} />}</MenuItemIcon>
               <MenuItemLabel>{copy.verb(option)}</MenuItemLabel>
@@ -200,7 +267,8 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
     </DropdownMenu.Root>
   );
 
-  const objectsDisabled = !live || subject === null || stuck;
+  const clearObjectsLabel =
+    objects.length > 1 ? t('dialogs:layerOrder.builder.clearObjects', 'Clear the objects') : t('dialogs:layerOrder.builder.clearObject', 'Clear the object');
   const objectsField = (
     <div
       key="objects"
@@ -210,9 +278,10 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       onPointerEnter={() => dispatch({ type: 'slot_hovered', slot: 'object' })}
       onPointerLeave={() => dispatch({ type: 'slot_hovered', slot: null })}
     >
-      <DropdownMenu.Root modal={false} open={objectsOpen && !objectsDisabled} onOpenChange={setObjectsOpen}>
+      <DropdownMenu.Root modal={false} open={objectsOpen} onOpenChange={setObjectsOpen}>
         <DropdownMenu.Trigger asChild>
           <button
+            ref={fieldRef}
             type="button"
             className={styles.fieldOpen}
             aria-label={objectsAria}
@@ -260,7 +329,11 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
                 tone={clashObjects.has(face) ? 'danger' : 'pick'}
                 aria-label={remove}
                 title={remove}
-                onClick={() => dispatch({ type: 'object_removed', face })}
+                onClick={(event) => {
+                  // The next chip takes the focus, else the field.
+                  handFocus(event.currentTarget, event.currentTarget.nextElementSibling ?? fieldRef.current);
+                  dispatch({ type: 'object_removed', face });
+                }}
               />
             );
           })}
@@ -271,18 +344,14 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           type="button"
           className={styles.slotClear}
           data-objects=""
-          aria-label={
-            objects.length > 1
-              ? t('dialogs:layerOrder.builder.clearObjects', 'Clear the objects')
-              : t('dialogs:layerOrder.builder.clearObject', 'Clear the object')
-          }
-          title={
-            objects.length > 1
-              ? t('dialogs:layerOrder.builder.clearObjects', 'Clear the objects')
-              : t('dialogs:layerOrder.builder.clearObject', 'Clear the object')
-          }
+          aria-label={clearObjectsLabel}
+          title={clearObjectsLabel}
           aria-disabled={!live || undefined}
-          onClick={() => dispatch({ type: 'slot_cleared', slot: 'object' })}
+          onClick={(event) => {
+            if (!live) return;
+            handFocus(event.currentTarget, fieldRef.current);
+            dispatch({ type: 'slot_cleared', slot: 'object' });
+          }}
         >
           <X size={12} aria-hidden="true" />
         </button>
@@ -292,7 +361,6 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
 
   const tone = hint?.tone ?? 'quiet';
   const danger = tone === 'danger' || tone === 'busy_danger';
-  const role = !hint ? undefined : danger ? 'alert' : tone === 'busy' || hint.action ? 'status' : undefined;
 
   return (
     <section className={styles.builder} data-off={!live || undefined} aria-labelledby={titleId}>
@@ -301,7 +369,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           {t('dialogs:layerOrder.builder.title', 'Add a constraint')}
         </h3>
       </div>
-      <div className={styles.sentence} role="group" aria-labelledby={titleId} aria-describedby={hintId}>
+      <div className={styles.sentence} role="group" aria-labelledby={titleId} aria-describedby={`${politeId} ${alertId}`}>
         {copy.sentenceParts().map((part, index) => {
           if (part.kind === 'subject') return subjectSlot;
           if (part.kind === 'verb') return verbMenu;
@@ -315,9 +383,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       </div>
       <div
         className={styles.hint}
-        id={hintId}
         data-tone={tone}
-        role={role}
         onPointerEnter={() => {
           if (danger) dispatch({ type: 'reason_hovered', on: true });
         }}
@@ -325,8 +391,14 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       >
         {danger && <CircleAlert size={12} className={styles.hintIcon} aria-hidden="true" />}
         {tone === 'busy' && <LoaderCircle size={12} className={styles.spin} aria-hidden="true" />}
+        {/* Two live regions, always there: the polite one for every hint, the alert for a danger one. */}
         <span className={styles.hintText} title={hintText || undefined}>
-          {hintText}
+          <span id={politeId} role="status">
+            {danger ? '' : hintText}
+          </span>
+          <span id={alertId} role="alert">
+            {danger ? hintText : ''}
+          </span>
         </span>
         {tone === 'busy_danger' && <LoaderCircle size={12} className={styles.spin} aria-hidden="true" />}
         {hint?.action === 'keep_trying' && (
@@ -361,4 +433,9 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       </div>
     </section>
   );
+}
+
+/** Faces in letter order. */
+function sortedBy(letters: FaceLetters | null, faces: readonly LayerFace[]): LayerFace[] {
+  return letters ? [...faces].sort(letters.compare) : [...faces];
 }

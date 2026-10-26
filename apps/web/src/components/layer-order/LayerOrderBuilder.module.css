@@ -8,6 +8,8 @@
 .builder {
   --slot-height: 28px;
   --slot-ring: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  /* The boards' quiet ink: --text-secondary alone is under 4.5:1 here in some presets (layerOrderQuietInk.test.ts). */
+  --quiet: color-mix(in srgb, var(--text-secondary) 50%, var(--text-primary));
 
   display: flex;
   flex: none;
@@ -25,7 +27,7 @@
 
 .title {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--quiet);
   font-size: 0.74rem;
   font-weight: 600;
 }
@@ -125,7 +127,7 @@
 .placeholder {
   min-width: 0;
   overflow: hidden;
-  color: var(--text-secondary);
+  color: var(--quiet);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -226,7 +228,7 @@
 .particle {
   flex: none;
   align-self: center;
-  color: var(--text-secondary);
+  color: var(--quiet);
   font-size: 0.75rem;
 }
 
@@ -239,7 +241,7 @@
   height: 2.7em;
   margin-top: 6px;
   overflow: hidden;
-  color: var(--text-secondary);
+  color: var(--quiet);
   font-size: 0.7rem;
   line-height: 1.35;
 }
@@ -311,7 +313,12 @@
     margin-top: 3px;
   }
 
+  /* Keep trying is a 44 px button here: the line reserves that much, whatever it says, so it is never clipped. */
   .hint {
+    align-items: center;
+    height: auto;
+    min-height: var(--touch-target);
     margin-top: 12px;
+    overflow: visible;
   }
 }

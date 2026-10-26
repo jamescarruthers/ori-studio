@@ -1,5 +1,6 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LayerStatusView } from '../../layer-order/model/layerOrderSelectors';
+import type { LayerStatusText, LayerStatusView } from '../../layer-order/model/layerOrderSelectors';
 import type { LayerSide } from '../../layer-order/engine/layerOrderEngine';
 import { Pager } from '../ui/Pager';
 import type { LayerOrderCopy } from './layerOrderInspectorCopy';
@@ -15,14 +16,31 @@ export interface LayerOrderStatusProps {
 }
 
 /**
+ * What the status says to a screen reader: the count once it settles, and
+ * "Counting solutions…" while it runs, so the running number ("at least N",
+ * growing slice by slice) is never queued up line after line.
+ */
+function spokenStatus(text: LayerStatusText): LayerStatusText {
+  if ((text.key === 'solutions' || text.key === 'layer_orders') && !text.count.exact) return { key: 'none' };
+  return text;
+}
+
+/**
  * The inspector's first row (A3, `Round4-States`' counting states): how many
  * solutions fit, with the dot that turns to success once one order is
  * decided, and ‹ n of N › through them in a stable order. "At least N" and
  * "n of N+" while the count runs; with the count skipped (D7) the status
  * names the solution shown and the stepper has no total. With X-ray on it
  * counts and steps through every layer order (D5).
+ *
+ * The stepper is the shared `Pager` (Properties' ‹ › and Diagram's), not the
+ * board's bordered buttons: one stepper control across the app, its ends and
+ * busy state said the same way.
+ *
+ * Memoised by value: the model builds a new view each render, and a pane
+ * hover changes none of it.
  */
-export function LayerOrderStatus({ status, copy, counting, side, onStep }: LayerOrderStatusProps) {
+export const LayerOrderStatus = memo(function LayerOrderStatus({ status, copy, counting, side, onStep }: LayerOrderStatusProps) {
   const { t } = useTranslation();
   const { stepper } = status;
   const one = stepper?.total?.exact && stepper.total.n <= 1;
@@ -36,9 +54,14 @@ export function LayerOrderStatus({ status, copy, counting, side, onStep }: Layer
         : end;
   return (
     <section className={styles.status} aria-label={t('dialogs:layerOrder.status.label', 'Solutions')}>
-      <p className={styles.line} role="status" aria-live="polite" title={copy.statusTitle(status)}>
+      <p className={styles.line} title={copy.statusTitle(status)}>
         <span className={styles.dot} data-state={status.dot} aria-hidden="true" />
-        {copy.status(status.text, counting)}
+        <span aria-hidden="true" data-status-shown="">
+          {copy.status(status.text, counting)}
+        </span>
+        <span className={styles.spoken} role="status">
+          {copy.status(spokenStatus(status.text), counting)}
+        </span>
       </p>
       {stepper && (
         <Pager
@@ -64,5 +87,15 @@ export function LayerOrderStatus({ status, copy, counting, side, onStep }: Layer
         </Pager>
       )}
     </section>
+  );
+}, sameStatusProps);
+
+function sameStatusProps(a: LayerOrderStatusProps, b: LayerOrderStatusProps): boolean {
+  return (
+    a.copy === b.copy &&
+    a.counting === b.counting &&
+    a.side === b.side &&
+    a.onStep === b.onStep &&
+    JSON.stringify(a.status) === JSON.stringify(b.status)
   );
 }

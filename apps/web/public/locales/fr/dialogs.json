@@ -612,6 +612,7 @@
       "nothingToRedo": "Rien à rétablir",
       "nothingToUndo": "Rien à annuler",
       "redo": "Rétablir",
+      "redoShortcut": "Rétablir ({{shortcut}})",
       "remove": "Retirer {{sentence}}",
       "reveal": "Mettre {{face}} dans la phrase",
       "separator": ",",
@@ -619,7 +620,8 @@
       "titleCount_one": "Contraintes · {{count}}",
       "titleCount_many": "Contraintes · {{count}}",
       "titleCount_other": "Contraintes · {{count}}",
-      "undo": "Annuler"
+      "undo": "Annuler",
+      "undoShortcut": "Annuler ({{shortcut}})"
     },
     "lost": "Ordre des couches s’est arrêté de façon inattendue. Rien n’a été modifié.",
     "lostLoad": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion, puis réessayez.",
@@ -641,11 +643,12 @@
     "reason": {
       "ambiguous": "Non appliquée : un nouveau pli a divisé {{face}}, elle peut donc désigner l’une ou l’autre partie.",
       "bothGone": "Non appliquée : ses faces n’existent plus.",
-      "clashes": "En conflit avec {{clashes}}.",
-      "clashesCreases": "En conflit avec les plis.",
+      "clashes": "En conflit avec {{clashes}}",
+      "clashesCreases": "En conflit avec les plis",
       "clashWithin": "{{sentence}} ne peuvent pas toutes tenir ensemble.",
       "noOverlap": "Non appliquée : ses faces ne se chevauchent plus.",
-      "objectGone": "Non appliquée : la face par rapport à laquelle {{subject}} était ordonnée n’existe plus.",
+      "objectGone": "Non appliquée : la face {{verb}} {{subject}} n’existe plus.",
+      "objectGoneAgainst": "Non appliquée : la face par rapport à laquelle {{subject}} était ordonnée n’existe plus.",
       "sameFace": "Non appliquée : ses deux faces n’en font plus qu’une.",
       "subjectGone": "Non appliquée : la face {{verb}} {{objects}} n’existe plus.",
       "waiting": "Pas encore appliquée : elle attend que les contraintes en conflit soient réglées."

@@ -578,12 +578,14 @@
       "nothingToRedo": "やり直す操作はありません",
       "nothingToUndo": "元に戻す操作はありません",
       "redo": "やり直す",
+      "redoShortcut": "やり直す ({{shortcut}})",
       "remove": "{{sentence}} を削除",
       "reveal": "{{face}} を文に入れる",
       "separator": "、",
       "title": "制約",
       "titleCount_other": "制約 · {{count}}",
-      "undo": "元に戻す"
+      "undo": "元に戻す",
+      "undoShortcut": "元に戻す ({{shortcut}})"
     },
     "lost": "重なり順が予期せず停止しました。何も変更されていません。",
     "lostLoad": "重なり順を読み込めませんでした。接続を確認してから、もう一度お試しください。",
@@ -605,11 +607,12 @@
     "reason": {
       "ambiguous": "未適用: 新しい折り線で {{face}} が分かれたため、どちらの部分か判断できません。",
       "bothGone": "未適用: その面はもうありません。",
-      "clashes": "{{clashes}} と衝突します。",
-      "clashesCreases": "折り線と衝突します。",
+      "clashes": "{{clashes}} と衝突します",
+      "clashesCreases": "折り線と衝突します",
       "clashWithin": "{{sentence}} はすべて同時には収まりません。",
       "noOverlap": "未適用: その面はもう重なっていません。",
-      "objectGone": "未適用: {{subject}} の基準だった面はもうありません。",
+      "objectGone": "未適用: {{subject}} の{{verb}}にあった面はもうありません。",
+      "objectGoneAgainst": "未適用: {{subject}} の基準だった面はもうありません。",
       "sameFace": "未適用: 2 つの面が 1 つになりました。",
       "subjectGone": "未適用: {{objects}} の{{verb}}にあった面はもうありません。",
       "waiting": "まだ未適用: 衝突している制約が解決されるのを待っています。"

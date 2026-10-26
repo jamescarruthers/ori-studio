@@ -578,12 +578,14 @@
       "nothingToRedo": "没有可重做的",
       "nothingToUndo": "没有可撤销的",
       "redo": "重做",
+      "redoShortcut": "重做（{{shortcut}}）",
       "remove": "删除：{{sentence}}",
       "reveal": "将 {{face}} 放入构建器",
       "separator": "，",
       "title": "约束",
       "titleCount_other": "约束 · {{count}}",
-      "undo": "撤销"
+      "undo": "撤销",
+      "undoShortcut": "撤销（{{shortcut}}）"
     },
     "lost": "层叠顺序意外停止。没有任何改动。",
     "lostLoad": "层叠顺序未能加载。请检查网络连接，然后重试。",
@@ -605,13 +607,14 @@
     "reason": {
       "ambiguous": "未应用：新折痕把 {{face}} 分开了，因此它可能指任一部分。",
       "bothGone": "未应用：它的面已不存在。",
-      "clashes": "与 {{clashes}} 冲突。",
-      "clashesCreases": "与折痕冲突。",
+      "clashes": "与 {{clashes}} 冲突",
+      "clashesCreases": "与折痕冲突",
       "clashWithin": "{{sentence}} 无法同时满足。",
       "noOverlap": "未应用：它的面已不再重叠。",
-      "objectGone": "未应用：{{subject}} 所参照的面已不存在。",
+      "objectGone": "未应用：在 {{subject}} {{verb}}的面已不存在。",
+      "objectGoneAgainst": "未应用：{{subject}} 所参照的面已不存在。",
       "sameFace": "未应用：它的两个面现在是同一个面。",
-      "subjectGone": "未应用：{{verb}} {{objects}} 的面已不存在。",
+      "subjectGone": "未应用：在 {{objects}} {{verb}}的面已不存在。",
       "waiting": "尚未应用：等待冲突的约束解决。"
     },
     "refused": {

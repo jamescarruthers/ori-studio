@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import type { FaceLetters } from '../../layer-order/engine/faceIndex';
 import { statusView } from '../../layer-order/model/layerOrderSelectors';
 import type { LayerOrderAction, LayerOrderDialogState } from '../../layer-order/model/layerOrderState';
@@ -19,20 +20,17 @@ export interface LayerOrderInspectorProps {
  * `Round4-States`, the phone in `Round4-Phone`, compound constraints in
  * `Round5-Compound`): the solutions and their stepper, "Add a constraint",
  * then the constraints. It draws the model's state (`layerOrderSelectors.ts`)
- * and sends its actions; the frame places it.
+ * and sends its actions; the frame places it. The status and the list are
+ * memoised past a pane hover; the builder is not, since its hint names the
+ * face pointed at.
  */
 export function LayerOrderInspector({ state, dispatch, copy, letters, hint }: LayerOrderInspectorProps) {
   const status = statusView(state);
+  const onStep = useCallback((direction: 'previous' | 'next') => dispatch({ type: 'step', direction }), [dispatch]);
   return (
     <>
       {status && (
-        <LayerOrderStatus
-          status={status}
-          copy={copy}
-          counting={state.solutions.runs}
-          side={state.view.side}
-          onStep={(direction) => dispatch({ type: 'step', direction })}
-        />
+        <LayerOrderStatus status={status} copy={copy} counting={state.solutions.runs} side={state.view.side} onStep={onStep} />
       )}
       <LayerOrderBuilder state={state} dispatch={dispatch} copy={copy} letters={letters} hint={hint} />
       <LayerOrderConstraintList state={state} dispatch={dispatch} copy={copy} />

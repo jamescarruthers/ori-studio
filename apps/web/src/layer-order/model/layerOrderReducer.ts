@@ -53,7 +53,6 @@ import {
 } from './layerOrderEngineFacts';
 import { afterRedo, afterUndo, emptyHistory, recorded, redoTarget, undoTarget } from './layerOrderHistory';
 import {
-  constraintRowKey,
   rowGroupByKey,
   rowGroupsOf,
   rowParts,

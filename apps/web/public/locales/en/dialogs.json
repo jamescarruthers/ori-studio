@@ -595,13 +595,15 @@
       "nothingToRedo": "Nothing to redo",
       "nothingToUndo": "Nothing to undo",
       "redo": "Redo",
+      "redoShortcut": "Redo ({{shortcut}})",
       "remove": "Remove {{sentence}}",
       "reveal": "Put {{face}} in the builder",
       "separator": ",",
       "title": "Constraints",
       "titleCount_one": "Constraints · {{count}}",
       "titleCount_other": "Constraints · {{count}}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "undoShortcut": "Undo ({{shortcut}})"
     },
     "lost": "Layer order stopped unexpectedly. Nothing was changed.",
     "lostLoad": "Layer order couldn’t load. Check your connection, then try again.",
@@ -623,11 +625,12 @@
     "reason": {
       "ambiguous": "Not applied: a new crease split {{face}}, so this could mean either part.",
       "bothGone": "Not applied: its faces no longer exist.",
-      "clashes": "Clashes with {{clashes}}.",
-      "clashesCreases": "Clashes with the creases.",
+      "clashes": "Clashes with {{clashes}}",
+      "clashesCreases": "Clashes with the creases",
       "clashWithin": "{{sentence}} can’t all fit together.",
       "noOverlap": "Not applied: its faces no longer overlap.",
-      "objectGone": "Not applied: the face {{subject}} was ordered against no longer exists.",
+      "objectGone": "Not applied: the face {{verb}} {{subject}} no longer exists.",
+      "objectGoneAgainst": "Not applied: the face {{subject}} was ordered against no longer exists.",
       "sameFace": "Not applied: its two faces are one face now.",
       "subjectGone": "Not applied: the face {{verb}} {{objects}} no longer exists.",
       "waiting": "Not applied yet: it waits for the clashing constraints to be settled."

@@ -578,12 +578,14 @@
       "nothingToRedo": "다시 실행할 작업이 없습니다",
       "nothingToUndo": "실행 취소할 작업이 없습니다",
       "redo": "다시 실행",
+      "redoShortcut": "다시 실행 ({{shortcut}})",
       "remove": "{{sentence}} 제거",
       "reveal": "{{face}}을(를) 문장에 넣기",
       "separator": ",",
       "title": "제약",
       "titleCount_other": "제약 · {{count}}",
-      "undo": "실행 취소"
+      "undo": "실행 취소",
+      "undoShortcut": "실행 취소 ({{shortcut}})"
     },
     "lost": "겹침 순서가 예기치 않게 중지되었습니다. 아무것도 바뀌지 않았습니다.",
     "lostLoad": "겹침 순서를 불러오지 못했습니다. 연결을 확인한 다음 다시 시도하세요.",
@@ -605,11 +607,12 @@
     "reason": {
       "ambiguous": "적용 안 됨: 새 접는 선이 {{face}}을(를) 나눠서 어느 쪽을 뜻하는지 알 수 없습니다.",
       "bothGone": "적용 안 됨: 해당 면이 더 이상 없습니다.",
-      "clashes": "{{clashes}}과(와) 충돌합니다.",
-      "clashesCreases": "접는 선과 충돌합니다.",
+      "clashes": "{{clashes}}과(와) 충돌합니다",
+      "clashesCreases": "접는 선과 충돌합니다",
       "clashWithin": "{{sentence}}은(는) 모두 함께 성립할 수 없습니다.",
       "noOverlap": "적용 안 됨: 면들이 더 이상 겹치지 않습니다.",
-      "objectGone": "적용 안 됨: {{subject}}의 기준이던 면이 더 이상 없습니다.",
+      "objectGone": "적용 안 됨: {{subject}} {{verb}} 있던 면이 더 이상 없습니다.",
+      "objectGoneAgainst": "적용 안 됨: {{subject}}의 기준이던 면이 더 이상 없습니다.",
       "sameFace": "적용 안 됨: 두 면이 이제 하나가 되었습니다.",
       "subjectGone": "적용 안 됨: {{objects}} {{verb}} 있던 면이 더 이상 없습니다.",
       "waiting": "아직 적용 안 됨: 충돌하는 제약이 해결되기를 기다리는 중입니다."

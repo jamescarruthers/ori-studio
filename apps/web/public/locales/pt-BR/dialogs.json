@@ -612,6 +612,7 @@
       "nothingToRedo": "Nada para refazer",
       "nothingToUndo": "Nada para desfazer",
       "redo": "Refazer",
+      "redoShortcut": "Refazer ({{shortcut}})",
       "remove": "Remover {{sentence}}",
       "reveal": "Colocar {{face}} na frase",
       "separator": ",",
@@ -619,7 +620,8 @@
       "titleCount_one": "Restrições · {{count}}",
       "titleCount_many": "Restrições · {{count}}",
       "titleCount_other": "Restrições · {{count}}",
-      "undo": "Desfazer"
+      "undo": "Desfazer",
+      "undoShortcut": "Desfazer ({{shortcut}})"
     },
     "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
     "lostLoad": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo.",
@@ -641,11 +643,12 @@
     "reason": {
       "ambiguous": "Não aplicada: um vinco novo dividiu {{face}}, então ela pode se referir a qualquer uma das partes.",
       "bothGone": "Não aplicada: as faces dela não existem mais.",
-      "clashes": "Entra em conflito com {{clashes}}.",
-      "clashesCreases": "Entra em conflito com os vincos.",
+      "clashes": "Entra em conflito com {{clashes}}",
+      "clashesCreases": "Entra em conflito com os vincos",
       "clashWithin": "{{sentence}} não cabem todas juntas.",
       "noOverlap": "Não aplicada: as faces dela não se sobrepõem mais.",
-      "objectGone": "Não aplicada: a face em relação à qual {{subject}} foi ordenada não existe mais.",
+      "objectGone": "Não aplicada: a face {{verb}} {{subject}} não existe mais.",
+      "objectGoneAgainst": "Não aplicada: a face em relação à qual {{subject}} foi ordenada não existe mais.",
       "sameFace": "Não aplicada: as duas faces dela agora são uma só.",
       "subjectGone": "Não aplicada: a face {{verb}} {{objects}} não existe mais.",
       "waiting": "Ainda não aplicada: aguarda as restrições em conflito serem resolvidas."

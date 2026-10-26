@@ -595,13 +595,15 @@
       "nothingToRedo": "Nichts zu wiederholen",
       "nothingToUndo": "Nichts rückgängig zu machen",
       "redo": "Wiederholen",
+      "redoShortcut": "Wiederholen ({{shortcut}})",
       "remove": "{{sentence}} entfernen",
       "reveal": "{{face}} in den Satz übernehmen",
       "separator": ",",
       "title": "Vorgaben",
       "titleCount_one": "Vorgaben · {{count}}",
       "titleCount_other": "Vorgaben · {{count}}",
-      "undo": "Rückgängig"
+      "undo": "Rückgängig",
+      "undoShortcut": "Rückgängig ({{shortcut}})"
     },
     "lost": "Lagenreihenfolge wurde unerwartet beendet. Es wurde nichts geändert.",
     "lostLoad": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es dann erneut.",
@@ -623,11 +625,12 @@
     "reason": {
       "ambiguous": "Nicht angewendet: eine neue Falte hat {{face}} geteilt, daher könnte jeder Teil gemeint sein.",
       "bothGone": "Nicht angewendet: ihre Flächen gibt es nicht mehr.",
-      "clashes": "Widerspricht {{clashes}}.",
-      "clashesCreases": "Widerspricht den Falten.",
+      "clashes": "Widerspricht {{clashes}}",
+      "clashesCreases": "Widerspricht den Falten",
       "clashWithin": "{{sentence}} passen nicht alle zusammen.",
       "noOverlap": "Nicht angewendet: ihre Flächen überlappen sich nicht mehr.",
-      "objectGone": "Nicht angewendet: die Fläche, zu der {{subject}} geordnet war, gibt es nicht mehr.",
+      "objectGone": "Nicht angewendet: die Fläche {{verb}} {{subject}} gibt es nicht mehr.",
+      "objectGoneAgainst": "Nicht angewendet: die Fläche, zu der {{subject}} geordnet war, gibt es nicht mehr.",
       "sameFace": "Nicht angewendet: ihre beiden Flächen sind jetzt eine.",
       "subjectGone": "Nicht angewendet: die Fläche {{verb}} {{objects}} gibt es nicht mehr.",
       "waiting": "Noch nicht angewendet: sie wartet, bis die widersprüchlichen Vorgaben geklärt sind."

@@ -95,17 +95,35 @@ const counted = (from: Played, total = count(9, 9, 24), at = position(4, 9)): La
 const click = (element: Element) => act(() => element.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 const key = (element: Element, keyName: string) =>
   act(() => element.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true })));
-const hint = () => {
+/** The hint's two live regions, as the sentence names them for its description: the polite one, then the alert. */
+const hintRegions = () => {
   const sentence = byRole(host, 'group', 'Add a constraint');
-  return document.getElementById(sentence.getAttribute('aria-describedby')!)!;
+  return sentence
+    .getAttribute('aria-describedby')!
+    .split(' ')
+    .map((id) => document.getElementById(id)!);
+};
+/** The hint line: its text, in whichever region holds it, and its Keep trying. */
+const hint = () => hintRegions()[0]!.closest('[data-tone]') as HTMLElement;
+/** Which region the hint speaks in: the alert for a danger reason, else the polite one. */
+const hintRole = () => {
+  const [polite, alert] = hintRegions();
+  expect(polite!.getAttribute('role')).toBe('status');
+  expect(alert!.getAttribute('role')).toBe('alert');
+  return alert!.textContent ? 'alert' : polite!.textContent ? 'status' : null;
 };
 const button = (name: string | RegExp) => byRole(document.body, 'button', name);
-const status = () => byRole(byRole(host, 'region', 'Solutions'), 'status', /./);
+const statusRegion = () => byRole(host, 'region', 'Solutions');
+/** The status as drawn. */
+const status = () => statusRegion().querySelector('[data-status-shown]')!;
+/** The status as a screen reader hears it: the settled count only. */
+const spoken = () => statusRegion().querySelector('[role="status"]')!;
 
 describe('the status and its stepper', () => {
   it('counts the solutions, and steps through them in a stable order (A3)', () => {
     draw(counted(opened()));
     expect(status().textContent).toBe('9 solutions');
+    expect(spoken().textContent).toBe('9 solutions');
     const stepper = byRole(host, 'group', 'Solution shown');
     expect(stepper.textContent).toBe('4 of 9');
     click(byRole(stepper, 'button', 'Next solution'));
@@ -115,6 +133,8 @@ describe('the status and its stepper', () => {
   it('reads “at least N” while the count runs (Round4-States, counting)', () => {
     draw(counted(opened(), count(4, 4, 10, false), position(2, 4, false)));
     expect(status().textContent).toBe('At least 4 solutions');
+    // The running number stays out of the live region: it says the count is running, once.
+    expect(spoken().textContent).toBe('Counting solutions…');
     expect(byRole(host, 'group', 'Solution shown').textContent).toBe('2 of 4+');
   });
 
@@ -136,7 +156,7 @@ describe('the status and its stepper', () => {
     act(() => root.unmount());
     root = createRoot(host);
     draw(counted(opened(), count(1, 1, 1), position(1, 1)));
-    expect(status().querySelector('[data-state]')?.getAttribute('data-state')).toBe('decided');
+    expect(statusRegion().querySelector('[data-state]')?.getAttribute('data-state')).toBe('decided');
     expect(button('Next solution').getAttribute('aria-disabled')).toBe('true');
   });
 });
@@ -157,7 +177,7 @@ describe('the sentence builder', () => {
   it('says a preview is running, and Add waits on it (Round4-States, a preview running)', () => {
     draw(picked(opened().state, 2, 0).state);
     expect(button('Subject: face C. Press to replace it')).toBeDefined();
-    expect(hint().getAttribute('role')).toBe('status');
+    expect(hintRole()).toBe('status');
     expect(hint().textContent).toBe('Checking C in front of A…');
     expect(button('Add constraint').title).toBe('Checking C in front of A');
   });
@@ -176,7 +196,7 @@ describe('the sentence builder', () => {
     const preview = lastOf(asked.effects, 'preview');
     draw(play(asked, { type: 'previewed', request: preview.request, facts: { verdict: 'cant_fit', constraints: [0] } }).state);
     // One candidate that the creases alone refuse needs no explain: the reason is final.
-    expect(hint().getAttribute('role')).toBe('alert');
+    expect(hintRole()).toBe('alert');
     expect(hint().textContent).toBe('Can’t fit: the creases don’t allow C in front of A.');
   });
 
@@ -229,6 +249,32 @@ describe('the sentence builder', () => {
     ]);
   });
 
+  it('keeps the focus in the dialog when a chip or a slot’s × goes from the keyboard', () => {
+    const two = play(opened(), { type: 'face_picked', face: 2, origin: 'pattern' }, { type: 'face_picked', face: 3, origin: 'folded' }, { type: 'face_picked', face: 0, origin: 'folded' });
+    draw(fits(two, 7, SPOTS, changedSpots()).state, { live: true });
+    // A chip removed: the next chip takes the focus, and after the last, the object field.
+    act(() => button('Remove A').focus());
+    click(button('Remove A'));
+    expect(document.activeElement).toBe(button('Remove D'));
+    click(button('Remove D'));
+    expect(document.activeElement?.getAttribute('aria-label')).toMatch(/^Objects:/);
+    // The subject's ×: the subject slot itself.
+    act(() => button('Clear C from the subject').focus());
+    click(button('Clear C from the subject'));
+    expect(document.activeElement?.getAttribute('aria-label')).toMatch(/^Subject:/);
+  });
+
+  it('opens no face menu that was asked for while it could not open', () => {
+    draw(opened().state, { live: true });
+    key(button('Objects: pick the subject first'), 'Enter');
+    expect(queryByRole(document.body, 'menu', /^Objects for/)).toBeNull();
+    // The subject picked from its menu: the objects' menu does not open by itself.
+    key(button('Subject: pick a face'), 'Enter');
+    click(byRole(byRole(document.body, 'menu', 'Subjects'), 'menuitemradio', 'Face C'));
+    expect(button(/^Subject: face C/)).toBeDefined();
+    expect(queryByRole(document.body, 'menu', /^Objects for/)).toBeNull();
+  });
+
   it('asks for the tinted faces past the label cap, and to zoom in when they have no letters (D7)', () => {
     const pairs = Uint32Array.from(Array.from({ length: 60 }, (_, k) => [0, k + 1]).flat());
     const many = play(opened(openFactsOf({ faces: 61, openPairs: pairs, frontUp: new Uint8Array(61), stacks: sidesOf([Array.from({ length: 61 }, (_, f) => f)]) })), { type: 'face_picked', face: 0, origin: 'pattern' });
@@ -240,13 +286,20 @@ describe('the sentence builder', () => {
     expect(hint().textContent).toBe('Pick one of the 60 tinted faces. Zoom in to see their letters.');
   });
 
-  it('previews the verb under the focus in its menu, and closes it again (Round3:457, 893)', () => {
+  it('opens on the verb picked, previews the verb under the focus, and lets go as the pointer leaves or it closes (Round3:455-457, 893, 929)', async () => {
     draw(picked(opened().state, 2, 0).state);
     key(button('Verb: in front of'), 'Enter');
     const menu = byRole(document.body, 'menu', 'Verb');
     expect(allByRole(menu, 'menuitemradio').map((row) => row.textContent)).toEqual(['in front of', 'behind']);
+    await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    // From the keyboard it opens on the verb already picked, and previews nothing on the way.
+    expect(document.activeElement).toBe(byRole(menu, 'menuitemradio', 'in front of'));
+    expect(sent.filter((action) => action.type === 'verb_pointed')).toEqual([]);
     act(() => byRole(menu, 'menuitemradio', 'behind').focus());
     expect(sent).toContainEqual({ type: 'verb_pointed', verb: 'behind' });
+    act(() => menu.dispatchEvent(new PointerEvent('pointerout', { bubbles: true })));
+    act(() => menu.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false })));
+    expect(sent.at(-1)).toEqual({ type: 'verb_pointed', verb: null });
     key(byRole(menu, 'menuitemradio', 'behind'), 'Escape');
     expect(queryByRole(document.body, 'menu', 'Verb')).toBeNull();
     expect(sent.at(-1)).toEqual({ type: 'verb_pointed', verb: null });
@@ -290,8 +343,8 @@ describe('the sentence builder', () => {
     });
     draw(opened(facts, { hasRecord: true }).state);
     expect(status().textContent).toBe('0 solutions');
-    expect(status().querySelector('[data-state]')?.getAttribute('data-state')).toBe('danger');
-    expect(hint().getAttribute('role')).toBe('alert');
+    expect(statusRegion().querySelector('[data-state]')?.getAttribute('data-state')).toBe('danger');
+    expect(hintRole()).toBe('alert');
     // F shows its back from the front: E on F's front side is behind it, as the list reads.
     expect(hint().textContent).toBe('Can’t fit: with the new creases, E behind F clashes with F in front of E. Remove one to apply.');
     expect(button('Subject: pick a face').getAttribute('aria-disabled')).toBe('true');
@@ -329,6 +382,25 @@ describe('the constraints list', () => {
       { type: 'rows_removed', ids: [first!.id] },
       { type: 'rows_removed', ids: [first!.id, second!.id] },
     ]);
+  });
+
+  it('keeps the focus in the list when an object or a row goes from the keyboard', () => {
+    draw(compound().state);
+    // An object's ×: its row stays, and its button takes the focus.
+    act(() => button('Remove C in front of A').focus());
+    click(button('Remove C in front of A'));
+    expect(document.activeElement).toBe(button('C in front of A, D'));
+    // The last row's trash: Undo takes the focus.
+    act(() => button('Remove C in front of A, D').focus());
+    click(button('Remove C in front of A, D'));
+    expect(document.activeElement).toBe(button('Undo'));
+  });
+
+  it('names Undo’s key in its tooltip, as the registry resolves it', async () => {
+    draw(compound().state);
+    act(() => button('Undo').focus());
+    await act(async () => new Promise<void>((resolve) => setTimeout(resolve, 50)));
+    expect(byRole(document.body, 'tooltip', /^Undo \(/).textContent).toMatch(/^Undo \(.*Z\)$/);
   });
 
   it('lights a row’s faces while it is pointed at, focused or pressed (D6)', () => {
@@ -372,5 +444,25 @@ describe('the constraints list', () => {
     expect(gone.closest('li')?.querySelector('[data-gone]')?.textContent).toBe('');
     // Inside another sentence, it is a clause.
     expect(button('Remove a face that no longer exists behind D')).toBeDefined();
+  });
+
+  it('names an object that no longer exists from where it stood (A5), when its side is known', () => {
+    const copy = layerOrderCopy(i18n.t, 'en', LETTERS);
+    const gone = (verb: 'in_front_of' | 'behind' | null) =>
+      copy.reason({ key: 'face_gone', sentence: { subject: 3, verb, objects: [null] }, gone: 'object' });
+    expect(gone('in_front_of')).toBe('Not applied: the face behind D no longer exists.');
+    expect(gone('behind')).toBe('Not applied: the face in front of D no longer exists.');
+    // A gone face's side was never saved, so a restore's row reads "D against …": said as it was ordered.
+    expect(gone(null)).toBe('Not applied: the face D was ordered against no longer exists.');
+    const facts = openFactsOf({
+      restore: {
+        outcome: { kind: 'applied' },
+        carried: [
+          carried({ index: 0, status: { status: 'gone', cause: 'face_gone' }, subject: 3, object: null, objectState: 'gone', constraint: null }),
+        ],
+      },
+    });
+    draw(opened(facts, { hasRecord: true }).state);
+    expect(button('D against a face that no longer exists').title).toBe('Not applied: the face D was ordered against no longer exists.');
   });
 });

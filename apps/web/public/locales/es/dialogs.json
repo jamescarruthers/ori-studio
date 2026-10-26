@@ -612,6 +612,7 @@
       "nothingToRedo": "Nada que rehacer",
       "nothingToUndo": "Nada que deshacer",
       "redo": "Rehacer",
+      "redoShortcut": "Rehacer ({{shortcut}})",
       "remove": "Quitar {{sentence}}",
       "reveal": "Poner {{face}} en la frase",
       "separator": ",",
@@ -619,7 +620,8 @@
       "titleCount_one": "Restricciones · {{count}}",
       "titleCount_many": "Restricciones · {{count}}",
       "titleCount_other": "Restricciones · {{count}}",
-      "undo": "Deshacer"
+      "undo": "Deshacer",
+      "undoShortcut": "Deshacer ({{shortcut}})"
     },
     "lost": "Orden de capas se detuvo de forma inesperada. No se cambió nada.",
     "lostLoad": "Orden de capas no se pudo cargar. Comprueba tu conexión y vuelve a intentarlo.",
@@ -641,11 +643,12 @@
     "reason": {
       "ambiguous": "No aplicada: un pliegue nuevo dividió {{face}}, así que podría referirse a cualquiera de las partes.",
       "bothGone": "No aplicada: sus caras ya no existen.",
-      "clashes": "Entra en conflicto con {{clashes}}.",
-      "clashesCreases": "Entra en conflicto con los pliegues.",
+      "clashes": "Entra en conflicto con {{clashes}}",
+      "clashesCreases": "Entra en conflicto con los pliegues",
       "clashWithin": "{{sentence}} no caben todas juntas.",
       "noOverlap": "No aplicada: sus caras ya no se solapan.",
-      "objectGone": "No aplicada: la cara respecto a la que se ordenó {{subject}} ya no existe.",
+      "objectGone": "No aplicada: la cara {{verb}} {{subject}} ya no existe.",
+      "objectGoneAgainst": "No aplicada: la cara respecto a la que se ordenó {{subject}} ya no existe.",
       "sameFace": "No aplicada: sus dos caras ahora son una sola.",
       "subjectGone": "No aplicada: la cara {{verb}} {{objects}} ya no existe.",
       "waiting": "Aún no aplicada: espera a que se resuelvan las restricciones en conflicto."

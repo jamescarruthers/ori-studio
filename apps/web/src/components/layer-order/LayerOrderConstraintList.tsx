@@ -1,12 +1,15 @@
-import { useId, type PointerEvent } from 'react';
+import { memo, useId, useMemo, useRef, type PointerEvent } from 'react';
 import { Redo2, Trash2, Undo2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { shortcutLabelForAction } from '../../keyboard/shortcuts';
 import { listControls, rowGroupsView, type LayerRowGroupView } from '../../layer-order/model/layerOrderSelectors';
 import type { LayerOrderAction, LayerOrderDialogState } from '../../layer-order/model/layerOrderState';
+import { useShortcutStore } from '../../store/shortcutStore';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { LayerOrderFaceChip } from './LayerOrderFaceChip';
 import type { LayerOrderCopy } from './layerOrderInspectorCopy';
+import { samePastPaneHover } from './layerOrderInspectorRenders';
 import styles from './LayerOrderConstraintList.module.css';
 
 export interface LayerOrderConstraintListProps {
@@ -18,6 +21,21 @@ export interface LayerOrderConstraintListProps {
 /** A finger down on a row lights its faces, as pointing at it does (D6). */
 function touched(event: PointerEvent): boolean {
   return event.pointerType === 'touch';
+}
+
+/** Before a control that holds the focus goes, hand the focus to `to`, which stays. */
+function handFocus(from: Element, to: Element | null | undefined) {
+  if (to instanceof HTMLElement && from.contains(document.activeElement)) to.focus();
+}
+
+/** Undo's and Redo's keys as the registry resolves them now, so a rebinding shows. */
+function useHistoryShortcuts(): { undo: string | undefined; redo: string | undefined } {
+  const overrides = useShortcutStore((state) => state.overrides);
+  const defaultsSource = useShortcutStore((state) => state.defaultsSource);
+  return useMemo(() => {
+    const resolution = { overrides, defaultsSource };
+    return { undo: shortcutLabelForAction('edit.undo', resolution), redo: shortcutLabelForAction('edit.redo', resolution) };
+  }, [overrides, defaultsSource]);
 }
 
 /**
@@ -36,14 +54,31 @@ function touched(event: PointerEvent): boolean {
  *   not applied is dimmed with the warning dot, and its reason is its title.
  *   A face that no longer exists keeps its chip's place, with no letter.
  * - The heading counts constraints, as Properties does (D11), not rows.
+ * - Removing a row, or an object, from the keyboard leaves the focus on a
+ *   neighbour: the row after the one trashed (else Undo), or the row whose
+ *   object went.
+ *
+ * Memoised past a pane hover: pointing at a face changes nothing here.
  */
-export function LayerOrderConstraintList({ state, dispatch, copy }: LayerOrderConstraintListProps) {
+export const LayerOrderConstraintList = memo(function LayerOrderConstraintList({
+  state,
+  dispatch,
+  copy,
+}: LayerOrderConstraintListProps) {
   const { t } = useTranslation();
   const titleId = useId();
+  const undoRef = useRef<HTMLButtonElement>(null);
   const groups = rowGroupsView(state);
   const controls = listControls(state);
+  const keys = useHistoryShortcuts();
   const count = state.rows.committed.length + state.rows.carried.length;
   const leave = () => dispatch({ type: 'row_hovered', key: null });
+  const undoTitle = keys.undo
+    ? t('dialogs:layerOrder.list.undoShortcut', 'Undo ({{shortcut}})', { shortcut: keys.undo })
+    : t('dialogs:layerOrder.list.undo', 'Undo');
+  const redoTitle = keys.redo
+    ? t('dialogs:layerOrder.list.redoShortcut', 'Redo ({{shortcut}})', { shortcut: keys.redo })
+    : t('dialogs:layerOrder.list.redo', 'Redo');
 
   return (
     <section className={styles.list} aria-labelledby={titleId}>
@@ -54,9 +89,10 @@ export function LayerOrderConstraintList({ state, dispatch, copy }: LayerOrderCo
             : t('dialogs:layerOrder.list.title', 'Constraints')}
         </h3>
         <IconButton
+          ref={undoRef}
           size="sm"
           aria-label={t('dialogs:layerOrder.list.undo', 'Undo')}
-          title={controls.undo ? t('dialogs:layerOrder.list.undo', 'Undo') : t('dialogs:layerOrder.list.nothingToUndo', 'Nothing to undo')}
+          title={controls.undo ? undoTitle : t('dialogs:layerOrder.list.nothingToUndo', 'Nothing to undo')}
           aria-disabled={!controls.undo || undefined}
           onClick={() => {
             if (controls.undo) dispatch({ type: 'undo' });
@@ -67,7 +103,7 @@ export function LayerOrderConstraintList({ state, dispatch, copy }: LayerOrderCo
         <IconButton
           size="sm"
           aria-label={t('dialogs:layerOrder.list.redo', 'Redo')}
-          title={controls.redo ? t('dialogs:layerOrder.list.redo', 'Redo') : t('dialogs:layerOrder.list.nothingToRedo', 'Nothing to redo')}
+          title={controls.redo ? redoTitle : t('dialogs:layerOrder.list.nothingToRedo', 'Nothing to redo')}
           aria-disabled={!controls.redo || undefined}
           onClick={() => {
             if (controls.redo) dispatch({ type: 'redo' });
@@ -100,13 +136,14 @@ export function LayerOrderConstraintList({ state, dispatch, copy }: LayerOrderCo
               removable={controls.remove}
               dispatch={dispatch}
               onLeave={leave}
+              undo={undoRef}
             />
           ))}
         </ul>
       )}
     </section>
   );
-}
+}, samePastPaneHover);
 
 function ConstraintRow({
   group,
@@ -114,13 +151,17 @@ function ConstraintRow({
   removable,
   dispatch,
   onLeave,
+  undo,
 }: {
   group: LayerRowGroupView;
   copy: LayerOrderCopy;
   removable: boolean;
   dispatch: (action: LayerOrderAction) => void;
   onLeave: () => void;
+  /** Where the focus goes when the last row is trashed. */
+  undo: { readonly current: HTMLButtonElement | null };
 }) {
+  const hitRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
   const { key, sentence, members, mark, reason } = group;
   const multi = members.length > 1;
@@ -189,6 +230,9 @@ function ConstraintRow({
                         onBlur={onLeave}
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (!removable) return;
+                          // The row stays, one object shorter: its button takes the focus.
+                          handFocus(event.currentTarget, hitRef.current);
                           remove([member.id]);
                         }}
                       >
@@ -229,8 +273,10 @@ function ConstraintRow({
     >
       <div className={styles.line}>
         <button
+          ref={hitRef}
           type="button"
           className={styles.hit}
+          data-row-button=""
           aria-label={text}
           title={title}
           onClick={() => dispatch({ type: 'row_clicked', key })}
@@ -248,7 +294,14 @@ function ConstraintRow({
         aria-disabled={!removable || undefined}
         onFocus={enter}
         onBlur={onLeave}
-        onClick={() => remove(members.map((member) => member.id))}
+        onClick={(event) => {
+          if (!removable) return;
+          // The row goes: the next row's button takes the focus, else Undo.
+          const row = event.currentTarget.closest('li');
+          const next = row?.nextElementSibling?.querySelector('[data-row-button]');
+          handFocus(event.currentTarget, next ?? undo.current);
+          remove(members.map((member) => member.id));
+        }}
       >
         <Trash2 size={14} />
       </IconButton>

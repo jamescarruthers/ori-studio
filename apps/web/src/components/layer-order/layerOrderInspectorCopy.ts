@@ -157,8 +157,15 @@ export function layerOrderCopy(
           });
         }
         if (value.gone === 'object' && view.subject !== null) {
+          // The gone face named from where it stood (A5): "the face behind D", for "D in front of …".
+          if (view.verb !== null) {
+            return t('dialogs:layerOrder.reason.objectGone', 'Not applied: the face {{verb}} {{subject}} no longer exists.', {
+              verb: verb(view.verb === 'in_front_of' ? 'behind' : 'in_front_of'),
+              subject: letter(view.subject),
+            });
+          }
           return t(
-            'dialogs:layerOrder.reason.objectGone',
+            'dialogs:layerOrder.reason.objectGoneAgainst',
             'Not applied: the face {{subject}} was ordered against no longer exists.',
             { subject: letter(view.subject) }
           );
@@ -171,8 +178,8 @@ export function layerOrderCopy(
         return t('dialogs:layerOrder.reason.noOverlap', 'Not applied: its faces no longer overlap.');
       case 'clashes':
         return value.clashes.length > 0
-          ? t('dialogs:layerOrder.reason.clashes', 'Clashes with {{clashes}}.', { clashes: sentences(value.clashes) })
-          : t('dialogs:layerOrder.reason.clashesCreases', 'Clashes with the creases.');
+          ? t('dialogs:layerOrder.reason.clashes', 'Clashes with {{clashes}}', { clashes: sentences(value.clashes) })
+          : t('dialogs:layerOrder.reason.clashesCreases', 'Clashes with the creases');
       case 'clash_within':
         return t('dialogs:layerOrder.reason.clashWithin', '{{sentence}} can’t all fit together.', {
           sentence: clause(value.sentence),
