@@ -446,12 +446,12 @@ describe('the Layer order dialog’s session', () => {
   });
 
   it('a figure stacked too deep says how deep, from the refusal', async () => {
-    refusing({ code: 'source_stacked_too_deep', deepest: 320, triples: 51_396_055, limit: 20_000_000 });
+    refusing({ code: 'source_stacked_too_deep', deepest: 358, triples: 79_849_732, limit: 52_000_000 });
     mount();
     await opened();
     await until(() => alert(/layers in one place/) !== null, 'the refusal showed');
     expect(alert(/layers in one place/)?.textContent).toBe(
-      'This figure stacks 320 layers in one place, more than Layer order can work with yet. Nothing was changed.'
+      'This figure stacks 358 layers in one place, more than Layer order can work with yet. Nothing was changed.'
     );
     expect(queryByRole(openDialog(), 'button', 'Keep trying')).toBeNull();
   });
