@@ -120,6 +120,7 @@ import type { LayerOrderApplied, LayerOrderSource } from '../../lib/layerOrder/l
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { PaperStyleOverrides } from '../../lib/paper/paperStyle';
 import type { FoldPress } from '../../cp-workspace/folded/foldPress';
+import type { FoldedFigureLayerOrderRefold } from '../../cp-workspace/folded/foldedFigureLayerOrderState';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
 import type { CpLineClipboardPayload, CpSelectionTransform } from '../../lib/creasePatternClipboard';
@@ -860,14 +861,31 @@ export type OristudioCpFigureLayerOrderOpening =
        * dialog has closed.
        */
       release: () => Promise<void>;
+      /**
+       * Set for a figure whose creases changed since it was folded (D12):
+       * `source` is its creases as they are now, so the dialog says that
+       * Apply also refolds it, and the Apply hands this back
+       * (`applyOristudioCpFigureLayerOrder`'s `refold`).
+       */
+      refold?: OristudioCpFigureLayerOrderRefold;
     }
   /**
    * - `blocked`: "Layer order…" cannot open on it now (`foldedFigureLayerOrderBlock`);
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
    * - `unavailable`: the Layer order engine could not be loaded at all;
-   * - `cancelled`: stopped while it folded, or the figure went meanwhile.
+   * - `cancelled`: stopped while it folded, or the figure went meanwhile;
+   * - `spatial`: its creases changed since it was folded, and fold in 3D now (D13).
    */
-  | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' };
+  | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' | 'spatial' };
+
+/**
+ * A stale figure's creases as the dialog opened on them (D12): which reselect
+ * of its region they were, by fingerprint, so an Apply that refolds it
+ * re-baselines it only onto creases that are still those.
+ */
+export interface OristudioCpFigureLayerOrderRefold {
+  sourceFingerprint: string | null;
+}
 
 /**
  * What "Fold with layer order…" opens the Layer order dialog on, for an Edit
@@ -1262,8 +1280,21 @@ export interface CreasePatternSliceActions {
    * placement, style and model, fresh geometry. See
    * `lib/foldedFigureStaleness.ts` for how that region is recorded and how a
    * figure is judged out of date.
+   *
+   * A flat figure with a chosen layer order (row H4) is refolded in it: the
+   * record restored onto the creases as they are now through the host
+   * engine, then folded with the relations it rebuilds (`fold_with_order`).
+   * When they clash, the check runs out of time or the engine or the kernel
+   * refuses, the figure keeps its picture and its record is flagged (D10);
+   * when the engine is not there, nothing is written. A figure whose creases
+   * now fold in 3D keeps its record, flagged as waiting (D13). What it came
+   * to is handed to `onLayerOrder`, for the verb to say. With no record,
+   * every kernel call is the one it always was.
    */
-  refoldOristudioCpFoldedFigure: (id: string) => Promise<boolean>;
+  refoldOristudioCpFoldedFigure: (
+    id: string,
+    options?: { onLayerOrder?: (outcome: FoldedFigureLayerOrderRefold) => void }
+  ) => Promise<boolean>;
   /**
    * Give a 3D figure reopened from a file its geometry back, so it can be turned
    * again — without changing what it draws.
@@ -1316,8 +1347,26 @@ export interface CreasePatternSliceActions {
    * until the entry has taken it. When the crease pattern changed or was
    * replaced since `press` (`foldPress.ts`), it writes nothing and says so:
    * figure `id` may then be another document's.
+   *
+   * With `refold` (the opening's, D12), the dialog was opened on the
+   * figure's creases as they are now: the Apply is its refold too, and the
+   * figure is re-baselined on them — while they are still the ones it opened
+   * on — so it reads as up to date.
    */
-  applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied, press: FoldPress) => Promise<boolean>;
+  applyOristudioCpFigureLayerOrder: (
+    id: string,
+    applied: LayerOrderApplied,
+    press: FoldPress,
+    options?: { refold?: OristudioCpFigureLayerOrderRefold }
+  ) => Promise<boolean>;
+  /**
+   * Let a record a reload detached go (Dismiss, beside its Review…): the
+   * figure stops showing it, and the save drops its entry from the bag's
+   * `detached` list. False, writing nothing, when the figure shows none.
+   * Callers bracket it as one undo entry, so an undo brings it back
+   * (`dismissFoldedFigureDetachedLayerOrder`).
+   */
+  dismissOristudioCpFigureDetachedLayerOrder: (id: string) => boolean;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;
   /**

@@ -57,6 +57,7 @@ import {
   resolveLayerOrder,
   type LayerOrderResolveBatch,
 } from '../../layer-order/host/hostEngineGateway';
+import { sameLayerOrderAttention } from '../../layer-order/host/layerOrderResolution';
 import { FOLD_RUN_NONE } from '../../lib/foldCancellation';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
@@ -354,10 +355,8 @@ function storedAttentionOf(store: DiagramCaptureStore, stepId: string): LayerOrd
   return source?.kind === 'cp' ? (layerOrderSummaryOf(source)?.attention ?? null) : null;
 }
 
-/** Whether two summaries say the same: the same reason, for as many constraints. */
-export function sameAttention(a: LayerOrderAttention | null, b: LayerOrderAttention | null): boolean {
-  return a === b || (a !== null && b !== null && a.reason === b.reason && a.count === b.count);
-}
+/** Whether two summaries say the same: the same reason, for as many constraints (shared with Edit's figures). */
+export const sameAttention = sameLayerOrderAttention;
 
 /** The layer order a capture asks `captureStep` to draw: one the dialog applied, the step's record, or none. */
 function captureLayerOrderOf(

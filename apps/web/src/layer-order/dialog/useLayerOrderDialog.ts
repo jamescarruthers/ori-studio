@@ -35,13 +35,13 @@ import { reportError } from '../../monitoring';
 import type { LayerFace } from '../engine/faceIndex';
 import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import { isLayerOrderEngineLost } from '../engine/layerOrderRuntime';
-import { recordNeedsAttentionOf } from '../model/layerOrderDecisions';
 import type { LayerSidesStacks } from '../model/layerOrderEngineFacts';
 import { currentStepBy, initLayerOrderDialog, layerOrderReducer } from '../model/layerOrderReducer';
 import { listControls } from '../model/layerOrderSelectors';
 import type { LayerOrderAction, LayerOrderDialogState } from '../model/layerOrderState';
 import type { LayerPaneId, LayerPanesEvents } from '../panes/layerPaneInput';
 import type { LayerFaceMarks, LayerPanesView } from '../panes/layerPaneMarks';
+import { layerOrderRequestInit } from './layerOrderDialogInit';
 import type { LayerOrderDialogOpening } from './layerOrderDialogStore';
 import { runLayerOrderEffects, type LayerOrderEffectCall, type LayerOrderEffectHost } from './layerOrderEffects';
 import { layerOrderFaceMarks, layerOrderPanesStacks, layerOrderPanesView } from './layerOrderPaneBinding';
@@ -116,10 +116,9 @@ export function useLayerOrderDialog(
   const [first] = useState(() =>
     initLayerOrderDialog({
       surface: request.surface ?? null,
-      hasRecord: request.record !== null,
-      recordNeedsAttention: recordNeedsAttentionOf(request.record),
-      review: false,
-      xray: request.look.xray,
+      // What the request decides: a record to restore, whether an untouched
+      // Apply still writes (D10, D12), the flagged rows from Review… (D14).
+      ...layerOrderRequestInit(request),
       side: request.look.side,
       at: Date.now(),
     })

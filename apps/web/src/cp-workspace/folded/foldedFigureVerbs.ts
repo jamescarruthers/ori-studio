@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { FoldedFigureCamera } from './folded3dCamera';
 import { foldedFigureCapabilities } from './foldedFigureCapabilities';
 import { foldedFigureGesture } from './foldedFigureGesture';
+import { sayFoldedFigureLayerOrderRefold } from './foldedFigureLayerOrderToasts';
 import { foldedFigureCurrentCase, foldedFigureFrontier } from './foldedFigureState';
 import { openFoldedFigureExport } from './openFoldedFigureExport';
 
@@ -120,6 +121,34 @@ export function duplicateFoldedFigure(id: string, t: TFunction): Promise<boolean
     'verb',
     t('panels:creasePattern.duplicateFoldedModelAction', 'Duplicate folded model'),
     () => useWorkspaceStore.getState().duplicateOristudioCpFoldedFigure(id)
+  );
+}
+
+/** Let go of the layer constraints a reload found detached (Dismiss, beside Review…), as one entry. */
+export function dismissFoldedFigureDetachedLayerOrder(id: string, t: TFunction): Promise<boolean | undefined> {
+  return foldedFigureGesture.run(
+    'verb',
+    t('panels:foldedFigureActions.dismissDetachedLayerOrderAction', 'Dismiss layer constraints'),
+    () => useWorkspaceStore.getState().dismissOristudioCpFigureDetachedLayerOrder(id)
+  );
+}
+
+/**
+ * Refold a figure from its creases as they are now, as one entry: in its
+ * chosen layer order when it has one (H4), saying what that came to
+ * (`foldedFigureLayerOrderToasts.ts`).
+ */
+export function refoldFoldedFigure(id: string, t: TFunction): Promise<boolean | undefined> {
+  return foldedFigureGesture.run(
+    'verb',
+    t('panels:creasePattern.refoldFoldedModelAction', 'Refold folded model'),
+    () =>
+      useWorkspaceStore.getState().refoldOristudioCpFoldedFigure(id, {
+        onLayerOrder: (outcome) => {
+          const figure = useWorkspaceStore.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+          sayFoldedFigureLayerOrderRefold(outcome, figure?.title ?? '', t);
+        },
+      })
   );
 }
 

@@ -104,6 +104,10 @@ export type LayerOrderFact =
   | {
       readonly event: 'layer constraints need attention';
       readonly properties: { readonly surface: LayerOrderSurface; readonly broken_count_bucket: string };
+    }
+  | {
+      readonly event: 'layer constraints dismissed';
+      readonly properties: { readonly surface: LayerOrderSurface; readonly constraint_count_bucket: string };
     };
 
 export function dialogOpenedFact(
@@ -181,5 +185,16 @@ export function needsAttentionFact(
   return {
     event: 'layer constraints need attention',
     properties: { surface, broken_count_bucket: bucketCount(broken, LAYER_ORDER_BROKEN_COUNT_BUCKETS) },
+  };
+}
+
+/** A host's detached record let go (Dismiss): how many constraints it held, by the dialog's ladder. */
+export function dismissedFact(
+  surface: LayerOrderSurface,
+  constraints: number
+): Extract<LayerOrderFact, { event: 'layer constraints dismissed' }> {
+  return {
+    event: 'layer constraints dismissed',
+    properties: { surface, constraint_count_bucket: bucketCount(constraints, LAYER_ORDER_CONSTRAINT_COUNT_BUCKETS) },
   };
 }

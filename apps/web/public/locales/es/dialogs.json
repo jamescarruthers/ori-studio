@@ -515,6 +515,8 @@
     "applying": "Guardando el orden de capas…",
     "applyNothing": "No hay nada que aplicar",
     "applyOpening": "Todavía no hay nada que aplicar",
+    "applyRefolds": "Los pliegues cambiaron desde que se plegó: Aplicar también lo vuelve a plegar.",
+    "applyRefoldsNamed": "Los pliegues de {{name}} cambiaron desde que se plegó: Aplicar también lo vuelve a plegar.",
     "applyRefused": {
       "other": "No se pudo guardar este orden de capas. No se cambió nada.",
       "tooLarge": "Este orden de capas es demasiado grande para guardarlo con la figura."

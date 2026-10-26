@@ -821,6 +821,64 @@ A third, the on-demand flat rehydrate re-enabling "Another solution" and
 Duplicate on reopened unconstrained figures (hosts Q8), is a side effect of
 H3's new rehydrate, so it can only follow H3.
 
+Settled while building H4, for the PRs that meet it:
+- **The request gained two fields:** `applyRefolds` (D12: the foot's note,
+  and an untouched Apply on a record still writes, `untouchedApplyWrites`;
+  with no record the dialog opens on the order a plain Refold draws, and
+  Edit runs that Refold for an untouched Apply) and `review` (D14: opened
+  from a flag's Review…; Edit's and the Diagram's both set it). The
+  reducer reads them through one helper,
+  `layer-order/dialog/layerOrderDialogInit.ts` (`layerOrderRequestInit`),
+  which `useLayerOrderDialog` spreads into its init (with its own
+  `surface`, `side` and clock), merged after U10: its D16 verdict
+  (`no_change`) then honours `applyRefolds`, so an untouched Apply on a
+  stale figure whose record restores whole answers applied and refolds it.
+- **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`: D19's
+  notice, else D12's note.
+- **A 3D figure's record attaches by its key** (D13). Its one blind spot: an
+  older build that deletes a 3D constrained figure and folds the same
+  creases in 3D again on the reused id inherits the record, flagged as
+  waiting; flat figures have the snapshot check for that, 3D ones have no
+  flat snapshot.
+- **Detached by an older build** (the Refusals board's frame), built in H4.
+  A released build detaches a record only by editing the creases and
+  refolding, which changes the source fingerprint, so the figure is
+  recognised by what every build's Refold keeps instead:
+  - **The refold key.** Saved entries carry a `refoldKey`, a hash of the id,
+    the title, the placement, the starting face and the region (rounded).
+    An `order-not-given` record whose figure is still there, flat, with
+    that key is shown for review ("Not applied", Review…, Dismiss), never
+    used to fold. The dialog restores it on the figure as folded now, so a
+    row whose faces are gone reads as not applied.
+  - **Through this build.** The figure holds it through a Refold, a move or
+    a rename, and the save keys its entry to the figure as it is then.
+  - **Settled.** An Apply takes it up and Dismiss lets it go, each one undo
+    entry; the save then drops its entry from `detached[]`, and an undo
+    keeps it.
+  - **Deleted.** The save marks an `order-not-given` entry whose figure is
+    gone `figure-missing`, so a figure folded on the reused id is never
+    shown it. `figure-missing` entries stay in the bag, unshown.
+  - **No id reused in a session.** Figure ids come from a session high-water
+    mark (`foldedFigureIds.ts`) that opening a file raises past every figure
+    id it holds and every id its bag names, so a fold after a Delete, with
+    no save between, never takes the deleted figure's id.
+  - **The session's bag follows each save** (`foldedFigureLayerOrdersAfterSave`):
+    an entry a save dropped stays dropped, and a figure that shows a record,
+    after an undo, writes its entry again.
+  - **`sourceKey`,** the key development builds saved before `refoldKey`, is
+    known and ignored: those entries never lock a figure, and are not shown.
+  - **Blind spots, display only.** A figure the older build moved or
+    renamed shows nothing. One it deleted and folded again from the same
+    region, unmoved, on the reused id with the same title, is shown the
+    record. Entries saved before the key existed (dev builds only) are
+    never shown.
+  - **Dismiss** is on the Properties pane's notice only: the toolbar's chip
+    is one button, and a second would need a rule in the shared
+    `.cp-folded-figure-toolbar` block.
+- **A 3D figure whose creases fold flat again,** and whose record a
+  refold on them could not draw, is a stale figure on flat creases:
+  flagged, opened on them, refolded flat by its Apply.
+
 ### Risks
 
 - **Display fidelity on real files.**

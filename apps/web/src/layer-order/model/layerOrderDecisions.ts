@@ -137,6 +137,20 @@ export function recordNeedsAttentionOf(record: LayerOrderRecord | null): boolean
 }
 
 /**
+ * Whether even an untouched Apply writes, as the reducer's
+ * {@link openedBaseline} takes it (read from a request through
+ * `layer-order/dialog/layerOrderDialogInit.ts`): the host flagged its record
+ * after an edit ({@link recordNeedsAttentionOf}); or its picture was folded
+ * from creases that changed since (the request's `applyRefolds`, D12) and it
+ * hands a record, which the Apply is then the refold in. A stale host with no
+ * record opens on the order a plain Refold draws, so an untouched Apply there
+ * answers "unchanged", and the host runs that Refold.
+ */
+export function untouchedApplyWrites(record: LayerOrderRecord | null, applyRefolds: boolean | undefined): boolean {
+  return recordNeedsAttentionOf(record) || (applyRefolds === true && record !== null);
+}
+
+/**
  * What a session opened on: the reducer keeps it at its open (`opened`), and
  * an Apply decided outside the reducer asks it too, the dialog shell's before
  * an inspector (U4's `useLayerOrderSettle`). The order is the host's when it

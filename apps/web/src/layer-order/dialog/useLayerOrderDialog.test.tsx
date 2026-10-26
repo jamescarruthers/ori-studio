@@ -19,6 +19,7 @@ import {
   type FakeLayerOrderBackend,
 } from '../engine/layerOrderEngine.fixtures';
 import { layerOrderReducer } from '../model/layerOrderReducer';
+import { applyState } from '../model/layerOrderSelectors';
 import {
   beginLayerOrderDialog,
   registerLayerOrderDialogMount,
@@ -147,5 +148,39 @@ describe('useLayerOrderDialog', () => {
     if (outcome.kind !== 'applied') throw new Error(outcome.kind);
     expect(saves[1]).toEqual([0, 1]);
     expect(outcome.applied.record.constraints).toHaveLength(2);
+  });
+
+  describe('its init, read from the request (`layerOrderRequestInit`)', () => {
+    /** The record restored whole, on the order the host shows: what an untouched Apply leaves alone (D16). */
+    const restoredWhole = () => {
+      const base = createFakeLayerOrderBackend();
+      return {
+        ...base,
+        restore: async (source, record, limits) => {
+          const out = await base.restore(source, record, limits);
+          return out.status === 'ok' ? { ...out, opened_on: { kind: 'held', ignored: 0 } } : out;
+        },
+      } as FakeLayerOrderBackend;
+    };
+
+    async function untouchedApply(request: LayerOrderRequest) {
+      const h = await mount(request, restoredWhole);
+      // Settled, and the solutions' count quiet: Apply can go.
+      await vi.waitFor(() => expect(h.out.current && applyState(h.out.current.state).enabled).toBe(true));
+      const review = h.out.current!.state.review;
+      await act(async () => h.out.current!.apply());
+      const outcome = await h.outcome;
+      await h.done();
+      return { kind: outcome.kind, review };
+    }
+
+    it('writes on an untouched Apply over a stale host’s record, so the host’s refold happens (D12)', async () => {
+      expect(await untouchedApply(REQUEST)).toEqual({ kind: 'unchanged', review: false });
+      expect((await untouchedApply({ ...REQUEST, applyRefolds: true })).kind).toBe('applied');
+    });
+
+    it('opens from Review… as a review (D14)', async () => {
+      expect((await untouchedApply({ ...REQUEST, review: true })).review).toBe(true);
+    });
   });
 });

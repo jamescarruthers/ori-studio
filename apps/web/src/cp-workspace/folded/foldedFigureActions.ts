@@ -19,8 +19,10 @@ import {
 } from './foldedFigureControlOptions';
 import { foldedFigureNotice, type FoldedFigureNotice } from './foldedFigureNotice';
 import {
+  foldedFigureLayerOrderAttention,
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderHold,
+  foldedFigureLayerOrderRecord,
   refoldHeldByLayerOrder,
   refoldHeldByLayerOrderReason,
   type FoldedFigureLayerOrderBlock,
@@ -649,8 +651,8 @@ export function buildFoldedFigureActions(
 
   // Refold is present only when it applies: a figure that matches its source
   // creases has nothing to refold, and a disabled button would just be noise.
+  // A chosen layer order refolds with it (H4); a newer build's holds it.
   if (canRefold) {
-    // Held, and why, until a refold keeps a chosen layer order (H4).
     const held = refoldHeldByLayerOrder(figure);
     actions.push({
       kind: 'command',
@@ -721,12 +723,19 @@ export function anotherSolutionCommand(
  * null when none does (D9). Oriedita's search steps through every order the
  * creases allow, not the ones that fit the figure's constraints, so until
  * they step within them (H6) they are held, pointing to where the solutions
- * that fit are. A newer build's order is that build's to step.
+ * that fit are; and while its constraints need a look since an edit, they
+ * wait for it (D14). A newer build's order is that build's to step.
  */
 function heldByLayerOrderHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string | null {
   switch (foldedFigureLayerOrderHold(figure)) {
     case 'record':
-      return t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
+      if (!foldedFigureLayerOrderAttention(figure)) {
+        return t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
+      }
+      // An order chosen with no constraint has none to review: the order itself (D16).
+      return (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0
+        ? t('panels:foldedFigureActions.layerOrderReviewChosenFirst', 'Review the chosen layer order first')
+        : t('panels:foldedFigureActions.layerOrderReviewFirst', 'Review the layer constraints that need attention first');
     case 'newer':
       return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
     case null:
@@ -734,17 +743,18 @@ function heldByLayerOrderHint(figure: OristudioCpFoldedFigureEntry, t: TFunction
   }
 }
 
-/** What the Layer order verb calls, and what it reads to say whether it can. */
-export type FoldedFigureLayerOrderDeps = Pick<FoldedFigureActionDeps, 't' | 'openLayerOrder' | 'isStale'>;
+/** What the Layer order verb calls. */
+export type FoldedFigureLayerOrderDeps = Pick<FoldedFigureActionDeps, 't' | 'openLayerOrder'>;
 
 /**
  * "Layer order…": open the dialog on the figure (row H3). Null when the
  * surface offers no way to open it. Disabled, with why, from saved data only
  * (`foldedFigureLayerOrderBlock`): a 3D figure (D13), one whose fold found no
- * layer order (D3), a newer build's record, no source to fold, or creases
- * changed since the fold; and with no reason while the figure is folding, as
- * every verb waits. A figure reopened from a file has no live fold and stays
- * enabled: the press folds it again first.
+ * layer order (D3), a newer build's record, or no source to fold; and with
+ * no reason while the figure is folding, as every verb waits. A figure
+ * reopened from a file has no live fold and stays enabled: the press folds it
+ * again first. So does one whose creases changed since its fold: the dialog
+ * opens on them as they are now, and its Apply also refolds (D12).
  *
  * Drawn as its word: no glyph says "layer order" (Layers already means
  * Render as, Precreases and Spread), so the toolbar shows the label and the
@@ -756,8 +766,8 @@ export function layerOrderCommand(
 ): FoldedFigureCommand | null {
   const { t, openLayerOrder } = deps;
   if (!openLayerOrder) return null;
-  const block = foldedFigureLayerOrderBlock(figure, { stale: deps.isStale?.(figure) === true });
-  const hint = block ? layerOrderBlockHint(block, t) : null;
+  const block = foldedFigureLayerOrderBlock(figure);
+  const hint = block === '3d' ? layerOrder3dHint(figure, t) : block ? layerOrderBlockHint(block, t) : null;
   return {
     kind: 'command',
     id: 'layer-order',
@@ -767,6 +777,27 @@ export function layerOrderCommand(
     ...(hint ? { hint } : {}),
     run: () => openLayerOrder(figure),
   };
+}
+
+/**
+ * Why "Layer order…" waits on a 3D figure, in the States board's words for
+ * its 3D lock: and, when it keeps a chosen order, that its constraints are
+ * kept for when it folds flat again (D13).
+ */
+function layerOrder3dHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string {
+  const record = foldedFigureLayerOrderRecord(figure);
+  if (!record) return t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
+  if (record.constraints.length === 0) {
+    return t(
+      'panels:foldedFigureActions.layerOrder3dChosenKept',
+      'Layer order works on flat figures. Its chosen layer order is kept for when it folds flat again.'
+    );
+  }
+  return t('panels:foldedFigureActions.layerOrder3dKept', {
+    count: record.constraints.length,
+    defaultValue_one: 'Layer order works on flat figures. Its layer constraint is kept for when it folds flat again.',
+    defaultValue_other: 'Layer order works on flat figures. Its {{count}} layer constraints are kept for when it folds flat again.',
+  });
 }
 
 /** Why "Layer order…" waits, as its hint; null while the figure is folding, which says nothing. */
@@ -782,8 +813,6 @@ export function layerOrderBlockHint(block: FoldedFigureLayerOrderBlock, t: TFunc
       return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
     case 'no-source':
       return t('panels:foldedFigureActions.layerOrderNoSource', 'This folded model has no source creases to work from');
-    case 'stale':
-      return t('panels:foldedFigureActions.layerOrderCreasesChanged', 'Its creases changed since it was folded');
   }
 }
 
