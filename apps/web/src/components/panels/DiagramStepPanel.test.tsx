@@ -267,13 +267,14 @@ describe('DiagramStepPanel', () => {
           oristudioCpDocument: { handle: 1, document: cpDocument(), geometry: null } as unknown as OristudioCpDocumentState,
         });
 
-      it('stands open with no Link Pattern… to press first, and nothing to cancel', () => {
+      it('stands open with no Link Pattern… to press first, and nothing to cancel, offering Folded', () => {
         act(() => {
           withPattern();
           state().addDiagramStep();
         });
         expect(host?.textContent).toContain('Choose a pattern');
-        expect(host?.querySelector('[aria-label="Show as"]')).not.toBeNull();
+        // Nothing linked before it this session: the model as it folds.
+        expect(pressed('Show as')).toBe('Folded');
         expect(textButton('Link Pattern…')).toBeUndefined();
         expect(textButton('Cancel')).toBeUndefined();
       });

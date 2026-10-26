@@ -36,6 +36,9 @@ import look the same wherever they appear:
   pattern open it still shows, with its existing note ("Open a crease pattern
   in Edit to link one.") and without the Show as row, which has nothing to
   apply to.
+- Show as starts on **Folded** (`lastLinkedAs` in `stepCaptureActions.ts`;
+  Zach, 2026-10-26). It still follows the nearest linked step before the
+  step, and then the way the picker last linked this session.
 - `DiagramStepPicture`: `link-pattern` leaves `WAYS_IN`, so an empty step's
   ways in are Upload Picture…, From References…, From Fold… and From File
   (CP, Defox)…. Relink Pattern… on a linked step is untouched.
