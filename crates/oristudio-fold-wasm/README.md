@@ -246,6 +246,12 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With every `layer_*` call, the additions bound (E7, 2026-10-24) | 3,747,930 B (3,660 KiB) | 1,450,720 B (1,417 KiB) |
 | At E5 `c2abda418` with E6 `f495229b7` merged (explain and the solutions), before the calls (2026-10-24) | 3,339,896 B (3,262 KiB) | 1,305,371 B (1,275 KiB) |
 | With every `layer_*` call, E6's bound (E7, 2026-10-24) | 3,861,859 B (3,771 KiB) | 1,505,540 B (1,470 KiB) |
+| At `76d0c1720`, the dialog's branch with H8 merged, before E9 (2026-10-25) | 3,861,928 B (3,771 KiB) | 1,505,521 B (1,470 KiB) |
+| With E9, the stepper without the count: its search and Flat-Folder's lexical walk (2026-10-25) | 3,930,347 B (3,838 KiB) | 1,529,898 B (1,494 KiB) |
+
+The last two rows, built in one worktree the same day: E9 adds **68,419 B
+raw (+67 KiB), 24,377 B gzipped (+24 KiB)**, all of it engine code behind
+`layer_step` (no call was added or changed).
 
 The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
 (+92 KiB)**: the staged motions, the fan scoring and the general pieces
@@ -279,10 +285,10 @@ they add **214,970 B raw (+210 KiB), 70,672 B gzipped (+69 KiB)** over the
 row before. That leaves the bridge **324,095 B (316 KiB) gzipped over the
 two budgets' 800 KiB sum**.
 
-**The Layer order dialog's calls** (the last six rows, each pair built in
+**The Layer order dialog's calls** (the six rows from `6652deeb3` to E6's, each pair built in
 one worktree the same day) add, with every call bound, E6's included,
 **521,963 B raw (+510 KiB), 200,169 B gzipped (+195 KiB)** over the
-engine they link (the last two rows), past the ~50 KiB the dialog's plan
+engine they link (E6's two rows), past the ~50 KiB the dialog's plan
 allowed for reusing this bridge (`implementation-plans/layer-order-dialog.md`,
 "The dialog reuses the Fold bridge"). **Decided (2026-10-24): the calls
 stay in this bridge, no split**; this table is kept current instead. Row by

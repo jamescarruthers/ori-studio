@@ -313,6 +313,7 @@ is built.
 | E6 | **Explain and solutions.** `explain` (smallest clashing set); the solution count with a stable order and the current solution's index; X-ray stepping (D5) | M | E5 | – | Counts equal brute force (kabuto 9/1, `solution_sample_1` 1/16, `colorconstrainttest` 12/2); property test over random small multi-component problems; the index stays stable across Add and remove |
 | E7 | **Wasm bridge.** `layer_*` bindings with typed arrays and deadlines (`clock::now_ms`), a retry with a larger deadline ("keep trying"), close; a size row in the bridge README. Explain and count bindings follow E6 | M | E5 | – | Native bridge tests (the `tests/import_session.rs` shape); wasm bytes recorded |
 | E8 | **Census 2 (wasm).** A Node 22 harness over the built bridge (`scripts/layer-order-census.mjs`, local, output pasted): open, preview and count timings and memory per worker, on cpoogle and iguana-c0. Fills the named constants for the count threshold and the label cap | S | E6, E7 | – | **Phase gate 2** (below) |
+| E9 | **The stepper without the count** (D7, added 2026-10-25). Until the count has every solution a step goes through, `step` searches for the one the count would list next, in the count's own order, from the order on screen: by picture, spot by spot with the session's check; with X-ray, each component's next order from Flat-Folder's search over its variables in ascending order, placed on the order on screen (`Enumeration::lexical`, `after`), combined as the count's views are. What it finds is kept ("Solution 3"; exact once every one is found), and what a check proved survives a Keep trying | M | E6 | – | Stepping with no count visits exactly the count's solutions in its order, both ways, by picture and by layer order, on the fixtures and a property test; with a complete count, unchanged; iguana-c0's steps timed natively and in wasm |
 | **Phase 1: the dialog** |
 | U1 | **Shared picking and tints.** `cp-workspace/picking/stackHitIndex.ts` (built from the subfaces the painter reads, in its model frame; non-convex cells, convex fast path), `cp-workspace/renderer/fillTint.ts` with Fold's alpha ladder named; Fold moves onto both. Creates `scripts/layer-order-dialog-check.mjs` with a Fold scene | S–M | – | – | Fold's picking, overlay and canvas tests unchanged; hits equal brute force in vitest, with p99 reported, not asserted; Fold before/after screenshots show no change |
 | U2 | **ModalFrame.** Fold's Import CP moves onto it | S | – | – | Computed-style proof of no change; styling ratchets |
@@ -398,6 +399,20 @@ designs) threw instead of answering. It is now sent capped, as counts are.
 For U6: a step while the count is unfinished first counts for half its
 deadline, so on the 5 designs whose count doesn't end, 19 of their 20 steps
 took 1.4 to 2.5 s of a 5 s deadline. The stepper's deadline should be short.
+
+**E9, 2026-10-25: the stepper without the count.** A step before the count
+has what it steps through now searches for the solution the count would
+list next, in the count's order, and gives the count a tenth of its limits
+after (row E9). On iguana-c0, with no count and the dialog's 3 s, in wasm:
+X-ray › moves in 0.3–0.9 s a step, ‹ comes back in 0.3 s, and the positions
+read "2 of 2+", "3 of 3+" (about 0.3 s of each is the count's tenth). By
+picture it does not move: the picture on screen is the first from the front
+and the last from the back (each proved in under 1 s), and the next one
+hinges on whether a picture with the first top of one and the second of the
+other exists, which a check leaves undecided after 600 s (the converse is
+refuted in 13 s). Keeping the count's order there needs that answer; the
+options (keep the order, step out of order on figures the count skips, or
+clause learning) are in the PR, and the choice is open.
 
 **Where the gates run.**
 - **CI:** small fixtures only (kabuto, `solution_sample_1`,
@@ -960,6 +975,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] E6: explain and solutions (#509, landed through #505)
 - [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [x] E8: census 2 (#513; phase gate 2 passed)
+- [ ] E9: the stepper without the count
 - [x] U1: shared picking and tints (#497)
 - [x] U2: ModalFrame (#493)
 - [ ] U3a: the native-menu guard (to main)
