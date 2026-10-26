@@ -28,16 +28,16 @@ use std::collections::HashMap;
 use oristudio_cp::folding::{FoldedFigureModel, FoldedPaperScene};
 use oristudio_cp::session::FoldSource;
 use oristudio_fold::steer::{
-    Commit, ConstraintSession, ConstraintStatus, EncodeRefusal, FaceStatus, LayerOrderRecord,
-    LayerSource, Position, Preview, PreviewFit, RecordRead, RestoreOutcome, Restored,
-    SavedPairStatus, SolutionCount, Solutions, StepBy, StepDirection, Stepped, ViewSide,
-    encode_record, read_record,
+    Commit, Committed, ConstraintSession, ConstraintStatus, EncodeRefusal, FaceStatus,
+    LayerOrderRecord, LayerSource, Position, Preview, PreviewFit, RecordRead, RestoreOutcome,
+    Restored, SavedPairStatus, Show, SolutionCount, Solutions, StepBy, StepDirection, Stepped,
+    ViewSide, encode_record, read_record,
 };
 
 use super::wire::{
     CarriedRow, CommitDone, Committing, Explained, LayerCallError, LayerLimits, LayerOpened,
     LayerRefusal, LayerRestored, LayerSolutionCaps, OpenedOnWire, Opening, PackedStacks,
-    PreviewFits, Previewed, Restoring, SavedFaces, Saving, Sides, SteppedTo, Stepping,
+    PreviewFits, Previewed, Restoring, SavedFaces, Saving, Showing, Sides, SteppedTo, Stepping,
     candidate_of, carried_rows, constraints_of, flat_pairs, order_status, relations_of,
     session_refusal, source_refusal, thrown, triples_of,
 };
@@ -300,6 +300,38 @@ impl LayerSessions {
         };
         let commit = commit.map_err(thrown)?;
         Ok(committing(&held.session, commit, adopted))
+    }
+
+    /// The order on screen, packed one bit per variable
+    /// ([`ConstraintSession::shown_bits`]): what [`Self::show`] puts back.
+    pub fn order(&self, session: u32) -> Result<Vec<u8>, LayerCallError> {
+        Ok(self.session(session)?.shown_bits())
+    }
+
+    /// Undo and redo: make `constraints` (triples) the committed list and
+    /// `order` ([`Self::order`]'s, from earlier) the order on screen,
+    /// exactly, with no search ([`ConstraintSession::show`]). A cursor
+    /// counting the same constraints stays good.
+    pub fn show(
+        &mut self,
+        session: u32,
+        constraints: &[i32],
+        order: &[u8],
+        limits: &LayerLimits,
+    ) -> Result<Showing, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let list = constraints_of(constraints)?;
+        let held = self.held_mut(session)?;
+        Ok(
+            match held.session.show(list, order, &limits).map_err(thrown)? {
+                Show::Shown(done) => {
+                    held.preview = None;
+                    Showing::Shown(commit_done(&held.session, done, false))
+                }
+                Show::Refused => Showing::Refused,
+                Show::TimedOut(out) => Showing::TimedOut(out),
+            },
+        )
     }
 
     /// The saved constraints the last restore did not apply, and nothing has
@@ -670,19 +702,24 @@ fn keep(held: &mut Held, tokens: &mut u32, preview: Preview) -> Previewed {
 /// A commit's verdict as it crosses.
 fn committing(session: &ConstraintSession, commit: Commit, adopted: bool) -> Committing {
     match commit {
-        Commit::Committed(done) => Committing::Committed(CommitDone {
-            changed: done.changed,
-            stacks: Sides {
-                front: PackedStacks::from(&session.stacks(ViewSide::Front)),
-                back: PackedStacks::from(&session.stacks(ViewSide::Back)),
-            },
-            open_pairs: flat_pairs(&session.open_pairs()),
-            stage: done.stage,
-            nodes: done.nodes,
-            adopted,
-        }),
+        Commit::Committed(done) => Committing::Committed(commit_done(session, done, adopted)),
         Commit::CantFit(cant) => Committing::CantFit(cant.into()),
         Commit::TimedOut(out) => Committing::TimedOut(out),
+    }
+}
+
+/// What a commit or a show that landed answers: the session as it now is.
+fn commit_done(session: &ConstraintSession, done: Committed, adopted: bool) -> CommitDone {
+    CommitDone {
+        changed: done.changed,
+        stacks: Sides {
+            front: PackedStacks::from(&session.stacks(ViewSide::Front)),
+            back: PackedStacks::from(&session.stacks(ViewSide::Back)),
+        },
+        open_pairs: flat_pairs(&session.open_pairs()),
+        stage: done.stage,
+        nodes: done.nodes,
+        adopted,
     }
 }
 

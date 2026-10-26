@@ -24,7 +24,7 @@ use oristudio_fold_wasm::steer::{
     CantFitKind, Committing, Explained, FACE_INTACT, LayerCallError, LayerLimits, LayerOpened,
     LayerRefusal, LayerRestored, LayerSessions, LayerSolutionCaps, OpenedOnWire, Opening,
     PAIR_KEPT, PAIR_UNRESOLVED, PackedStacks, Previewed, RestoredOutcome, Restoring, Saving,
-    Stepping, constraints_of,
+    Showing, Stepping, constraints_of,
 };
 
 fn repo(relative: &str) -> std::path::PathBuf {
@@ -1405,6 +1405,72 @@ fn walking_the_stepper_visits_every_solution_once_in_order() {
             Ok(total)
         );
     }
+}
+
+/// Undo and redo (#539's review): `order` reads the order on screen, and
+/// `show` puts an earlier one back exactly with the list it had, keeping a
+/// cursor counting the same list; an order that does not fit is refused and
+/// changes nothing.
+#[test]
+fn show_puts_an_earlier_order_back_exactly_and_keeps_the_cursor() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let opened = open(&mut layers, &source);
+    let session = opened.session;
+    let cursor = layers
+        .solutions_start(session, &LayerSolutionCaps::default())
+        .expect("a cursor");
+    let by = StepBy::Picture(ViewSide::Front);
+    let opening = layers.order(session).expect("the order");
+    let front = layers.stacks(session, ViewSide::Front).expect("stacks");
+    let direction = match layers.step(session, cursor, by, StepDirection::Next, &defaults()) {
+        Ok(Stepping::Moved(_)) => StepDirection::Next,
+        Ok(Stepping::End) => StepDirection::Previous,
+        other => panic!("{other:?}"),
+    };
+    if direction == StepDirection::Previous {
+        assert!(matches!(
+            layers.step(session, cursor, by, direction, &defaults()),
+            Ok(Stepping::Moved(_))
+        ));
+    }
+    let stepped = layers.order(session).expect("the order");
+    assert_ne!(stepped, opening);
+    // A constraint the stepped order breaks, committed: the order moves.
+    let pair = pairs(&opened.open_pairs)
+        .into_iter()
+        .find(|&pair| {
+            let candidate = against_shown(&layers, session, pair, &opened.front_up);
+            matches!(
+                layers.preview(session, &candidate, &defaults()),
+                Ok(Previewed::Fits(_))
+            )
+        })
+        .expect("a constraint that fits against the stepped order");
+    let candidate = against_shown(&layers, session, pair, &opened.front_up);
+    let Ok(Committing::Committed(_)) = layers.commit(session, &candidate, &defaults()) else {
+        panic!("it fits");
+    };
+    // Undo the Add, then the step: each order exactly, the cursor good again on no constraints.
+    let Ok(Showing::Shown(_)) = layers.show(session, &[], &stepped, &defaults()) else {
+        panic!("the stepped order fits no constraints");
+    };
+    assert_eq!(layers.order(session), Ok(stepped.clone()));
+    assert!(layers.solutions_position(session, cursor, by).is_ok());
+    let Ok(Showing::Shown(done)) = layers.show(session, &[], &opening, &defaults()) else {
+        panic!("the opening order fits no constraints");
+    };
+    assert_eq!(layers.order(session), Ok(opening.clone()));
+    assert_eq!(layers.stacks(session, ViewSide::Front), Ok(front));
+    assert!(!done.adopted);
+    assert!(layers.solutions_position(session, cursor, by).is_ok());
+    // The opening order breaks the constraint: refused, and nothing changes.
+    assert_eq!(
+        layers.show(session, &candidate, &opening, &defaults()),
+        Ok(Showing::Refused)
+    );
+    assert_eq!(layers.order(session), Ok(opening));
+    assert_eq!(layers.constraints(session), Ok(Vec::new()));
 }
 
 #[test]
