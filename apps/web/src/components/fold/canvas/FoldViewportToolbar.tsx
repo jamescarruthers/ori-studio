@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, PenLine } from 'lucide-react';
+import { FlipHorizontal2, Layers, PenLine } from 'lucide-react';
 import type { LayerSpreadToggle } from '../../../cp-workspace/folded/layerSpreadControls';
 import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/ViewportToolbar';
@@ -25,6 +25,8 @@ export function FoldViewportToolbar({
   camera,
   display,
   onDisplay,
+  cpSide,
+  onTurnCpOver,
   spread = null,
   phoneGroups = [],
   sendToEdit,
@@ -38,6 +40,8 @@ export function FoldViewportToolbar({
   };
   display: FoldPaneDisplay;
   onDisplay: (display: FoldPaneDisplay) => void;
+  cpSide: 'front' | 'back';
+  onTurnCpOver: () => void;
   /** The step on screen's Spread Layers (`useFoldStepSpread`); null at the flat sheet, which has none. */
   spread?: LayerSpreadToggle | null;
   /** A phone's: the starred tools and the pane switch (`useFoldPhoneBarGroups`), at the head of the bar. */
@@ -50,6 +54,19 @@ export function FoldViewportToolbar({
     {
       id: 'display',
       items: [
+        {
+          kind: 'action',
+          id: 'turn-cp-over',
+          label: t('panels:fold.canvas.turnCpOver', 'Turn CP over'),
+          title: cpSide === 'front'
+            ? t('panels:fold.canvas.showCpBack', 'Show the back of the crease pattern: turn left to right and reverse mountain/valley creases')
+            : t('panels:fold.canvas.showCpFront', 'Show the front of the crease pattern'),
+          icon: <FlipHorizontal2 size={14} />,
+          checked: cpSide === 'back',
+          pinned: true,
+          onPhone: 'collapse',
+          onSelect: onTurnCpOver,
+        },
         {
           kind: 'action',
           id: 'step-creases',

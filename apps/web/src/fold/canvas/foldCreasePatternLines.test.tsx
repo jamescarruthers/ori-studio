@@ -107,8 +107,8 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
   let themed: HTMLDivElement;
   let latest: FoldCreasePatternStrokes | null = null;
 
-  function Probe({ lines }: { lines: FoldCreasePatternLines }) {
-    latest = useFoldCreasePatternStrokes(lines, themed, 'theme');
+  function Probe({ lines, side = 'front' }: { lines: FoldCreasePatternLines; side?: 'front' | 'back' }) {
+    latest = useFoldCreasePatternStrokes(lines, themed, 'theme', side);
     return null;
   }
 
@@ -135,6 +135,39 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
 
   const rgb = (color: Float32Array, at: number) =>
     [0, 1, 2].map((k) => Math.round((color[at * 4 + k] ?? 0) * 255).toString(16).padStart(2, '0')).join('');
+
+  it('reverses both M/V inks and instruction creases on the back, leaving source assignments, flat creases and borders intact', () => {
+    const a = { x: 0.2, y: 0.1 };
+    const b = { x: 0.7, y: 0.8 };
+    const lines: FoldCreasePatternLines = {
+      creases: ['Red1', 'Blue2', 'Cyan3', 'Black0'].map((color) => ({ a, b, color })),
+      instruction: [{ a, b, letter: 'mountain' }, { a: b, b: a, letter: 'valley' }],
+    };
+    const saved = JSON.stringify(lines);
+    act(() => root.render(<Probe lines={lines} />));
+    const front = latest!;
+    act(() => root.render(<Probe lines={lines} side="back" />));
+    expect([0, 1, 2, 3].map((k) => rgb(latest!.creases.color, k))).toEqual(['60a5fa', 'ff4d5d', '64c8c8', '111417']);
+    // Instructions are grouped valley first, mountain second.
+    expect([0, 1].map((k) => rgb(latest!.instruction!.color, k))).toEqual(['ff4d5d', '60a5fa']);
+    expect(latest!.creases.a).toEqual(front.creases.a);
+    expect(latest!.creases.b).toEqual(front.creases.b);
+    expect(JSON.stringify(lines)).toBe(saved);
+    act(() => root.render(<Probe lines={lines} />));
+    expect(latest).toEqual(front);
+  });
+
+  it('reverses mountain and valley dash patterns as well as colors in a monochrome line style', () => {
+    useWorkspaceStore.setState((state) => ({ oristudioCpViewport: { ...state.oristudioCpViewport, lineStyle: 'black-one-dot' } }));
+    const lines: FoldCreasePatternLines = {
+      creases: ['Red1', 'Blue2'].map((color) => ({ a: { x: 0, y: 0 }, b: { x: 1, y: 1 }, color })), instruction: [],
+    };
+    act(() => root.render(<Probe lines={lines} />));
+    const front = [...latest!.creases.dashSlot!];
+    expect(front[0]).not.toBe(front[1]);
+    act(() => root.render(<Probe lines={lines} side="back" />));
+    expect([...latest!.creases.dashSlot!]).toEqual(front.reverse());
+  });
 
   it('inks the pattern as Edit does and draws the instruction solid in its crease colour, wider', () => {
     const lines = creasePatternPaneLines(bookWithPrecrease(), {

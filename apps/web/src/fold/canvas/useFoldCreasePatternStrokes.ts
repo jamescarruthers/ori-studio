@@ -5,11 +5,13 @@ import { cpSnapshotToScene } from '../../cp-workspace/adapters/cpSnapshotToScene
 import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
 import { previewGroupsToStrokes, type PreviewStrokeGroup } from '../../cp-workspace/renderer/previewStrokes';
 import type { StrokeGeometry } from '../../cp-workspace/renderer/types';
+import type { PaperSide } from '../../lib/paper/paperScene';
 import { DEFAULT_ORISTUDIO_CP_LINE_STYLE } from '../../lib/creasePatternViewport';
 import { cpLineStyleDashPatterns } from '../../lib/oristudioCpLineStyle';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { FoldLetter } from '../engine/foldEngineWire';
 import { foldLetterLineColor, type FoldCreasePatternLines } from './foldCreasePatternLines';
+import { foldCpViewedColor } from './foldCreasePatternView';
 
 /**
  * How much wider the instruction is drawn than a crease: the step's own lines
@@ -67,18 +69,24 @@ export function foldPaneStrokeWidthPx(
 export function useFoldCreasePatternStrokes(
   lines: FoldCreasePatternLines | null,
   element: Element | null,
-  themeKey: string
+  themeKey: string,
+  side: PaperSide = 'front'
 ): FoldCreasePatternStrokes | null {
   const lineStyle = useWorkspaceStore((state) => state.oristudioCpViewport.lineStyle ?? DEFAULT_ORISTUDIO_CP_LINE_STYLE);
   const lineWidth = useWorkspaceStore((state) => state.oristudioCpViewport.lineWidth ?? 1);
   return useMemo(() => {
     if (!element || !lines) return null;
     const appearanceFor = createCpLineAppearanceResolver(lineStyle, 'mvf', element);
-    const creases = cpSnapshotToScene(lines.creases, appearanceFor, cpLineStyleDashPatterns(lineStyle)).strokes;
+    // Reverse the assignment before choosing its ink AND dash, including monochrome styles.
+    const creases = cpSnapshotToScene(
+      lines.creases,
+      (color) => appearanceFor(foldCpViewedColor(color, side)),
+      cpLineStyleDashPatterns(lineStyle)
+    ).strokes;
     const groups: PreviewStrokeGroup[] = LETTERS.flatMap((letter) => {
       const segments = lines.instruction.filter((line) => line.letter === letter);
       return segments.length > 0
-        ? [{ segments, color: resolveCpLineColor(foldLetterLineColor(letter), 'mvf', element) }]
+        ? [{ segments, color: resolveCpLineColor(foldCpViewedColor(foldLetterLineColor(letter), side), 'mvf', element) }]
         : [];
     });
     let instruction: StrokeGeometry | null = null;
@@ -89,5 +97,5 @@ export function useFoldCreasePatternStrokes(
     return { creases, instruction, lineWidth };
     // The theme is read off the element: its key is what says it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, element, themeKey, lineStyle, lineWidth]);
+  }, [lines, element, themeKey, lineStyle, lineWidth, side]);
 }

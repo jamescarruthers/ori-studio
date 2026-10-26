@@ -2,8 +2,8 @@
  * The crease-pattern pane in Edit's vocabulary: each crease the pane shows as
  * the line Edit's document would hold for it, so the pane is drawn the way
  * Edit's canvas draws a crease pattern — its role inks, widths and dashes,
- * on the canvas's own ground, no paper — and reads the same as the pattern
- * Send to Edit lands.
+ * over the sheet's paper color. These assignments stay front-relative as
+ * Send to Edit lands them; the view reverses their appearance on the back.
  *
  * - The border is Edit's `Black0`, a fold its `Red1` or `Blue2` by the letter
  *   it has from the front.

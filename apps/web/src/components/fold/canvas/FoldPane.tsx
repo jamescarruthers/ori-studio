@@ -57,6 +57,10 @@ export interface FoldPaneProps {
    * feedback from the edge pen.
    */
   creases?: FoldCreasePatternStrokes | null;
+  /** The unfolded sheet, in model space, drawn beneath its creases and feedback. */
+  sheetFill?: FillGeometry | null;
+  /** Override the model-to-user map for the CP's horizontal turnover; also drives picking and overlays. */
+  modelToUser?: (point: Point) => Point;
   /** A tint over the paper, in the pane's frame: the moving set of a located fold. */
   tint?: FillGeometry | null;
   /**
@@ -110,7 +114,7 @@ export interface FoldPaneProps {
  * folded form is a paper scene, painted through the shared painter on the
  * folded channel in the user's paper style (D11); the crease pattern is drawn
  * as Edit's canvas draws one — its creases on the crease channel in Edit's
- * inks, on the canvas's own ground (`creases`). It publishes into no store
+ * inks, over its paper-colored sheet (`sheetFill`). It publishes into no store
  * and registers no singleton; the canvas that mounts it holds the camera
  * verbs through the handle.
  */
@@ -121,6 +125,8 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     style,
     ink = FOLD_INK,
     creases = null,
+    sheetFill = null,
+    modelToUser,
     tint = null,
     offset,
     contentBounds,
@@ -150,7 +156,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
 
   const { canvasRef, rendererRef, rendererGeneration, rendererStatus, hovered, dragging, render, controls } =
     useCpSurface<FoldHit>({
-      modelToSvg,
+      modelToSvg: modelToUser ?? modelToSvg,
       contentBounds,
       framingKey,
       keepInViewKey,
@@ -176,6 +182,13 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     });
 
   useImperativeHandle(ref, () => controls, [controls]);
+
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+    renderer.setSheetFill(sheetFill);
+    render();
+  }, [sheetFill, rendererGeneration, rendererRef, render]);
 
   // The paper: the scene through the painter, in the user's style.
   const geometry = useMemo(() => (scene ? paperSceneToFoldedGeometry(scene, style, ink) : EMPTY_FOLDED), [scene, style, ink]);

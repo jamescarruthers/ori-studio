@@ -4408,7 +4408,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_one": "81bc828efd3c",
@@ -6369,7 +6369,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10780,7 +10784,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_one": "81bc828efd3c",
@@ -12741,7 +12745,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -17154,7 +17162,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_one": "81bc828efd3c",
@@ -19115,7 +19123,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -23428,7 +23440,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_other": "2511ea544964",
@@ -25142,7 +25154,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -29455,7 +29471,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_other": "2511ea544964",
@@ -31169,7 +31185,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -35580,7 +35600,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_one": "81bc828efd3c",
@@ -37541,7 +37561,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -41952,7 +41976,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_one": "81bc828efd3c",
@@ -43913,7 +43937,11 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48226,7 +48254,7 @@
     "panels:fold.paper.shape": "e0e492707f85",
     "panels:fold.paper.sheet": "54bf0ebbfb3e",
     "panels:fold.paper.start": "e4bb9f1ece9a",
-    "panels:fold.paper.startHelp": "6dd5f7e06e47",
+    "panels:fold.paper.startHelp": "08e9b5f2744b",
     "panels:fold.sentence.cpJump": "639e7dfea61a",
     "panels:fold.sentence.mountain.crease.all": "364d066b8402",
     "panels:fold.sentence.mountain.crease.depth_other": "2511ea544964",
@@ -49940,6 +49968,10 @@
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
     "common:workspaceRail.foldBeta": "4ca3f6c57efe",
-    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
+    "panels:fold.canvas.creasePatternBackLabel": "168670237703",
+    "panels:fold.canvas.showCpBack": "4707f67ffeb4",
+    "panels:fold.canvas.showCpFront": "2a02acd2c46f",
+    "panels:fold.canvas.turnCpOver": "539fd86c9c51"
   }
 }
