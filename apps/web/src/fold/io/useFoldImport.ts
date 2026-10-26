@@ -6,6 +6,8 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { trackFoldChoiceOffered, trackFoldOrderResolved } from '../../analytics/trackFold';
 import { trackFoldCpImported, trackFoldImportRefused } from '../../analytics/trackFoldIo';
+import i18n from '../../i18n';
+import { prefetchLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSession } from '../../store/workspaceStore/foldSession';
@@ -13,12 +15,18 @@ import { getOristudioCpFoldedFigurePaperScene } from '../../store/workspaceStore
 import { projectCpImport } from '../collapse/projectCpImport';
 import { foldStartingFigureScene } from './foldEditFigure';
 import { createFoldImportFlow, type FoldImportFlow, type FoldImportFlowState, type FoldImportRequest } from './foldImportFlow';
+import { chooseFoldImportLayerOrder, foldImportView } from './foldImportLayerOrder';
 
 /** What the dialog reads before its flow exists: nothing under way. */
 const IDLE = createStore<FoldImportFlowState>(() => ({ phase: 'idle' }));
 
-/** The import flow as the app runs it: the app's session, Edit's figures, the analytics event. */
+/**
+ * The import flow as the app runs it: the app's session, Edit's figures, the
+ * analytics events, and the Layer order dialog to choose among several orders
+ * (row H10), whose code starts loading now, as the import is asked for.
+ */
 export function createAppFoldImportFlow(): FoldImportFlow {
+  prefetchLayerOrderDialog();
   return createFoldImportFlow({
     session: foldSession(),
     editFoldedFigure: () =>
@@ -28,6 +36,8 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
     onOrderResolved: (result, count) => trackFoldOrderResolved(result, 'cp', count),
     onRefused: trackFoldImportRefused,
+    chooseLayerOrder: (ask) =>
+      chooseFoldImportLayerOrder(ask, foldImportView(useWorkspaceStore.getState()), i18n.t.bind(i18n)),
   });
 }
 
@@ -47,7 +57,10 @@ export function useFoldImportFlow(initial: FoldImportRequest | null): {
     const made = createAppFoldImportFlow();
     useFoldImportOrderUi.setState({ spread: null });
     const unsubscribe = made.store.subscribe((next, before) => {
-      if (before.phase === 'choosing' && next.phase === 'idle') useFoldImportUiStore.getState().close();
+      // A choice let go (the chooser's, or the Layer order dialog's Cancel) closes the import.
+      if ((before.phase === 'choosing' || before.phase === 'ordering') && next.phase === 'idle') {
+        useFoldImportUiStore.getState().close();
+      }
     });
     setFlow(made);
     if (initial) void made.open(initial);

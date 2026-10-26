@@ -7,9 +7,17 @@
  * - **Open, choose, commit.** Opening reads the file with the CP kernel's
  *   loader and completes its layer order from its letters, a true ‹ n of m ›
  *   held in the engine. One order lands and commits at once; several wait
- *   for a choice, one listed order per independent component, each order
- *   pictured by the state it lands (a preview, landed and let go). Edit's
- *   figure brings its own order and commits at once.
+ *   for a choice. Edit's figure brings its own order and commits at once.
+ * - **The choice is the Layer order dialog's** (`implementation-plans/layer-order-dialog.md`,
+ *   row H10), when the app hands one in (`chooseLayerOrder`): the engine
+ *   opens the import onto the dialog's faces, the dialog opens on the order
+ *   the import would land by default, and its answer decides — Apply lands
+ *   the order it chose (exactly: the engine seeds the import with it),
+ *   an Apply that changed nothing lands that default, Cancel cancels the
+ *   import. When the dialog can't take it (another is open, its code didn't
+ *   load, or the engine can't open this import onto its faces), the import
+ *   keeps its own chooser: one listed order per independent component, each
+ *   order pictured by the state it lands (a preview, landed and let go).
  * - **The step lands once.** The pick that is committed is the state the
  *   session's replay then takes (`commitLanded`); nothing is folded twice.
  * - **The engine is held while the flow lives**, so a menu or a drop can
@@ -32,6 +40,7 @@ import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldSampleId } from '../engine/foldEngineIoSamples';
 import type {
   FoldImportFingerprinted,
+  FoldImportLayerOpening,
   FoldImportLimits,
   FoldImportOpened,
   FoldImportSource,
@@ -69,6 +78,25 @@ export interface FoldProjectCpImport {
   replace?: (landed: FoldImportFingerprinted) => boolean;
 }
 
+/** What the flow asks the Layer order dialog: the import, and the engine's opening of it onto the dialog's faces. */
+export interface FoldImportLayerOrderAsk {
+  readonly request: FoldImportRequest;
+  readonly opening: FoldImportLayerOpening;
+}
+
+/**
+ * How the Layer order dialog answered an import, as the flow acts on it:
+ * Apply's order (`relations` over the faces of the opening's source, whose
+ * digest is `digest`); an Apply that changed nothing; Cancel; or no dialog
+ * (`fallback`: another one is open, or its code didn't load), and the
+ * import keeps its own chooser.
+ */
+export type FoldImportLayerOrderAnswer =
+  | { readonly kind: 'applied'; readonly relations: Uint32Array; readonly digest: string }
+  | { readonly kind: 'unchanged' }
+  | { readonly kind: 'cancelled' }
+  | { readonly kind: 'fallback' };
+
 /** One order's picture: the folded state it lands. */
 export type FoldOrderPreview =
   | { readonly status: 'working' }
@@ -80,6 +108,8 @@ export type FoldImportFlowState =
   /** Reading the file, completing its order, or landing and committing it. */
   | { readonly phase: 'working'; readonly request: FoldImportRequest }
   | { readonly phase: 'refused'; readonly request: FoldImportRequest; readonly refusal: FoldImportRefusal; readonly searchLimited?: boolean }
+  /** The Layer order dialog is choosing the import's order: the import's own dialog steps aside. */
+  | { readonly phase: 'ordering'; readonly request: FoldImportRequest }
   | { readonly phase: 'failed'; readonly request: FoldImportRequest; readonly error: WasmErrorEnvelope }
   | {
       readonly phase: 'choosing';
@@ -113,6 +143,11 @@ export interface FoldImportFlowOptions {
   onOrderResolved?: (result: 'accepted' | 'canceled', count: number) => void;
   /** An import was refused: the dialog now says why. Once per refusal, whichever step of the flow made it. */
   onRefused?: (refusal: FoldImportRefusal) => void;
+  /**
+   * Ask the Layer order dialog for the order of an import with several
+   * (row H10). Left out, the import's own chooser asks, as before the dialog.
+   */
+  chooseLayerOrder?: (ask: FoldImportLayerOrderAsk) => Promise<FoldImportLayerOrderAnswer>;
 }
 
 export interface FoldImportFlow {
@@ -194,6 +229,7 @@ export function createFoldImportFlow({
   onChoiceOffered,
   onOrderResolved,
   onRefused,
+  chooseLayerOrder,
 }: FoldImportFlowOptions): FoldImportFlow {
   const store = createStore<FoldImportFlowState>(() => IDLE);
   // Every refusal is a new state, set once: heard here rather than at each place that sets one.
@@ -296,9 +332,14 @@ export function createFoldImportFlow({
     }
   };
 
-  /** Land `choice` of the held import and commit it. */
-  const pickAndCommit = async (request: FoldImportRequest, import_: Held, choice: readonly number[], mine: number) => {
-    const picked = await ask(import_.where.state, (engine) => engine.importPick(import_.handle, choice));
+  /** Land the order `land` picks of the held import and commit it. */
+  const landAndCommit = async (
+    request: FoldImportRequest,
+    import_: Held,
+    land: (engine: FoldSessionWorker) => Promise<FoldEngineOutcome<FoldImportFingerprinted>>,
+    mine: number
+  ) => {
+    const picked = await ask(import_.where.state, land);
     if (mine !== ticket) {
       if (picked?.status === 'ok') {
         void ask(import_.where.state, (engine) => engine.release([picked.state])).catch(() => {});
@@ -314,6 +355,53 @@ export function createFoldImportFlow({
       return;
     }
     await commitLandedStep(request, import_.where, picked, import_.opened.paper, mine, import_.project);
+  };
+
+  /** Land `choice` of the held import and commit it. */
+  const pickAndCommit = (request: FoldImportRequest, import_: Held, choice: readonly number[], mine: number) =>
+    landAndCommit(request, import_, (engine) => engine.importPick(import_.handle, choice), mine);
+
+  /**
+   * Choose the held import's order in the Layer order dialog (row H10), and
+   * act on its answer. Whether the dialog took the import (it committed,
+   * cancelled, was refused, or a newer request took over); false hands it
+   * to the import's own chooser, with nothing changed.
+   */
+  const chooseInDialog = async (
+    choose: NonNullable<FoldImportFlowOptions['chooseLayerOrder']>,
+    request: FoldImportRequest,
+    import_: Held,
+    choice: readonly number[],
+    mine: number
+  ): Promise<boolean> => {
+    const opening = await ask(import_.where.state, (engine) => engine.importLayerOpening(import_.handle, choice)).catch(
+      () => null
+    );
+    if (mine !== ticket) return true;
+    // The engine can't open this import onto the dialog's faces: its own chooser can.
+    if (opening?.status !== 'ok') return false;
+    store.setState({ phase: 'ordering', request }, true);
+    const answer = await choose({ request, opening });
+    if (mine !== ticket) return true;
+    switch (answer.kind) {
+      case 'fallback':
+        return false;
+      case 'cancelled':
+        letGo();
+        store.setState(IDLE, true);
+        return true;
+      case 'unchanged':
+        // The dialog opened on the default choice and Apply kept it.
+        store.setState({ phase: 'working', request }, true);
+        await pickAndCommit(request, import_, choice, mine);
+        return true;
+      case 'applied': {
+        store.setState({ phase: 'working', request }, true);
+        const { digest, relations } = answer;
+        await landAndCommit(request, import_, (engine) => engine.importPickLayerOrder(import_.handle, digest, relations), mine);
+        return true;
+      }
+    }
   };
 
   /** Picture the orders the chooser shows, one at a time, the newest choice's first. */
@@ -442,6 +530,8 @@ export function createFoldImportFlow({
         await pickAndCommit(request, import_, choice, mine);
         return;
       }
+      if (chooseLayerOrder && (await chooseInDialog(chooseLayerOrder, request, import_, choice, mine))) return;
+      if (mine !== ticket) return;
       for (const component of opened.components) if (component.orders > 1) onChoiceOffered?.(component.orders);
       const snapshot = session.store.getState();
       context = { cursor: snapshot.cursor, state: selectFoldCursorNode(snapshot).state };

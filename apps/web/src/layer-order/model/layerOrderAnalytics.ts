@@ -14,8 +14,8 @@ import type { LayerRefusal } from '../engine/layerOrderEngine';
 import type { LayerPickOrigin } from './layerOrderSentence';
 import type { LayerTally, LayerVerb } from './layerOrderEngineFacts';
 
-/** Where the dialog opened: an Edit figure, an Edit crease-pattern selection, a Diagram step, Pose. */
-export type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
+/** Where the dialog opened: an Edit figure, an Edit crease-pattern selection, a Diagram step, Pose, Fold's Import CP. */
+export type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose' | 'fold_import';
 
 export type LayerOrderOutcome = 'applied' | 'cancelled';
 

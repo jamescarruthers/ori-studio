@@ -172,6 +172,7 @@
     "solvingLong": "Sigue resolviendo: esto puede tardar un rato"
   },
   "layerOrder": {
+    "foldImportBusy": "Orden de capas ya está abierto, así que elige el orden de capas de este patrón de pliegues en el lienzo.",
     "folds3d": "Los pliegues de este modelo ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Vuelve a plegarlo para verlo.",
     "refoldKept": "Las restricciones de capas de {{name}} necesitan atención, así que conserva su imagen.",
     "refoldKeptChosenOrder": "El orden de capas elegido para {{name}} necesita atención, así que conserva su imagen.",

@@ -136,6 +136,7 @@
     "solvingLong": "仍在求解 — 这可能需要一段时间"
   },
   "layerOrder": {
+    "foldImportBusy": "层叠顺序已打开，请在画布上选择此折痕图的层叠顺序。",
     "folds3d": "此模型的折痕现在以 3D 折叠，而层叠顺序适用于平折。请重新折叠后查看。",
     "refoldKept": "{{name}} 的层叠约束需要处理，因此保留其图片。",
     "refoldKeptChosenOrder": "{{name}} 所选的层叠顺序需要处理，因此保留其图片。",
