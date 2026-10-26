@@ -52,9 +52,10 @@ export function openDiagramPatternPicker(stepId: string): void {
 
 /**
  * The way the pattern picker last linked a pattern, this session: what it
- * offers a new link with no linked step before it (D19).
+ * offers a new link with no linked step before it (D19). Folded until the
+ * first link: a diagram's step shows the model as it folds (Zach, 2026-10-26).
  */
-let lastLinkedAs: DiagramShowAs = 'crease-pattern';
+let lastLinkedAs: DiagramShowAs = 'folded';
 
 /**
  * What the picker offers a step to be shown as, until the reader picks

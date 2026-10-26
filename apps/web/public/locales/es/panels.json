@@ -731,6 +731,7 @@
         "page": "En la página",
         "picture": "Imagen"
       },
+      "importFromFile": "Desde archivo (CP, Defox)…",
       "insert": {
         "rotateAfter": "Giro después",
         "stepAfter": "Paso después",
@@ -1053,7 +1054,6 @@
       "capturing": "Capturando…",
       "enlarged": "Ampliado",
       "enlargedFrom": "Ampliado · {{number}}",
-      "fromReferences": "Referencias…",
       "goToEdit": "Ir a Editar",
       "lightingChanged": "Cambió la iluminación",
       "link": "Vincular…",
@@ -1091,9 +1091,7 @@
     },
     "empty": {
       "addStep": "Añadir paso",
-      "fromReferences": "Desde Referencias…",
       "goToEdit": "Ir a Editar",
-      "import": "Importar…",
       "learn": "¿Primera vez con los diagramas?",
       "link": "Vincular un patrón…",
       "message": "Un diagrama es tu secuencia de plegado, paso a paso. Añade un paso, una imagen y una instrucción, o importa patrones de pliegues, imágenes o un proyecto Defox.",
@@ -1232,6 +1230,7 @@
       "layout": "Vista previa de la disposición en Edición",
       "layoutHeading": "Disposición en Edición",
       "menu": "Importar pasos…",
+      "menuButton": "Importar",
       "noCanvas": "No se pudo crear un lienzo de Edición para la importación.",
       "noFiles": "No se encontraron patrones de pliegues, proyectos Defox ni imágenes.",
       "noRegion": "No se encontró ninguna región de papel; el patrón de pliegues se añade igualmente a Edición.",

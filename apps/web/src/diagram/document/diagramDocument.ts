@@ -1775,6 +1775,55 @@ export function insertSteps(
   };
 }
 
+/** An empty step's instruction once it is filled: the author's, if they wrote one, else what filled it came with. */
+export function filledText(step: DiagramStep, incoming: string): string {
+  return step.text.trim() === '' ? incoming : step.text;
+}
+
+/**
+ * Steps made from files, placed by D2's insertion rule as a pull places its
+ * cards: onto an empty anchor step, the first takes its place — the anchor's
+ * id, its instruction if it has one, and its own marks, which stay as an
+ * upload into the step keeps them — and the rest follow it; otherwise (or
+ * when the first brings no picture to fill it with) all go after the
+ * anchor, or at the end with none. The steps they became, in order.
+ */
+export function placeImportedSteps(
+  document: DiagramDocument,
+  steps: readonly DiagramStep[],
+  anchorStepId: string | null
+): { document: DiagramDocument; stepIds: string[] } {
+  const [first, ...rest] = steps;
+  const fill: DiagramPullAnchor | null = anchorStepId === null ? null : { kind: 'fill', stepId: anchorStepId };
+  if (!first || !stepHasPicture(first) || !fill || !anchorTakesCard(document, fill)) {
+    return {
+      document: insertSteps(document, steps, insertionIndex(document, anchorStepId)),
+      stepIds: steps.map((step) => step.id),
+    };
+  }
+  const filled = updateStep(document, fill.stepId, (step) =>
+    startsWhole(
+      step,
+      {
+        ...step,
+        importStatus: first.importStatus,
+        source: first.source,
+        picture: first.picture,
+        ...(step.annotations.length === 0
+          ? { annotations: first.annotations, annotatedPictureKey: first.annotatedPictureKey }
+          : { annotations: [...step.annotations, ...first.annotations] }),
+        text: filledText(step, first.text),
+        revision: step.revision + 1,
+      },
+      document.assets
+    )
+  );
+  return {
+    document: insertSteps(filled, rest, stepIndex(filled, fill.stepId) + 1),
+    stepIds: [fill.stepId, ...rest.map((step) => step.id)],
+  };
+}
+
 export function removeSteps(document: DiagramDocument, stepIds: readonly string[]): DiagramDocument {
   const removing = new Set(stepIds);
   const steps = document.steps.filter((step) => !removing.has(step.id));
@@ -2183,7 +2232,7 @@ export function pullReferencesSteps(
   const leading = sent.slice(0, firstStep);
   const rest = sent.slice(firstStep + 1);
   const words = (step: DiagramStep): string => {
-    if (anchor.kind === 'fill') return step.text.trim() === '' ? xmlText(first.text) : step.text;
+    if (anchor.kind === 'fill') return filledText(step, xmlText(first.text));
     // Replaced: still the old card's words, they become the new card's; edited, they are the reader's.
     const own = sourceSentenceOf(step.source);
     return own !== undefined && step.text === own ? xmlText(first.text) : step.text;

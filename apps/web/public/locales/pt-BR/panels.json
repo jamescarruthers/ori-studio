@@ -731,6 +731,7 @@
         "page": "Na página",
         "picture": "Imagem"
       },
+      "importFromFile": "De arquivo (CP, Defox)…",
       "insert": {
         "rotateAfter": "Giro depois",
         "stepAfter": "Passo depois",
@@ -1053,7 +1054,6 @@
       "capturing": "Capturando…",
       "enlarged": "Ampliado",
       "enlargedFrom": "Ampliado · {{number}}",
-      "fromReferences": "Referências…",
       "goToEdit": "Ir para Editar",
       "lightingChanged": "A iluminação mudou",
       "link": "Vincular…",
@@ -1091,9 +1091,7 @@
     },
     "empty": {
       "addStep": "Adicionar passo",
-      "fromReferences": "De Referências…",
       "goToEdit": "Ir para Editar",
-      "import": "Importar…",
       "learn": "Primeira vez com diagramas?",
       "link": "Vincular um padrão…",
       "message": "Um diagrama mostra sua sequência de dobras, passo a passo. Adicione um passo com imagem e instrução ou importe padrões de vincos, imagens ou um projeto Defox.",
@@ -1232,6 +1230,7 @@
       "layout": "Prévia da disposição na Edição",
       "layoutHeading": "Disposição na Edição",
       "menu": "Importar passos…",
+      "menuButton": "Importar",
       "noCanvas": "Não foi possível criar uma tela de Edição para a importação.",
       "noFiles": "Nenhum padrão de vincos, projeto Defox ou imagem foi encontrado.",
       "noRegion": "Nenhuma região de papel foi encontrada; o padrão de vincos ainda é adicionado à Edição.",

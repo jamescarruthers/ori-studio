@@ -254,9 +254,72 @@ describe('DiagramStepPanel', () => {
       });
       expect(host?.textContent).toContain('No picture yet');
       expect(textButton('Upload Picture…')?.disabled).toBe(false);
+      expect(textButton('From File (CP, Defox)…')?.disabled).toBe(false);
       for (const dead of ['Adjust Pose', 'Export Picture…', 'Remove Picture', 'Refresh Picture']) {
         expect(textButton(dead)).toBeUndefined();
       }
+    });
+
+    describe('an empty step’s pattern picker', () => {
+      const picker = () => host?.querySelector('[role="listbox"][aria-label="Patterns"]') ?? null;
+      const withPattern = () =>
+        useWorkspaceStore.setState({
+          oristudioCpDocument: { handle: 1, document: cpDocument(), geometry: null } as unknown as OristudioCpDocumentState,
+        });
+
+      it('stands open with no Link Pattern… to press first, and nothing to cancel, offering Folded', () => {
+        act(() => {
+          withPattern();
+          state().addDiagramStep();
+        });
+        expect(host?.textContent).toContain('Choose a pattern');
+        // Nothing linked before it this session: the model as it folds.
+        expect(pressed('Show as')).toBe('Folded');
+        expect(textButton('Link Pattern…')).toBeUndefined();
+        expect(textButton('Cancel')).toBeUndefined();
+      });
+
+      it('says where to open a crease pattern when none is open, with no way to show one', () => {
+        act(() => {
+          state().addDiagramStep();
+        });
+        expect(host?.textContent).toContain('Choose a pattern');
+        expect(host?.textContent).toContain('Open a crease pattern in Edit to link one.');
+        expect(host?.querySelector('[aria-label="Show as"]')).toBeNull();
+        expect(picker()).toBeNull();
+      });
+
+      it('goes once the step has a picture, and is not there on a read-only diagram', () => {
+        let stepId = '';
+        act(() => {
+          withPattern();
+          stepId = state().addDiagramStep()!;
+        });
+        expect(host?.textContent).toContain('Choose a pattern');
+        act(() => state().setDiagramStepPicture(stepId, asset));
+        expect(host?.textContent).not.toContain('Choose a pattern');
+        act(() => {
+          state().addDiagramStep();
+          useWorkspaceStore.setState({ diagramReadOnly: true });
+        });
+        expect(host?.textContent).toContain('No picture yet');
+        expect(host?.textContent).not.toContain('Choose a pattern');
+      });
+
+      it('still opens from Relink Pattern… on a linked step, with Cancel', () => {
+        act(() => {
+          withPattern();
+          useWorkspaceStore.setState({
+            diagram: { ...createDiagram({ newId: () => 'diagram-1' }), steps: [cpStep('step-cp', { mode: 'crease-pattern', rotationDeg: 0 })] },
+          });
+          state().selectDiagramStep('step-cp');
+        });
+        expect(host?.textContent).not.toContain('Choose a pattern');
+        act(() => textButton('Relink Pattern…')?.click());
+        expect(host?.textContent).toContain('Choose a pattern');
+        act(() => textButton('Cancel')?.click());
+        expect(host?.textContent).not.toContain('Choose a pattern');
+      });
     });
 
     it('shows the pose only while the step is open in detail, and no verbs: they are Pose’s toolbar’s', () => {
