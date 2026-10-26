@@ -11,7 +11,8 @@ import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import { faceLettersOf } from '../../layer-order/engine/faceIndex';
 import type { LayerOrderSessionOpen } from '../../layer-order/dialog/layerOrderSession';
 import type { LayerOrderSessionStatus } from '../../layer-order/dialog/useLayerOrderSession';
-import { LAYER_ORDER_PANE_FIT_SHARE, PANE_USER_PER_UNIT } from '../../layer-order/panes/layerPaneFigure';
+import { DEFAULT_FIT_SHARE } from '../../cp-workspace/surface/useCpSurface';
+import { PANE_USER_PER_UNIT } from '../../layer-order/panes/layerPaneFigure';
 import { DOUBLE_TAP_MS } from '../../layer-order/panes/layerPaneInput';
 import { NO_FACE_MARKS, type LayerFaceMarks } from '../../layer-order/panes/layerPaneMarks';
 import { zScene } from '../../layer-order/panes/layerPanes.fixtures';
@@ -417,9 +418,9 @@ describe('the Layer order panes', () => {
   });
 
   describe('Fit: each pane fills itself with its own content', () => {
-    /** Fit's zoom readout for content `width` by `height` (crease-pattern units) in the 400 px pane, at 91%. */
+    /** Fit's zoom readout for content `width` by `height` (crease-pattern units) in the 400 px pane, at every pane's 70%. */
     const fitted = (width: number, height: number) =>
-      `${Math.round(Math.min(VIEWPORT.width / width, VIEWPORT.height / height) * (LAYER_ORDER_PANE_FIT_SHARE / PANE_USER_PER_UNIT) * 100)}%`;
+      `${Math.round(Math.min(VIEWPORT.width / width, VIEWPORT.height / height) * (DEFAULT_FIT_SHARE / PANE_USER_PER_UNIT) * 100)}%`;
     const readouts = () => [
       byRole(host, 'button', 'Reset the crease pattern zoom').textContent,
       byRole(host, 'button', 'Reset the folded figure zoom').textContent,

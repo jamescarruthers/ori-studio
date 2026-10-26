@@ -9,7 +9,6 @@ import {
   foldedPaneFrame,
   foldedPaneToUser,
   foldedPivot,
-  LAYER_ORDER_PANE_FIT_SHARE,
   PANE_USER_PER_UNIT,
   paneFacesOf,
   paneTurnDeg,
@@ -227,10 +226,6 @@ describe('Fit: each pane its own content', () => {
       { x: 0, y: 10 },
     ],
   ];
-
-  it('fills a pane’s shorter side 1000 in 1100, about 91%', () => {
-    expect(LAYER_ORDER_PANE_FIT_SHARE).toBeCloseTo(0.909, 3);
-  });
 
   it('the crease pattern: its region’s paper, never the document’s other patterns', () => {
     const region = { paper, auxSegments: [strip.auxSegments[0]!] };

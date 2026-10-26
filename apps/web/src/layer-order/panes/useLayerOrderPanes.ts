@@ -20,12 +20,12 @@
  *   style and policy, turned as the host turns it from the side its picture
  *   shows, with no spread (D18). X-ray draws every layer, the buried ones
  *   too, see-through.
- * - **Fit**: each pane fits its own content at
- *   {@link LAYER_ORDER_PANE_FIT_SHARE}, about 91% of it: the crease pattern
- *   its region's paper, the folded figure the figure itself, from either
- *   side, X-ray or not. So a figure that folds small fills its pane, and the
- *   two readouts each say their own scale (your call, 2026-10-26, over
- *   Round3's one shared sheet). A turn over keeps the figure in view.
+ * - **Fit**: each pane fits its own content as every `PaperPane` does,
+ *   about 70% of it: the crease pattern its region's paper, the folded
+ *   figure the figure itself, from either side, X-ray or not. So a figure
+ *   that folds small is drawn large, and the two readouts each say their
+ *   own scale (your call, 2026-10-26, over Round3's one shared sheet). A
+ *   turn over keeps the figure in view.
  * - **What follows the pointer** (the face pointed at, a row's faces) is
  *   painted apart, on the overlay channel (`pointerPanePaint`): under the
  *   creases on the crease pattern, as every tint there is (D20), over the

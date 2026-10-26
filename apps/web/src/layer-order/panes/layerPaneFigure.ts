@@ -283,12 +283,6 @@ export function patternPaneLines(source: LayerOrderSource, region: LayerOrderReg
 const EDGE_COLOR = 'Black0';
 
 /**
- * How much of a pane its content fills at Fit, across the pane's shorter
- * side: Round3's `fitAll` share, 1000 in 1100, about 91%.
- */
-export const LAYER_ORDER_PANE_FIT_SHARE = 1000 / 1100;
-
-/**
  * What the crease-pattern pane fits, in user space: the paper of the region
  * the fold came from, that one pattern however many the document holds; with
  * none, the creases folded. Never the aux lines, whose document's may run

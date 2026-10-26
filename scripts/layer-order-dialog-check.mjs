@@ -1985,7 +1985,7 @@ function paneCases(theme) {
       const dialog = await openPanesDialog(page, figure.title);
       const facts = await inspectorFacts(page);
       const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
-      // At Fit each pane fills itself with its own content, about 91% (your call, 2026-10-26).
+      // At Fit each pane fills itself with its own content, about 70% (your call, 2026-10-26).
       await fitFills(page, dialog, `[${tag}] ${figure.name}`);
       console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'subjects'))}`);
       await record(shot('front'), await panesShot(page));
@@ -4410,7 +4410,7 @@ function openedRegion(page) {
 
 /**
  * How much of a pane its content fills, in the pane's own pixels, across the
- * side that limits it: Fit fills 1000 / 1100 of it. Fit centres the content,
+ * side that limits it: Fit fills 70% of it. Fit centres the content,
  * so its extent is the pane less twice its margin, read where nothing floats
  * over it: from the top, and from the nearer side, over the rows the zoom bar
  * along the foot leaves clear (a tall figure runs on under the bar). Ink is
@@ -4459,7 +4459,10 @@ async function paneFill(page, dialog, pane) {
   );
 }
 
-/** Fit both panes, then how much each fills; throws unless each fills about 91% (1000 / 1100). */
+/** What Fit fills of a pane: `PaperPane`'s share, as every surface fits (`DEFAULT_FIT_SHARE`). */
+const FIT_FILL = 0.7;
+
+/** Fit both panes, then how much each fills; throws unless each fills about {@link FIT_FILL}. */
 async function fitFills(page, dialog, what) {
   await dialog.getByRole('button', { name: 'Fit both views' }).first().click();
   const fills = { pattern: await paneFill(page, dialog, 'pattern'), folded: await paneFill(page, dialog, 'folded') };
@@ -4468,8 +4471,8 @@ async function fitFills(page, dialog, what) {
   );
   console.log(`  ${what} at Fit: crease pattern ${JSON.stringify(fills.pattern)} at ${readouts[0]}, folded ${JSON.stringify(fills.folded)} at ${readouts[1]}`);
   for (const [pane, { fill }] of Object.entries(fills)) {
-    if (Math.abs(fill - 1000 / 1100) > 0.03 && !process.env.LAYER_ORDER_CHECK_LENIENT) {
-      throw new Error(`${what}: the ${pane} pane fills ${fill} of itself at Fit, not about 0.91`);
+    if (Math.abs(fill - FIT_FILL) > 0.03 && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+      throw new Error(`${what}: the ${pane} pane fills ${fill} of itself at Fit, not about ${FIT_FILL}`);
     }
   }
   return fills;
@@ -4517,7 +4520,7 @@ async function checkRegionDialog(page, record, shot, what) {
  * A document of a hundred patterns (panes-fit), in one theme: each host opens
  * the dialog on the pattern in the middle, and the crease-pattern pane shows
  * that pattern alone, framed on its paper, the folded pane the figure, each
- * filling about 91% at Fit; a face picked on the crease pattern lights the
+ * filling about 70% at Fit; a face picked on the crease pattern lights the
  * same face on the folded figure. Fold with layer order… on the selection
  * (H5); Layer order… on a figure folded from it (H3); a Diagram step linked
  * to it (H7); and Pose on that step (H8).
