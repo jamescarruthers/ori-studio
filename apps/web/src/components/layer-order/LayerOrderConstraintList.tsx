@@ -1,5 +1,5 @@
 import { memo, useId, useMemo, useRef, type MouseEvent, type PointerEvent } from 'react';
-import { Redo2, Trash2, Undo2, X } from 'lucide-react';
+import { Redo2, Trash2, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { shortcutLabelForAction } from '../../keyboard/shortcuts';
 import { listControls, rowGroupsView, type LayerRowGroupView } from '../../layer-order/model/layerOrderSelectors';
@@ -46,20 +46,20 @@ function useHistoryShortcuts(): { undo: string | undefined; redo: string | undef
  * status): one row per subject and verb, "D in front of H, K", each the
  * sentence that made it, read from the side shown.
  *
- * - A row is one button, named by its whole sentence: a press puts its
- *   subject in the builder; pointing at it, focusing it or pressing it lights
- *   its faces on both panes.
- * - Its trash removes the whole row as one undo step; in a row of two or
- *   more, each object has its own ×, shown on hover or focus, and always on
- *   a coarse pointer (D21).
+ * - A row is one button, named by its whole sentence: a press anywhere on it
+ *   puts its subject in the builder; pointing at it, focusing it or pressing
+ *   it lights its faces on both panes.
+ * - Its trash removes the whole row as one undo step. A row has no
+ *   per-object remove (D21; your words after trying it, 2026-10-26: "I don't
+ *   want individual xs in the constraints list if there are multiple
+ *   objects, they can delete the whole constraint if they want").
  * - A row in the clash shown carries the danger dot, and in a row of two or
  *   more the clashing objects are marked on their chips; a saved row that is
  *   not applied is dimmed with the warning dot, and its reason is its title.
  *   A face that no longer exists keeps its chip's place, with no letter.
  * - The heading counts constraints, as Properties does (D11), not rows.
- * - Removing a row, or an object, from the keyboard leaves the focus on a
- *   neighbour: the row after the one trashed (else Undo), or the row whose
- *   object went.
+ * - Trashing a row from the keyboard leaves the focus on the row after it,
+ *   else on Undo.
  *
  * Memoised past a pane hover: pointing at a face changes nothing here.
  */
@@ -164,7 +164,6 @@ function ConstraintRow({
   /** Where the focus goes when the last row is trashed. */
   undo: { readonly current: HTMLButtonElement | null };
 }) {
-  const hitRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
   const { key, sentence, members, mark, reason } = group;
   const multi = members.length > 1;
@@ -177,9 +176,7 @@ function ConstraintRow({
         ? t('dialogs:layerOrder.list.reveal', 'Put {{face}} in the builder', { face: copy.letter(sentence.subject) })
         : undefined;
   const dim = mark === 'not_applied';
-  const remove = (ids: readonly number[]) => {
-    if (removable) dispatch({ type: 'rows_removed', ids });
-  };
+  const removeLabel = t('dialogs:layerOrder.list.remove', 'Remove {{sentence}}', { sentence: copy.clause(sentence) });
 
   const parts = copy.sentenceParts().map((part, index) => {
     switch (part.kind) {
@@ -198,53 +195,21 @@ function ConstraintRow({
       case 'objects':
         return (
           <span key="objects" className={styles.objects}>
-            {members.map((member, i) => {
-              const one = copy.clause({ ...sentence, objects: [member.object] });
-              const label = t('dialogs:layerOrder.list.remove', 'Remove {{sentence}}', { sentence: one });
-              return (
-                <span
-                  key={member.id}
-                  className={styles.object}
-                  data-x={multi ? '' : undefined}
-                  // A press on an object reaches its row, as a press anywhere else on it does.
-                  onClick={() => dispatch({ type: 'row_clicked', key })}
-                >
-                  <LayerOrderFaceChip
-                    letter={copy.letter(member.object)}
-                    gone={member.object === null}
-                    tone={multi && member.clash ? 'danger' : 'plain'}
-                    dim={dim}
-                  />
-                  {multi && (
-                    <span className={styles.objectSlot}>
-                      <span className={styles.separator} aria-hidden="true">
-                        {i < members.length - 1 ? t('dialogs:layerOrder.list.separator', ',') : ''}
-                      </span>
-                      <button
-                        type="button"
-                        className={styles.objectRemove}
-                        aria-label={label}
-                        title={label}
-                        aria-disabled={!removable || undefined}
-                        onFocus={enter}
-                        onBlur={onLeave}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!removable) return;
-                          // The row stays, one object shorter: its button takes the focus.
-                          handFocus(event, hitRef.current);
-                          remove([member.id]);
-                        }}
-                      >
-                        <span className={styles.objectTab} aria-hidden="true">
-                          <X size={10} />
-                        </span>
-                      </button>
-                    </span>
-                  )}
-                </span>
-              );
-            })}
+            {members.map((member, i) => (
+              <span key={member.id} className={styles.object}>
+                <LayerOrderFaceChip
+                  letter={copy.letter(member.object)}
+                  gone={member.object === null}
+                  tone={multi && member.clash ? 'danger' : 'plain'}
+                  dim={dim}
+                />
+                {i < members.length - 1 && (
+                  <span className={styles.separator} aria-hidden="true">
+                    {t('dialogs:layerOrder.list.separator', ',')}
+                  </span>
+                )}
+              </span>
+            ))}
           </span>
         );
       case 'text':
@@ -275,7 +240,6 @@ function ConstraintRow({
     >
       <div className={styles.line}>
         <button
-          ref={hitRef}
           type="button"
           className={styles.hit}
           data-row-button=""
@@ -291,8 +255,8 @@ function ConstraintRow({
       </div>
       <IconButton
         size="sm"
-        aria-label={t('dialogs:layerOrder.list.remove', 'Remove {{sentence}}', { sentence: copy.clause(sentence) })}
-        title={t('dialogs:layerOrder.list.remove', 'Remove {{sentence}}', { sentence: copy.clause(sentence) })}
+        aria-label={removeLabel}
+        title={removeLabel}
         aria-disabled={!removable || undefined}
         onFocus={enter}
         onBlur={onLeave}
@@ -302,7 +266,7 @@ function ConstraintRow({
           const row = event.currentTarget.closest('li');
           const next = row?.nextElementSibling?.querySelector('[data-row-button]');
           handFocus(event, next ?? undo.current);
-          remove(members.map((member) => member.id));
+          dispatch({ type: 'row_removed', key });
         }}
       >
         <Trash2 size={14} />

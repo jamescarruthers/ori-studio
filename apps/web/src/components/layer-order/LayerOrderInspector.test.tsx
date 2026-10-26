@@ -394,29 +394,32 @@ describe('the constraints list', () => {
     expect(button('Clear all').getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('lists one row per subject and verb, with a × per object and a trash for the row (A5, D21)', () => {
+  it('lists one row per subject and verb, with a trash for the whole row and no × per object (A5, D21)', () => {
     const { state } = compound();
-    const [first, second] = state.rows.committed;
     draw(state);
     expect(byRole(host, 'region', 'Constraints · 2')).toBeDefined();
     const row = button('C in front of A, D');
     expect(row.title).toBe('Put C in the builder');
+    // Your words after trying it (2026-10-26): no individual × in a row of several objects.
+    expect(queryByRole(host, 'button', 'Remove C in front of A')).toBeNull();
+    expect(queryByRole(host, 'button', 'Remove C in front of D')).toBeNull();
+    const item = row.closest('li')!;
+    expect(allByRole(item, 'button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'C in front of A, D',
+      'Remove C in front of A, D',
+    ]);
+    // The objects read with a comma right after each but the last.
+    expect(item.textContent).toBe('Cin front ofA,D');
     click(row);
-    click(button('Remove C in front of A'));
     click(button('Remove C in front of A, D'));
     expect(sent).toEqual([
       { type: 'row_clicked', key: expect.any(String) },
-      { type: 'rows_removed', ids: [first!.id] },
-      { type: 'rows_removed', ids: [first!.id, second!.id] },
+      { type: 'row_removed', key: (sent[0] as { key: string }).key },
     ]);
   });
 
-  it('keeps the focus in the list when an object or a row goes from the keyboard', () => {
+  it('keeps the focus in the list when a row goes from the keyboard', () => {
     draw(compound().state);
-    // An object's ×: its row stays, and its button takes the focus.
-    act(() => button('Remove C in front of A').focus());
-    click(button('Remove C in front of A'));
-    expect(document.activeElement).toBe(button('C in front of A, D'));
     // The last row's trash: Undo takes the focus.
     act(() => button('Remove C in front of A, D').focus());
     click(button('Remove C in front of A, D'));
