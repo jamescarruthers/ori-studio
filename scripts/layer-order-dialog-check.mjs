@@ -2430,6 +2430,103 @@ function editRefoldCases(theme) {
     console.log(`[${tag}] reloaded: still flagged ${JSON.stringify(back.attention)}, no worker, no Fold wasm, no dialog code`);
     await record(`edit-refold-${tag}-reopened-attention`, reopenedShots);
 
+    // A stale figure with no record: Layer order… opens on the order a plain Refold draws, so an
+    // untouched Apply is that Refold — the same picture, and no record.
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await splitCornerFace(page);
+    await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
+    const plainDialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await plainDialog.getByRole('status').filter({ hasText: 'Apply also refolds' }).waitFor({ state: 'visible', timeout: 60000 });
+    const plainAsked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { record: request.record !== null, shown: request.shown != null, applyRefolds: request.applyRefolds === true };
+    });
+    if (plainAsked.record || !plainAsked.shown || !plainAsked.applyRefolds) throw new Error(`the stale opening is not the plain one: ${JSON.stringify(plainAsked)}`);
+    await plainDialog.getByRole('button', { name: 'Apply' }).click();
+    await plainDialog.waitFor({ state: 'detached', timeout: 60000 });
+    await page.waitForFunction(
+      () => {
+        const state = window.__treemakerWorkspaceStore.getState();
+        return Object.keys(state.oristudioCpFoldRuns).length === 0 && state.oristudioCpFoldedFigures.every((f) => f.status !== 'loading');
+      },
+      null,
+      { timeout: 120000 }
+    );
+    const untouched = await recordState(page);
+    const untouchedLabel = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.at(-1)?.label);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await pressFigureVerb(page, 'Refold');
+    const plainRefold = await recordState(page);
+    console.log(
+      `[${tag}] stale, no record, untouched Apply: "${untouchedLabel}", record ${JSON.stringify(untouched.constraints)}, stale ${untouched.stale}; ` +
+        `same picture as a plain Refold: ${untouched.picture === plainRefold.picture}`
+    );
+    if (untouched.constraints !== null || untouched.stale || untouchedLabel !== 'Refold folded model' || untouched.picture !== plainRefold.picture) {
+      throw new Error(`an untouched Apply is not the plain Refold: ${JSON.stringify({ untouched, untouchedLabel })}`);
+    }
+
+    // An older build folds a constrained figure again (its snapshot loses `shown_order`): the record detaches,
+    // flagged "Not applied" with Review…, from saved data alone; Review… and an Apply take it up again.
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const detachedId = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await chosenOrder(page, detachedId);
+    if (!(await applyChosenOrder(page, detachedId))) throw new Error('Apply wrote nothing');
+    const olderBuilds = JSON.parse(await savedProject(page));
+    delete olderBuilds.workspace.creasePattern.viewState.foldedFigures[0].snapshot.shown_order;
+    const watchDetached = watchLayerOrderLoads(page);
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    await openTextInEdit(page, JSON.stringify(olderBuilds), 'kabuto-older.osf', theme);
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+    });
+    await zoomOutToFigure(page);
+    const detachedShots = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (watchDetached.loaded().length > 0) throw new Error(`the detached figure loaded ${watchDetached.loaded().join(', ')}`);
+    watchDetached.stop();
+    const detachedState = await page.evaluate(() => {
+      const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0];
+      return { own: figure.layerOrder?.kind ?? null, detached: figure.detachedLayerOrder?.record.constraints.length ?? null };
+    });
+    const detachedSheet = page.locator('[data-property-sheet]');
+    const detachedSubtitle = await detachedSheet.locator('[data-property-sheet-subtitle]').innerText();
+    const chip = await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Not applied' }).innerText();
+    console.log(`[${tag}] detached by an older build: ${JSON.stringify(detachedState)}; Properties "${detachedSubtitle}"; chip "${chip}"; nothing loaded`);
+    if (detachedState.own !== null || detachedState.detached === null) throw new Error(`the record is not shown detached: ${JSON.stringify(detachedState)}`);
+    await record(`edit-refold-${tag}-detached`, detachedShots);
+
+    await detachedSheet.getByRole('button', { name: 'Review…' }).click();
+    const detachedDialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await detachedDialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+    const detachedAsked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { review: request.review === true, attention: request.record?.attention ?? null };
+    });
+    if (!detachedAsked.review || detachedAsked.attention?.reason !== 'detached') {
+      throw new Error(`Review… did not open on the detached record: ${JSON.stringify(detachedAsked)}`);
+    }
+    await page.waitForTimeout(500);
+    await record(`edit-refold-${tag}-detached-dialog`, await dialogShot(page));
+    // Untouched, the Apply still writes: it takes the record up.
+    await detachedDialog.getByRole('button', { name: 'Apply' }).click();
+    await detachedDialog.waitFor({ state: 'detached', timeout: 60000 });
+    await page.waitForFunction(
+      () => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.layerOrder?.kind === 'record',
+      null,
+      { timeout: 60000 }
+    );
+    const takenUp = JSON.parse(await savedProject(page)).workspace.creasePattern.extensions['oristudio.foldedFigureLayerOrders'];
+    console.log(`[${tag}] Review… and an untouched Apply took it up: the bag holds ${Object.keys(takenUp.figures ?? {}).length} record, ${takenUp.detached?.length ?? 0} detached`);
+    if (!takenUp.figures || takenUp.detached) throw new Error(`the save kept the detached entry: ${JSON.stringify(takenUp)}`);
+    await record(`edit-refold-${tag}-detached-taken`, await figureShots(page));
+
     // A book fold whose crease gains a fold angle: Refold shows it in 3D, its record kept and waiting (D13).
     const book = [
       '1 -200 -200 0 -200',
