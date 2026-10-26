@@ -15,7 +15,6 @@ import {
   SPOTS,
   SPOTS_TWO_OVER_ZERO,
   carried,
-  changedSpots,
   commits,
   dispatch,
   effectsOf,
@@ -23,11 +22,13 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   picked,
   play,
   position,
   rowKey,
   sidesOf,
+  steps,
   trashOf,
   withOneConstraint,
   type Played,
@@ -48,13 +49,7 @@ function enginesQuiet(played: Played) {
 }
 
 /** A step answered as moving the order on screen to `spots`. */
-function moved(played: Played, spots = SPOTS_TWO_OVER_ZERO, at = position(2, 9)): Played {
-  return play(played.state, {
-    type: 'stepped',
-    request: lastOf(played.effects, 'step').request,
-    facts: { verdict: 'moved', changed: changedSpots([1]), position: at, stacks: sidesOf(spots) },
-  });
-}
+const moved = (played: Played, spots = SPOTS_TWO_OVER_ZERO, at = position(2, 9)): Played => steps(played, spots, at);
 
 // ---------------------------------------------------------------------------
 
@@ -255,41 +250,74 @@ describe('changes to the list', () => {
 
 // ---------------------------------------------------------------------------
 
-describe('solution steps', () => {
-  it('a step is one step: undo steps back by what it stepped by, and redo steps again', () => {
-    const start = opened().state;
-    const stepped = moved(play(start, { type: 'step', direction: 'next' }));
-    const entry = { kind: 'step', direction: 'next', by: { picture: 'front' } };
-    expect(stepped.state.history.past).toEqual([entry]);
+describe('solution steps: undo and redo put the exact order back (#539’s review)', () => {
+  const OPENING = orderOf(SPOTS);
+  const STEPPED = orderOf(SPOTS_TWO_OVER_ZERO);
 
-    // Turned over: no step. Undo still steps by the front's picture, then reads the position by the back's.
+  it('a step is one step: undo puts back the order it left, redo the one it landed on, and the count goes on', () => {
+    const stepped = moved(play(opened().state, { type: 'step', direction: 'next' }));
+    expect(stepped.state.shownOrder).toEqual(STEPPED);
+    expect(stepped.state.history.past).toEqual([{ kind: 'step', order: OPENING }]);
+
+    // Turned over: no step. Undo puts the very order back, with the list as it is, no relative step.
     const back = play(stepped.state, { type: 'side_set', side: 'back' });
     expect(back.state.history).toBe(stepped.state.history);
     const undo = dispatch(back.state, { type: 'undo' });
-    expect(lastOf(undo.effects, 'step')).toMatchObject({ direction: 'previous', by: { picture: 'front' } });
-    // It waits for the step: nothing else undoes or redoes meanwhile.
+    expect(lastOf(undo.effects, 'commit')).toMatchObject({ constraints: [], token: null, order: OPENING });
+    expect(effectsOf(undo.effects, 'step')).toEqual([]);
+    // It waits for the engine: nothing else undoes or redoes meanwhile.
     expect(undo.state.history).toBe(back.state.history);
     expect(listControls(undo.state)).toMatchObject({ undo: false, redo: false });
     expect(dispatch(undo.state, { type: 'undo' }).effects).toEqual([]);
-    const undone = moved(undo, SPOTS, position(1, 9));
+    const undone = commits(undo, OPEN_PAIRS, SPOTS);
     expect(undone.state.shown).toEqual(sidesOf(SPOTS));
-    expect(undone.state.history).toEqual({ past: [], future: [entry] });
+    expect(undone.state.shownOrder).toEqual(OPENING);
+    expect(undone.state.history).toEqual({ past: [], future: [{ kind: 'step', order: STEPPED }] });
+    // The list did not change: the count and its cursor go on, and the position is read again for the side shown.
+    expect(undone.state.solutions.generation).toBe(stepped.state.solutions.generation);
+    expect(effectsOf(undone.effects, 'solutions_restart')).toEqual([]);
     expect(lastOf(undone.effects, 'solutions_position')).toMatchObject({ by: { picture: 'back' } });
     expect(undone.state.flash).not.toBeNull();
 
     const redo = dispatch(undone.state, { type: 'redo' });
-    expect(lastOf(redo.effects, 'step')).toMatchObject({ direction: 'next', by: { picture: 'front' } });
-    expect(moved(redo).state.history).toEqual({ past: [entry], future: [] });
+    expect(lastOf(redo.effects, 'commit')).toMatchObject({ constraints: [], order: STEPPED });
+    const redone = commits(redo, OPEN_PAIRS, SPOTS_TWO_OVER_ZERO);
+    expect(redone.state.shownOrder).toEqual(STEPPED);
+    expect(redone.state.history).toEqual({ past: [{ kind: 'step', order: OPENING }], future: [] });
   });
 
-  it('with X-ray on, a step goes by layer order, and so does its undo', () => {
-    const start = opened(openFactsOf(), { xray: true }).state;
-    const stepped = moved(play(start, { type: 'step', direction: 'previous' }));
-    const undo = dispatch(stepped.state, { type: 'undo' });
-    expect(lastOf(undo.effects, 'step')).toMatchObject({ direction: 'next', by: 'layer_order' });
+  it('› then Add then ⌘Z ×4 puts back each order exactly, to the opening, which Apply calls unchanged (D16)', () => {
+    const stepped = moved(play(opened().state, { type: 'step', direction: 'next' }));
+    const added = commits(play(fits(picked(stepped.state, 2, 3)).state, { type: 'add' }), Uint32Array.of(0, 2, 4, 5), SPOTS);
+    expect(added.state.shownOrder).toEqual(OPENING);
+    // The Add, with the order the step left; then the two picks, with no engine call.
+    const undoAdd = dispatch(added.state, { type: 'undo' });
+    expect(lastOf(undoAdd.effects, 'commit')).toMatchObject({ constraints: [], order: STEPPED });
+    const picks = play(commits(undoAdd, OPEN_PAIRS, SPOTS_TWO_OVER_ZERO).state, { type: 'undo' }, { type: 'undo' });
+    enginesQuiet(picks);
+    expect(picks.state.history.past).toEqual([{ kind: 'step', order: OPENING }]);
+    // The step: the opening order, never `end`, never another picture.
+    const undoStep = dispatch(picks.state, { type: 'undo' });
+    expect(lastOf(undoStep.effects, 'commit')).toMatchObject({ constraints: [], order: OPENING });
+    const opening = commits(undoStep, OPEN_PAIRS, SPOTS);
+    expect(opening.state.history.past).toEqual([]);
+    expect(opening.state.shown).toEqual(sidesOf(SPOTS));
+    expect(lastOf(dispatch(opening.state, { type: 'apply', at: 2_000 }).effects, 'apply').result).toEqual({ kind: 'no_change' });
   });
 
-  it('a step that ends or runs out moves nothing, the history included', () => {
+  it('turning over or X-ray while a step runs keeps it running: its answer lands, and the position is read again', () => {
+    const stepping = play(opened().state, { type: 'step', direction: 'next' });
+    for (const view of [{ type: 'side_set', side: 'back' }, { type: 'xray_set', on: true }] as const) {
+      const turned = play(stepping.state, view);
+      expect(turned.state.solutions.step.kind).toBe('pending');
+      const landed = moved({ state: turned.state, effects: stepping.effects });
+      expect(landed.state.shown).toEqual(sidesOf(SPOTS_TWO_OVER_ZERO));
+      expect(landed.state.history.past).toEqual([{ kind: 'step', order: OPENING }]);
+      expect(lastOf(landed.effects, 'solutions_position').by).toEqual(view.type === 'side_set' ? { picture: 'back' } : 'layer_order');
+    }
+  });
+
+  it('a step that ends or runs out moves nothing; an undo that runs out leaves the history, and Keep trying asks for the same order', () => {
     const start = opened().state;
     const stepping = play(start, { type: 'step', direction: 'next' });
     for (const verdict of ['end', 'timed_out'] as const) {
@@ -298,9 +326,10 @@ describe('solution steps', () => {
     }
     const stepped = moved(stepping);
     const undo = play(stepped.state, { type: 'undo' });
-    const out = play(undo.state, { type: 'stepped', request: lastOf(undo.effects, 'step').request, facts: { verdict: 'timed_out' } });
+    const out = play(undo.state, { type: 'committed', request: lastOf(undo.effects, 'commit').request, facts: { verdict: 'timed_out' } });
     expect(out.state.history).toBe(stepped.state.history);
-    expect(listControls(out.state).undo).toBe(true);
+    expect(hintLine(out.state)?.action).toBe('keep_trying');
+    expect(lastOf(dispatch(out.state, { type: 'keep_trying' }).effects, 'commit')).toMatchObject({ order: OPENING });
   });
 });
 

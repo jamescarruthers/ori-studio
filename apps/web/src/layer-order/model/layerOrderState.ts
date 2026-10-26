@@ -23,6 +23,7 @@ import type {
   LayerFace,
   LayerOpenedOn,
   LayerOpenFacts,
+  LayerOrderBits,
   LayerOrderLimits,
   LayerPosition,
   LayerPreviewFacts,
@@ -171,6 +172,12 @@ export interface LayerCommitAsk {
   readonly constraints: readonly LayerConstraint[];
   /** For Add: the preview's token, when it is the session's last preview, so it is adopted with no search; else null, a search. */
   readonly token: number | null;
+  /**
+   * For undo and redo: the order to put back exactly (`show`), no search;
+   * null for a new change, which re-solves for the fitting order closest to
+   * the one on screen.
+   */
+  readonly order: LayerOrderBits | null;
   readonly limits: LayerOrderLimits;
   /** The rows once it lands. */
   readonly rows: LayerRows;
@@ -183,8 +190,8 @@ export interface LayerCommitAsk {
    * is still on screen: an edit since is newer, and stays.
    */
   readonly sentence: LayerSentence;
-  /** For undo and redo: the sentence the entry brings back, with its block as reported. */
-  readonly restore: LayerSentenceEntry | null;
+  /** For undo and redo of a change to the list: the sentence and the restore's settling the entry brings back. */
+  readonly restore: (LayerSentenceEntry & { readonly settle: LayerSettle }) | null;
   /** The row each constraint of the list came from, by id. */
   readonly listRows: readonly number[];
 }
@@ -201,24 +208,31 @@ export interface LayerSentenceEntry {
 /**
  * One undo step: every inspector action is one (plan, "The inspector's
  * behaviour"). In the past it is what undo goes back to; in the future, what
- * redo goes forward to. View toggles (Front/Back, X-ray, Undecided) and the
- * pointer are no step: they change what is seen, never what Apply writes.
+ * redo goes forward to, as it was when undone. View toggles (Front/Back,
+ * X-ray, Undecided) and the pointer are no step: they change what is seen,
+ * never what Apply writes.
+ *
+ * An entry that changed the order on screen holds the order on its side of
+ * the change, packed (`order`), and undo and redo put that order back
+ * exactly, with no search (#539's review: stepping back relatively stuck or
+ * landed on another picture). It is null only when the engine never said.
  */
 export type LayerUndoEntry =
   /** A sentence edit (a pick, a ×, the verb, Clear, a row click): the sentence on the other side of it. No engine call. */
   | ({ readonly kind: 'sentence' } & LayerSentenceEntry)
   /**
-   * A change to the list (Add, a row's trash, Clear all): the rows and the
-   * sentence on the other side of it. A different committed list is committed
-   * again, for the fitting order closest to the one on screen.
+   * A change to the list (Add, a row's trash, Clear all, a saved row's
+   * removal while the restore settles): the rows, the order on screen, the
+   * restore's settling and the sentence on the other side of it.
    */
-  | ({ readonly kind: 'list'; readonly rows: LayerRows } & LayerSentenceEntry)
-  /**
-   * A solution step (‹ ›), which only moved the order on screen. Undo steps
-   * the other way by what it stepped by, back to the picture it left (with
-   * X-ray, the very layer order); redo takes the step again.
-   */
-  | { readonly kind: 'step'; readonly direction: LayerStepDirection; readonly by: LayerStepBy };
+  | ({
+      readonly kind: 'list';
+      readonly rows: LayerRows;
+      readonly order: LayerOrderBits | null;
+      readonly settle: LayerSettle;
+    } & LayerSentenceEntry)
+  /** A solution step (‹ ›), which only moved the order on screen: the order on the other side of it. */
+  | { readonly kind: 'step'; readonly order: LayerOrderBits | null };
 
 export type LayerCommitState =
   | { readonly kind: 'idle' }
@@ -258,7 +272,7 @@ export type LayerStepState =
       readonly request: number;
       readonly direction: LayerStepDirection;
       readonly by: LayerStepBy;
-      /** How the history moves once it moves the order: a step of the user's is an entry; an undo or redo of one moves through it. */
+      /** How the history moves once it moves the order: an entry holding the order before (an undo or redo of it is an exact `show`). */
       readonly move: LayerHistoryMove<LayerUndoEntry>;
       readonly at: number;
     }
@@ -331,6 +345,8 @@ export interface LayerOrderDialogState {
   readonly open: LayerOpenIndex;
   /** The order on screen's stacks, top first, per side. */
   readonly shown: LayerSidesStacks | null;
+  /** The order on screen, packed, as the engine last said it: what an undo entry holds. */
+  readonly shownOrder: LayerOrderBits | null;
 
   readonly rows: LayerRows;
   readonly history: LayerHistory<LayerUndoEntry>;
@@ -423,12 +439,19 @@ export type LayerOrderEffect =
       readonly constraints: readonly LayerConstraint[];
       readonly limits: LayerOrderLimits;
     }
-  /** Make `constraints` the committed list (`layer_commit`, or `layer_commit_preview` with a token): answer `committed`. */
+  /**
+   * Make `constraints` the committed list (`layer_commit`, or
+   * `layer_commit_preview` with a token), and read the order it landed on
+   * (`layer_order`): answer `committed`. With an `order` (undo, redo), put
+   * that order back exactly instead (`layer_show`), or, should that be
+   * refused, commit the list as a commit does.
+   */
   | {
       readonly type: 'commit';
       readonly request: number;
       readonly constraints: readonly LayerConstraint[];
       readonly token: number | null;
+      readonly order: LayerOrderBits | null;
       readonly limits: LayerOrderLimits;
     }
   /**

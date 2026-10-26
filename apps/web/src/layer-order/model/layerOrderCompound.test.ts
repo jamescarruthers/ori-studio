@@ -22,6 +22,7 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   play,
   position,
   rowKey,
@@ -381,7 +382,13 @@ describe('a clash on a compound sentence', () => {
       const moved = play(stepping.state, {
         type: 'stepped',
         request: lastOf(stepping.effects, 'step').request,
-        facts: { verdict: 'moved', changed: changedSpots([0]), position: position(2, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+        facts: {
+          verdict: 'moved',
+          changed: changedSpots([0]),
+          position: position(2, 9),
+          stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+          order: orderOf(SPOTS_TWO_OVER_ZERO),
+        },
       });
       expect(chosenPreview(moved.state)).toEqual(chosenPreview(blocked().state));
       expect(effectsOf(moved.effects, 'preview')).toEqual([]);
@@ -395,7 +402,7 @@ describe('a clash on a compound sentence', () => {
       const moved = play(stepping.state, {
         type: 'stepped',
         request: lastOf(stepping.effects, 'step').request,
-        facts: { verdict: 'moved', changed: changedSpots([0]), position: position(2, 9), stacks: sidesOf(SPOTS) },
+        facts: { verdict: 'moved', changed: changedSpots([0]), position: position(2, 9), stacks: sidesOf(SPOTS), order: orderOf(SPOTS) },
       });
       expect(effectsOf(moved.effects, 'preview')).toHaveLength(1);
     });
@@ -594,6 +601,7 @@ describe('Add by a token the session no longer holds', () => {
         changed: changedSpots([1]),
         position: { index: 2, total: { n: 3, exact: true } },
         stacks: sidesOf(SPOTS),
+        order: orderOf(SPOTS),
       },
     });
     // The old preview is gone with the order it was for; the sentence is checked again against the new one.
@@ -922,6 +930,35 @@ describe('the list: one row per subject and verb', () => {
       const removed = play(state, { type: 'row_removed', key: row!.key });
       expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[4, 5, -1]]]);
       expect(commits(removed).state.settle).toEqual({ kind: 'settled' });
+    });
+
+    it('a clash inside one grouped row: its trash takes both, as one undo step that brings them back with the clash (#539’s review)', () => {
+      const facts = openFactsOf({
+        restore: {
+          outcome: { kind: 'clash', constraints: [0, 1] },
+          carried: [
+            carried({ index: 0, status: { status: 'clashing' }, subject: 2, object: 0, sign: 1, constraint: [2, 0, 1] }),
+            carried({ index: 1, status: { status: 'clashing' }, subject: 2, object: 3, sign: -1, constraint: [2, 3, -1] }),
+            carried({ index: 2, status: { status: 'intact' }, subject: 4, object: 5, sign: -1, constraint: [4, 5, -1] }),
+          ],
+        },
+      });
+      const { state } = opened(facts, { hasRecord: true });
+      const rows = rowGroupsView(state);
+      expect(rows.map((r) => r.members.length)).toEqual([2, 1]);
+      const trashed = play(state, { type: 'row_removed', key: rows[0]!.key });
+      expect(trashed.state.rows.carried.map((r) => r.facts.index)).toEqual([2]);
+      expect(trashed.state.history.past.map((entry) => entry.kind)).toEqual(['list']);
+      expect(lastOf(trashed.effects, 'commit').constraints).toEqual([[4, 5, -1]]);
+      const settled = commits(trashed, Uint32Array.of(0, 2, 2, 3));
+      expect(settled.state.settle).toEqual({ kind: 'settled' });
+      expect(listControls(settled.state).undo).toBe(true);
+      // Undo: the two clashing rows are back, unsettled, and Apply waits on them again.
+      const undone = commits(play(settled.state, { type: 'undo' }), OPEN_PAIRS);
+      expect(undone.state.rows.carried.map((r) => r.facts.index)).toEqual([0, 1, 2]);
+      expect(undone.state.rows.committed).toEqual([]);
+      expect(undone.state.settle).toMatchObject({ kind: 'clash' });
+      expect(rowGroupsView(undone.state)[0]).toMatchObject({ mark: 'clash', members: [{ clash: true }, { clash: true }] });
     });
 
     it('a row whose own constraints are the whole clash says they can’t all fit together, naming them', () => {

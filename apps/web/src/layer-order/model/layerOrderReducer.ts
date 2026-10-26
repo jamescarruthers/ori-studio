@@ -48,10 +48,12 @@ import {
 import {
   LAYER_ORDER_LIMITS,
   type LayerChangedSpots,
+  type LayerCommitFacts,
   type LayerConstraint,
   type LayerExplainFacts,
   type LayerFace,
   type LayerOpenFacts,
+  type LayerOrderBits,
   type LayerOrderLimits,
   type LayerPreviewFacts,
   type LayerStacks,
@@ -101,7 +103,6 @@ import type {
   LayerRows,
   LayerSentenceEntry,
   LayerSettle,
-  LayerStepDirection,
   LayerUndoEntry,
 } from './layerOrderState';
 
@@ -147,6 +148,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     openedLimits: null,
     open: openIndexOf(new Uint32Array()),
     shown: null,
+    shownOrder: null,
     rows: NO_ROWS,
     history: emptyHistory(),
     commit: { kind: 'idle' },
@@ -448,9 +450,16 @@ function sentenceEntryOf(state: LayerOrderDialogState): LayerSentenceEntry {
   return { sentence: state.sentence, blocked: state.blocked };
 }
 
-/** The list and the sentence on screen, as an entry holds them. */
-function listEntryOf(state: LayerOrderDialogState): LayerUndoEntry {
-  return { kind: 'list', rows: state.rows, ...sentenceEntryOf(state) };
+/** The list, the order on screen, the restore's settling and the sentence, as an entry holds them. */
+function listEntryOf(state: LayerOrderDialogState): Extract<LayerUndoEntry, { kind: 'list' }> {
+  // A clash comes back to be explained again, if at all, not mid-explain.
+  const settle: LayerSettle = state.settle.kind === 'clash' ? { ...state.settle, explain: null } : state.settle;
+  return { kind: 'list', rows: state.rows, order: state.shownOrder, settle, ...sentenceEntryOf(state) };
+}
+
+/** Two orders the engine said, packed, the same. */
+function sameOrder(a: LayerOrderBits | null, b: LayerOrderBits | null): boolean {
+  return a === b || (a !== null && b !== null && a.length === b.length && a.every((byte, i) => byte === b[i]));
 }
 
 /**
@@ -466,10 +475,12 @@ function edited(before: LayerOrderDialogState, after: LayerOrderDialogState): La
 
 /**
  * Any change but the sentence's lets go of a commit that ran out: the user
- * has moved on, and Keep trying no longer applies (`landed` relies on it).
+ * has moved on, and Keep trying no longer applies (`landed` relies on it). A
+ * restore's re-check that ran out stays: it moves no history, and the rows
+ * still wait on it (D10).
  */
 function movedOn(state: LayerOrderDialogState): LayerOrderDialogState {
-  return state.commit.kind === 'timed_out' ? { ...state, commit: { kind: 'idle' } } : state;
+  return state.commit.kind === 'timed_out' && state.commit.via !== 'settle' ? { ...state, commit: { kind: 'idle' } } : state;
 }
 
 /**
@@ -486,11 +497,12 @@ function restoredSentence(state: LayerOrderDialogState, entry: LayerSentenceEntr
   return { ...restored, blocked: same ? state.blocked : entry.blocked };
 }
 
-function opposite(direction: LayerStepDirection): LayerStepDirection {
-  return direction === 'next' ? 'previous' : 'next';
-}
-
-/** The side or X-ray changed: the stepper steps by something else now (D5), so its position is read again. */
+/**
+ * The side or X-ray changed: the stepper steps by something else now (D5), so
+ * its position is read again. A step in flight stays in flight: the engine
+ * moves the order whatever the view, and its answer reads the position again
+ * when it stepped by something else (`stepped`).
+ */
 function repositioned(
   before: LayerOrderDialogState,
   next: LayerOrderDialogState,
@@ -499,7 +511,11 @@ function repositioned(
   const by = currentStepBy(next);
   if (stepByKey(by) === stepByKey(currentStepBy(before)) || next.phase.kind !== 'open') return next;
   effects.push({ type: 'solutions_position', generation: next.solutions.generation, by });
-  return { ...next, solutions: { ...next.solutions, position: null, positionBy: null, step: { kind: 'idle' } } };
+  const { step } = next.solutions;
+  return {
+    ...next,
+    solutions: { ...next.solutions, position: null, positionBy: null, step: step.kind === 'pending' ? step : { kind: 'idle' } },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -567,6 +583,7 @@ function opened(
     openedLimits: limits,
     open,
     shown: facts.stacks,
+    shownOrder: facts.order,
     rows: { committed, carried },
     history: emptyHistory(),
     commit: { kind: 'idle' },
@@ -779,6 +796,7 @@ function ask(state: LayerOrderDialogState, commitAsk: LayerCommitAsk, effects: L
     request: id,
     constraints: commitAsk.constraints,
     token: commitAsk.token,
+    order: commitAsk.order,
     limits: commitAsk.limits,
   });
   // A commit drops the preview the session holds, whatever it answers.
@@ -826,6 +844,7 @@ function add(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOr
       via: 'add',
       constraints: committedConstraints(rows),
       token: held && entry.kind === 'fits' ? entry.token : null,
+      order: null,
       limits,
       rows,
       ...newEntry(state, listEntryOf(state)),
@@ -868,6 +887,10 @@ function committed(
   const open = openIndexOf(facts.openPairs);
   // The sentence the commit was asked with is still on screen: an edit since is newer, and stays.
   const untouched = sameSentence(commit.sentence, state.sentence);
+  const history = landed(state.history, commit.at, commit.move);
+  if ((commit.via === 'undo' || commit.via === 'redo') && sameCommitted(commit.rows.committed, state.rows.committed)) {
+    return orderPutBack(state, commit, facts, history, untouched, effects);
+  }
   let sentence = state.sentence;
   if (commit.via === 'add' && untouched) {
     // Round3 `add`: the whole sentence clears; the flash is what remains of it.
@@ -883,15 +906,17 @@ function committed(
       ...state,
       open,
       shown: facts.stacks,
+      shownOrder: facts.order,
       commit: { kind: 'idle' },
-      settle: commit.via === 'settle' ? { kind: 'settled' } : state.settle,
+      // Undo and redo bring back the restore's settling on the other side of the entry (D10).
+      settle: commit.via === 'settle' ? { kind: 'settled' } : (commit.restore?.settle ?? state.settle),
       sentence,
       pointedVerb: commit.via === 'add' ? null : state.pointedVerb,
       ...NO_PREVIEWS,
       solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     },
     commit.rows,
-    landed(state.history, commit.at, commit.move)
+    history
   );
   // Undo and redo bring back the sentence that was on screen on the other side of the entry.
   if (commit.restore && untouched) next = restoredSentence(next, commit.restore);
@@ -904,6 +929,40 @@ function committed(
     effects.push({ type: 'track', fact });
   }
   return next;
+}
+
+/**
+ * An undo or redo that put an order back on the same committed list (a
+ * step's, or carried rows with an order): only the order on screen moved, as
+ * a step moves it. The count and the stepper's cursor go on, the can't-fits
+ * stay and the fits go, and the position is read again.
+ */
+function orderPutBack(
+  state: LayerOrderDialogState,
+  commit: Extract<LayerOrderDialogState['commit'], { kind: 'pending' }>,
+  facts: Extract<LayerCommitFacts, { verdict: 'committed' }>,
+  history: LayerOrderDialogState['history'],
+  untouched: boolean,
+  effects: LayerOrderEffect[]
+): LayerOrderDialogState {
+  let next: LayerOrderDialogState = landNow(
+    {
+      ...state,
+      open: openIndexOf(facts.openPairs),
+      shown: facts.stacks,
+      shownOrder: facts.order,
+      commit: { kind: 'idle' },
+      settle: commit.restore?.settle ?? state.settle,
+      previews: cantFitsOnly(state.previews),
+      lastPreview: null,
+      solutions: { ...state.solutions, position: null, positionBy: null, step: { kind: 'idle' } },
+    },
+    commit.rows,
+    history
+  );
+  if (commit.restore && untouched) next = restoredSentence(next, commit.restore);
+  effects.push({ type: 'solutions_position', generation: next.solutions.generation, by: currentStepBy(next) });
+  return flashed(next, facts.changed, effects);
 }
 
 function sameSentence(a: LayerSentence, b: LayerSentence): boolean {
@@ -939,6 +998,7 @@ function rowRemoved(state: LayerOrderDialogState, key: LayerRowKey, effects: Lay
         via: 'remove',
         constraints: committedConstraints(target),
         token: null,
+        order: null,
         limits: LAYER_ORDER_LIMITS.commit,
         rows: target,
         ...newEntry(state, listEntryOf(state)),
@@ -950,13 +1010,14 @@ function rowRemoved(state: LayerOrderDialogState, key: LayerRowKey, effects: Lay
     );
   }
   if (target.carried.length === rows.carried.length) return state;
-  if (state.settle.kind === 'settled') {
-    // Carried rows the order never depended on: no commit, but an entry, so undo puts them back.
-    return landNow(movedOn(state), target, recorded(state.history, listEntryOf(state)));
-  }
+  // Carried rows the order never depended on: no commit, but an entry, so undo puts them back. While a
+  // restore's rows settle (D10), the entry also brings back the clash, and the re-check the removal asks
+  // lands under it, so the removal and its re-check are one step.
+  const removed = landNow(movedOn(state), target, recorded(state.history, listEntryOf(state)));
+  if (state.settle.kind === 'settled') return removed;
   const kept = new Set(target.carried.map((row) => row.id));
   const gone = new Set(rows.carried.filter((row) => !kept.has(row.id)).map((row) => row.id));
-  return settleAfterRemoval(landNow(state, target, state.history), gone, effects);
+  return settleAfterRemoval(removed, gone, effects);
 }
 
 /**
@@ -993,9 +1054,10 @@ function settleAfterRemoval(
       via: 'settle',
       constraints: committedConstraints(rows),
       token: null,
+      order: null,
       limits: LAYER_ORDER_LIMITS.commit,
       rows,
-      // The rows a restore saved apply together, or not at all: no edit of the user's (D10).
+      // The rows a restore saved apply together, or not at all, under the removal's own entry (D10).
       move: { kind: 'none' },
       at: state.history.past.length,
       sentence: state.sentence,
@@ -1006,46 +1068,54 @@ function settleAfterRemoval(
   );
 }
 
+/** Whether undo and redo can move: the session open, nothing in flight, and no restore running (D10's clash and timeout included). */
+export function canTravel(state: LayerOrderDialogState): boolean {
+  return state.phase.kind === 'open' && quiet(state) && state.settle.kind !== 'restoring';
+}
+
 /**
  * Undo and redo, of any entry. A sentence edit's sentence comes back at once.
- * A change to the list commits the list stepped to, re-solved for the order
- * closest to the one on screen (Round3 `undo`, `redo`), and brings back the
- * sentence once it lands; with the same committed list (carried rows only)
- * both come back at once. A step steps back, or again.
+ * An entry that changed the order on screen puts the order on its other side
+ * back exactly (`show`, no search), with the list it had, and brings back the
+ * sentence and the restore's settling once it lands (#539's review: a
+ * relative step back stuck or landed on another picture). With the same list
+ * and the same order, all of it comes back at once.
  */
 function travel(state: LayerOrderDialogState, way: 'undo' | 'redo', effects: LayerOrderEffect[]): LayerOrderDialogState {
-  if (state.phase.kind !== 'open' || state.settle.kind !== 'settled' || !quiet(state)) return state;
+  if (!canTravel(state)) return state;
   const target = way === 'undo' ? undoTarget(state.history) : redoTarget(state.history);
   if (!target) return state;
   const at = state.history.past.length;
-  if (target.kind === 'step') {
-    const direction = way === 'undo' ? opposite(target.direction) : target.direction;
-    return stepAsk(movedOn(state), direction, target.by, { kind: way, present: target }, effects);
+  if (target.kind === 'sentence') {
+    const move = { kind: way, present: { kind: 'sentence', ...sentenceEntryOf(state) } } as const;
+    return restoredSentence({ ...movedOn(state), history: landed(state.history, at, move) }, target);
   }
-  const present: LayerUndoEntry =
-    target.kind === 'list' ? listEntryOf(state) : { kind: 'sentence', ...sentenceEntryOf(state) };
+  const present: LayerUndoEntry = target.kind === 'list' ? listEntryOf(state) : { kind: 'step', order: state.shownOrder };
   const move = { kind: way, present } as const;
-  if (target.kind === 'list' && !sameCommitted(target.rows.committed, state.rows.committed)) {
-    return ask(
-      state,
-      {
-        via: way,
-        constraints: committedConstraints(target.rows),
-        token: null,
-        limits: LAYER_ORDER_LIMITS.commit,
-        rows: target.rows,
-        move,
-        at,
-        sentence: state.sentence,
-        restore: { sentence: target.sentence, blocked: target.blocked },
-        listRows: target.rows.committed.map((row) => row.id),
-      },
-      effects
-    );
+  const rows = target.kind === 'list' ? target.rows : state.rows;
+  const restore = target.kind === 'list' ? target : null;
+  if (sameCommitted(rows.committed, state.rows.committed) && (target.order === null || sameOrder(target.order, state.shownOrder))) {
+    // Nothing for the engine to do: carried rows, a sentence, a settling.
+    const moved = landNow(movedOn(state), rows, landed(state.history, at, move));
+    return restore ? restoredSentence({ ...moved, settle: restore.settle }, restore) : moved;
   }
-  const history = landed(state.history, at, move);
-  const moved = target.kind === 'list' ? landNow(movedOn(state), target.rows, history) : { ...movedOn(state), history };
-  return restoredSentence(moved, target);
+  return ask(
+    state,
+    {
+      via: way,
+      constraints: committedConstraints(rows),
+      token: null,
+      order: target.order,
+      limits: LAYER_ORDER_LIMITS.commit,
+      rows,
+      move,
+      at,
+      sentence: state.sentence,
+      restore,
+      listRows: rows.committed.map((row) => row.id),
+    },
+    effects
+  );
 }
 
 /** Round3 `clearAll`: every row goes, carried ones included, as one entry undo puts back. */
@@ -1060,6 +1130,7 @@ function clearAll(state: LayerOrderDialogState, effects: LayerOrderEffect[]): La
       via: 'clear_all',
       constraints: [],
       token: null,
+      order: null,
       limits: LAYER_ORDER_LIMITS.commit,
       rows: NO_ROWS,
       ...newEntry(state, entry),
@@ -1116,7 +1187,10 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
 // ---------------------------------------------------------------------------
 // The stepper (Round3 `stepLook`; D5, D7)
 
-/** ‹ or ›: one undo step, once it moves the order on screen. */
+/**
+ * ‹ or ›: one undo step, once it moves the order on screen. Its entry holds
+ * the order it moved from, which undo puts back exactly (`travel`).
+ */
 function step(
   state: LayerOrderDialogState,
   direction: 'next' | 'previous',
@@ -1124,18 +1198,7 @@ function step(
 ): LayerOrderDialogState {
   if (state.phase.kind !== 'open' || state.settle.kind !== 'settled' || !quiet(state)) return state;
   const by = currentStepBy(state);
-  return stepAsk(movedOn(state), direction, by, { kind: 'record', entry: { kind: 'step', direction, by } }, effects);
-}
-
-/** Ask for a step by `by` (the stepper's own, or for undo and redo the one the step took), and how the history moves once it lands. */
-function stepAsk(
-  state: LayerOrderDialogState,
-  direction: LayerStepDirection,
-  by: LayerStepBy,
-  move: LayerHistoryMove<LayerUndoEntry>,
-  effects: LayerOrderEffect[]
-): LayerOrderDialogState {
-  const [id, next] = request(state);
+  const [id, next] = request(movedOn(state));
   effects.push({
     type: 'step',
     request: id,
@@ -1144,6 +1207,7 @@ function stepAsk(
     direction,
     limits: LAYER_ORDER_LIMITS.step,
   });
+  const move: LayerHistoryMove<LayerUndoEntry> = { kind: 'record', entry: { kind: 'step', order: state.shownOrder } };
   const at = state.history.past.length;
   return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by, move, at } } };
 }
@@ -1168,6 +1232,7 @@ function stepped(
   const next: LayerOrderDialogState = {
     ...state,
     shown: facts.stacks,
+    shownOrder: facts.order,
     previews: cantFitsOnly(state.previews),
     lastPreview: null,
     history: landed(state.history, pending.at, pending.move),
@@ -1178,7 +1243,7 @@ function stepped(
       step: { kind: 'idle' },
     },
   };
-  // An undo or redo steps by what its step did; the stepper reads its position again for what it steps by now.
+  // Turned over or X-rayed while it ran: the stepper reads its position again for what it steps by now.
   const by = currentStepBy(next);
   if (stepByKey(by) !== stepByKey(pending.by)) {
     effects.push({ type: 'solutions_position', generation: next.solutions.generation, by });

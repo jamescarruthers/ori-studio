@@ -21,6 +21,7 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   picked,
   play,
   position,
@@ -213,7 +214,13 @@ describe('decisions', () => {
     const stepped = play(stepping.state, {
       type: 'stepped',
       request: lastOf(stepping.effects, 'step').request,
-      facts: { verdict: 'moved', changed: changedSpots([1]), position: position(2, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([1]),
+        position: position(2, 9),
+        stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+        order: orderOf(SPOTS_TWO_OVER_ZERO),
+      },
     });
     expect(lastOf(dispatch(stepped.state, { type: 'apply', at: 2_000 }).effects, 'apply').result).toEqual({
       kind: 'changed',

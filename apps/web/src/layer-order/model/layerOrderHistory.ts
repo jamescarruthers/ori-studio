@@ -53,17 +53,7 @@ export function redoTarget<T>(history: LayerHistory<T>): T | null {
   return history.future.length > 0 ? history.future[0]! : null;
 }
 
-/** The history once an undo from `present` landed (Round3 `undo`). */
-export function afterUndo<T>(history: LayerHistory<T>, present: T): LayerHistory<T> {
-  return { past: history.past.slice(0, -1), future: [present, ...history.future] };
-}
-
-/** The history once a redo from `present` landed (Round3 `redo`). */
-export function afterRedo<T>(history: LayerHistory<T>, present: T): LayerHistory<T> {
-  return { past: [...history.past, present], future: history.future.slice(1) };
-}
-
-/** How the history moves once a commit or a step lands. */
+/** How the history moves once a commit or a step lands, or at once with nothing to wait for (`at` the past's length). */
 export type LayerHistoryMove<T> =
   /** Not at all: a restored record's rows applied together (D10) are no edit of the user's. */
   | { readonly kind: 'none' }

@@ -24,6 +24,7 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   picked,
   play,
   position,
@@ -680,9 +681,21 @@ describe('restored records: rows by status', () => {
         [waiting, [4, 5, -1]],
       ]);
       expect(landed.state.rows.carried.map((row) => row.id)).toEqual([ambiguous]);
-      // The settle is not an entry: there is nothing to undo back into a clash.
-      expect(listControls(landed.state).undo).toBe(false);
       expect(hintLine(landed.state)?.text.key).toBe('pick_face');
+
+      // The removal and its re-check are one undo step (#539's review): undo brings back the clash, with the
+      // row and the order it had, and redo settles the rows again.
+      expect(landed.state.history.past.map((entry) => entry.kind)).toEqual(['list']);
+      const undo = dispatch(landed.state, { type: 'undo' });
+      expect(lastOf(undo.effects, 'commit')).toMatchObject({ constraints: [], order: orderOf(SPOTS) });
+      const undone = commits(undo, OPEN_PAIRS, SPOTS);
+      expect(undone.state.settle).toEqual({ kind: 'clash', rows: [first, second], explain: null });
+      expect(undone.state.rows).toEqual(state.rows);
+      expect(applyState(undone.state)).toEqual({ enabled: false, why: 'clash' });
+      expect(listControls(undone.state)).toMatchObject({ undo: false, redo: true });
+      const redone = commits(play(undone.state, { type: 'redo' }), Uint32Array.of(2, 3));
+      expect(redone.state.settle).toEqual({ kind: 'settled' });
+      expect(redone.state.rows).toEqual(landed.state.rows);
     });
 
     it('removing a row outside the clashing set re-checks nothing: the set still clashes', () => {
@@ -876,7 +889,13 @@ describe('solutions: the count and the stepper', () => {
     const moved = play(stepping.state, {
       type: 'stepped',
       request: step.request,
-      facts: { verdict: 'moved', changed: changedSpots([0]), position: position(3, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([0]),
+        position: position(3, 9),
+        stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+        order: orderOf(SPOTS_TWO_OVER_ZERO),
+      },
     });
     expect(moved.state.rows).toBe(built.state.rows);
     expect(moved.state.shown).toEqual(sidesOf(SPOTS_TWO_OVER_ZERO));
