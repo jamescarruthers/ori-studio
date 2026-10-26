@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../lib/geometry';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
-import { restackedScene } from './layerPaneFigure';
+import { restackedScene, type LayerPaneSegment } from './layerPaneFigure';
 import {
   cappedFaces,
   chipFits,
   foldedLabelIndex,
+  labelLineIndex,
   labelSize,
   LABEL_EDGE_ROOM_PX,
   paneLetters,
@@ -364,6 +365,160 @@ describe('placing the letters', () => {
       0 - (wide.y + wide.height / 2)
     );
     expect(clearance).toBeGreaterThanOrEqual(4.5);
+  });
+
+  describe('clear of every line the pane draws (D20)', () => {
+    /** A face too small for its chip, at (100, 100), 8 across: its letter must sit beside it. */
+    const thin = square(100, 100, 8);
+    const spotsOf = () => ({ visible: true, spots: [{ at: { x: 104, y: 104 }, region: thin }], outline: thin });
+    const label: LayerPaneLabel[] = [{ face: 0, tone: 'pick', keep: true }];
+    const sides = (ring: readonly Point[]): LayerPaneSegment[] => ring.map((p, i) => [p, ring[(i + 1) % ring.length]!]);
+    const across = (y: number, from = -400, to = 600): LayerPaneSegment => [
+      { x: from, y },
+      { x: to, y },
+    ];
+    const down = (x: number, from = -400, to = 600): LayerPaneSegment => [
+      { x, y: from },
+      { x, y: to },
+    ];
+    /** Whether `segment`, level or upright, passes within `gap` of the chip's box. */
+    const covers = (chip: { x: number; y: number; width: number; height: number }, [a, b]: LayerPaneSegment, gap: number) => {
+      const [minX, maxX] = [chip.x - chip.width / 2 - gap, chip.x + chip.width / 2 + gap];
+      const [minY, maxY] = [chip.y - chip.height / 2 - gap, chip.y + chip.height / 2 + gap];
+      if (a.y === b.y) return a.y > minY && a.y < maxY && Math.max(a.x, b.x) > minX && Math.min(a.x, b.x) < maxX;
+      return a.x > minX && a.x < maxX && Math.max(a.y, b.y) > minY && Math.min(a.y, b.y) < maxY;
+    };
+    /** A crease every 6 px each way over the whole pane: no chip fits between them anywhere. */
+    const mesh = Array.from({ length: 150 }, (_, k) => [across(-400 + k * 6), down(-400 + k * 6)]).flat();
+
+    it('moves a letter set beside its face off a crease it would land on, to the nearest clear spot', () => {
+      // Two creases, 12 px over the face and 12 under it: where the letter sits beside it with no lines.
+      const creases = [across(88), across(120)];
+      const plain = placeLabels(label, spotsOf, () => 'A', (p) => p)[0]!;
+      expect(plain.off).toBe(true);
+      expect(covers(plain, creases[0]!, 0)).toBe(true);
+      const lines = labelLineIndex([...sides(thin), ...creases]);
+      const moved = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines })[0]!;
+      expect(moved.off).toBe(true);
+      // Clear of both creases and of the face's own, by the gap a letter keeps from its face.
+      for (const segment of [...creases, ...sides(thin)]) expect(covers(moved, segment, 3)).toBe(false);
+      // Still against the face: to its right, as near as up or down was.
+      expect([moved.x, moved.y]).toEqual([120, 104]);
+    });
+
+    it('keeps clear of a crease as wide as it is drawn', () => {
+      const crease = down(124);
+      const lines = labelLineIndex([...sides(thin), crease, across(88), across(120)]);
+      const moved = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines, linePx: 6 })[0]!;
+      expect(moved.off).toBe(true);
+      expect(covers(moved, crease, 3 + 3)).toBe(false);
+    });
+
+    it('reads the lines through the camera, turned and scaled', () => {
+      // A quarter turn and twice the size: the face is 16 px on screen, from (284, 200); creases down the
+      // frame at x = 94 and 114 run across the screen 12 px over it and 12 under it.
+      const project = ({ x, y }: Point): Point => ({ x: 500 - 2 * y, y: 2 * x });
+      const creases = [down(94), down(114)];
+      const onScreen = ([a, b]: LayerPaneSegment): LayerPaneSegment => [project(a), project(b)];
+      const plain = placeLabels(label, spotsOf, () => 'A', project)[0]!;
+      expect(covers(plain, onScreen(creases[0]!), 0)).toBe(true);
+      const lines = labelLineIndex([...sides(thin), ...creases]);
+      const moved = placeLabels(label, spotsOf, () => 'A', project, { lines })[0]!;
+      expect(moved.off).toBe(true);
+      for (const segment of [...creases, ...sides(thin)]) expect(covers(moved, onScreen(segment), 3)).toBe(false);
+      expect([moved.x, moved.y]).toEqual([312, 208]);
+    });
+
+    it('finds the spot a look at every step would: the nearest clear one, whichever way', () => {
+      // The reference: out each way 2 px at a time, the first spot clear of the face and of every crease.
+      const crosses = ([a, b]: LayerPaneSegment, minX: number, minY: number, maxX: number, maxY: number) => {
+        let [t0, t1] = [0, 1];
+        const [dx, dy] = [b.x - a.x, b.y - a.y];
+        for (const [p, q] of [
+          [-dx, a.x - minX],
+          [dx, maxX - a.x],
+          [-dy, a.y - minY],
+          [dy, maxY - a.y],
+        ] as const) {
+          if (p === 0) {
+            if (q <= 0) return false;
+          } else if (p < 0) t0 = Math.max(t0, q / p);
+          else t1 = Math.min(t1, q / p);
+          if (t0 >= t1) return false;
+        }
+        return true;
+      };
+      const ways = [
+        [0, -1],
+        [0, 1],
+        [1, 0],
+        [-1, 0],
+        [Math.SQRT1_2, -Math.SQRT1_2],
+        [-Math.SQRT1_2, -Math.SQRT1_2],
+        [Math.SQRT1_2, Math.SQRT1_2],
+        [-Math.SQRT1_2, Math.SQRT1_2],
+      ] as const;
+      const size = labelSize('A', false, false);
+      const [halfW, halfH] = [size.width / 2 + 3, size.height / 2 + 3];
+      let seed = 7;
+      const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+      let compared = 0;
+      for (let trial = 0; trial < 40; trial += 1) {
+        const creases: LayerPaneSegment[] = Array.from({ length: 12 }, () => [
+          { x: random() * 260 - 30, y: random() * 260 - 30 },
+          { x: random() * 260 - 30, y: random() * 260 - 30 },
+        ]);
+        const all = [...sides(thin), ...creases];
+        let expected: { x: number; y: number; reach: number } | null = null;
+        for (const [dx, dy] of ways) {
+          for (let reach = 2; reach <= 160; reach += 2) {
+            const [x, y] = [104 + dx * reach, 104 + dy * reach];
+            const overFace = x + halfW > 100 && x - halfW < 108 && y + halfH > 100 && y - halfH < 108;
+            if (overFace || all.some((s) => crosses(s, x - halfW, y - halfH, x + halfW, y + halfH))) continue;
+            if (!expected || reach < expected.reach) expected = { x, y, reach };
+            break;
+          }
+        }
+        const placed = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines: labelLineIndex(all) })[0]!;
+        if (!expected) continue;
+        compared += 1;
+        expect([placed.x, placed.y]).toEqual([expected.x, expected.y]);
+      }
+      // Most of the trials leave a clear spot somewhere.
+      expect(compared).toBeGreaterThan(30);
+    });
+
+    it('with no clear spot, falls back as before: beside the face, whatever it covers', () => {
+      const lines = labelLineIndex([...sides(thin), ...mesh]);
+      const plain = placeLabels(label, spotsOf, () => 'A', (p) => p);
+      const meshed = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines });
+      expect(at(meshed)).toEqual(at(plain));
+      expect(meshed[0]!.off).toBe(true);
+    });
+
+    it('with no clear spot, inside its face over another letter comes before beside it across a crease', () => {
+      // The subject's letter takes the one spot of a roomy face; the object's face is the same face.
+      const labels: LayerPaneLabel[] = [
+        { face: 0, tone: 'pick', keep: true },
+        { face: 1, tone: 'pick', keep: true },
+      ];
+      const face = roomy(200, 200, 40);
+      const plain = placeLabels(labels, () => face, (f) => 'AB'[f]!, (p) => p);
+      expect(plain.find((chip) => chip.face === 1)?.off).toBe(true);
+      const meshed = placeLabels(labels, () => face, (f) => 'AB'[f]!, (p) => p, { lines: labelLineIndex(mesh) });
+      const object = meshed.find((chip) => chip.face === 1)!;
+      expect([object.x, object.y, object.off]).toEqual([200, 200, false]);
+    });
+
+    it('changes no letter with no lines, nor one that fits inside its face', () => {
+      const lines = labelLineIndex(mesh);
+      const roomyLabel: LayerPaneLabel[] = [{ face: 0, tone: 'pick', keep: true }];
+      expect(at(placeLabels(roomyLabel, () => roomy(30, 30), () => 'A', (p) => p, { lines }))).toEqual([[0, 30, 30, false, false]]);
+      expect(at(placeLabels(label, spotsOf, () => 'A', (p) => p, { lines: null }))).toEqual(
+        at(placeLabels(label, spotsOf, () => 'A', (p) => p))
+      );
+      expect(labelLineIndex([])).toBeNull();
+    });
   });
 
   it('places in the pane’s pixels, through the projection', () => {

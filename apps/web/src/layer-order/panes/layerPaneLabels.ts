@@ -43,7 +43,8 @@
  * - a letter that must show ({@link LayerPaneLabel.keep}: a pick's, a
  *   clash's, the face pointed at) takes a clear spot inside its face if one
  *   has room, else sits just off the face, beside it, so it never covers the
- *   tint and ring that mark it.
+ *   tint and ring that mark it; and clear of every line the pane draws
+ *   ({@link labelLineIndex}), so it never covers another crease either (D20).
  *
  * Pure: no React, no store, no engine.
  */
@@ -52,7 +53,7 @@ import type { Point } from '../../lib/geometry';
 import { insideEvenOdd } from '../../cp-workspace/picking/polygonContains';
 import type { LayerFace } from '../engine/faceIndex';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
-import { ringArea, ringCentroid, ringInterior } from './layerPaneFigure';
+import { ringArea, ringCentroid, ringInterior, type LayerPaneSegment } from './layerPaneFigure';
 import type { LayerFaceMarks } from './layerPaneMarks';
 
 /** How a face's letter reads. */
@@ -351,12 +352,178 @@ export function foldedLabelIndex(scene: OristudioCpFoldedPaperScene): (face: Lay
   };
 }
 
-/** How {@link placeLabels} fits letters to the pane: its box, and the line along each face. */
+/**
+ * The lines a pane draws, in its frame, bucketed once on a grid
+ * ({@link labelLineIndex}): a letter set beside its face asks only about the
+ * lines through the cells its chip covers, so a pattern of thousands of
+ * creases costs it a handful.
+ */
+export interface LayerLabelLines {
+  /** Each segment's ends, `ax, ay, bx, by`, one segment after another. */
+  readonly ends: Float64Array;
+  /** The bounds of every end, in the frame. */
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+  readonly columns: number;
+  readonly rows: number;
+  readonly cellWidth: number;
+  readonly cellHeight: number;
+  /** Per cell, row by row, the segments that pass through it. */
+  readonly cells: readonly (readonly number[])[];
+}
+
+/** The most cells a side of {@link LayerLabelLines}' grid has. */
+const LINE_GRID_MAX = 128;
+
+const cellOf = (at: number, from: number, size: number, count: number) =>
+  Math.min(count - 1, Math.max(0, Math.floor((at - from) / size)));
+
+/**
+ * `segments`, a pane's lines in its frame, on a grid of about one cell per
+ * segment, each segment in the cells it passes through rather than in those
+ * its bounding box covers: a long diagonal crease is in a row of cells, not
+ * in all of them. Null for none. Built once per crease pattern, or per order
+ * the folded pane shows.
+ */
+export function labelLineIndex(segments: readonly LayerPaneSegment[]): LayerLabelLines | null {
+  const ends = new Float64Array(segments.length * 4);
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  segments.forEach(([a, b], k) => {
+    ends[k * 4] = a.x;
+    ends[k * 4 + 1] = a.y;
+    ends[k * 4 + 2] = b.x;
+    ends[k * 4 + 3] = b.y;
+    minX = Math.min(minX, a.x, b.x);
+    minY = Math.min(minY, a.y, b.y);
+    maxX = Math.max(maxX, a.x, b.x);
+    maxY = Math.max(maxY, a.y, b.y);
+  });
+  if (!Number.isFinite(minX + minY + maxX + maxY)) return null;
+  const side = Math.min(LINE_GRID_MAX, Math.max(1, Math.round(Math.sqrt(segments.length))));
+  const columns = maxX > minX ? side : 1;
+  const rows = maxY > minY ? side : 1;
+  const cellWidth = (maxX - minX) / columns || 1;
+  const cellHeight = (maxY - minY) / rows || 1;
+  const cells: number[][] = Array.from({ length: columns * rows }, () => []);
+  const column = (x: number) => cellOf(x, minX, cellWidth, columns);
+  const row = (y: number) => cellOf(y, minY, cellHeight, rows);
+  segments.forEach(([a, b], k) => {
+    const top = Math.min(a.y, b.y);
+    const bottom = Math.max(a.y, b.y);
+    // Where the segment is across the band `from`–`to`: all of it, when it runs along the band.
+    const across = (from: number, to: number): [number, number] => {
+      if (a.y === b.y) return [Math.min(a.x, b.x), Math.max(a.x, b.x)];
+      const xAt = (y: number) => a.x + ((y - a.y) * (b.x - a.x)) / (b.y - a.y);
+      const [x0, x1] = [xAt(Math.max(top, from)), xAt(Math.min(bottom, to))];
+      return [Math.min(x0, x1), Math.max(x0, x1)];
+    };
+    for (let r = row(top); r <= row(bottom); r += 1) {
+      const [left, right] = across(minY + r * cellHeight, minY + (r + 1) * cellHeight);
+      for (let c = column(left); c <= column(right); c += 1) cells[r * columns + c]!.push(k);
+    }
+  });
+  return { ends, minX, minY, maxX, maxY, columns, rows, cellWidth, cellHeight, cells };
+}
+
+/**
+ * How much further, CSS px, the box `minX`–`maxX` by `minY`–`maxY` must move
+ * along `(dx, dy)`, a unit step, to leave every line that crosses it now: 0
+ * when none does, Infinity when one runs along that way for good.
+ */
+type LineClearance = (minX: number, minY: number, maxX: number, maxY: number, dx: number, dy: number) => number;
+
+/** How far a point at `centre` on an axis, moving at `rate`, goes before it leaves `low`–`high`, which it is in. */
+function axisExit(centre: number, low: number, high: number, rate: number): number {
+  if (rate > 0) return (high - centre) / rate;
+  if (rate < 0) return (low - centre) / rate;
+  return Infinity;
+}
+
+/**
+ * How far a box centred at `(cx, cy)`, `hw` and `hh` each way, moves along
+ * `(dx, dy)` before it leaves the segment `(ax, ay)`–`(bx, by)` it crosses:
+ * where the first of their separating axes (across, down, and the segment's
+ * normal) stops overlapping.
+ */
+function segmentExit(
+  [ax, ay, bx, by]: readonly [number, number, number, number],
+  [cx, cy, hw, hh]: readonly [number, number, number, number],
+  dx: number,
+  dy: number
+): number {
+  // Along the normal the segment is one point, `at`, and the box reaches `extent` either side of its centre.
+  const [nx, ny] = [ay - by, bx - ax];
+  const extent = hw * Math.abs(nx) + hh * Math.abs(ny);
+  const at = nx * ax + ny * ay;
+  return Math.min(
+    axisExit(cx, Math.min(ax, bx) - hw, Math.max(ax, bx) + hw, dx),
+    axisExit(cy, Math.min(ay, by) - hh, Math.max(ay, by) + hh, dy),
+    axisExit(nx * cx + ny * cy, at - extent, at + extent, nx * dx + ny * dy)
+  );
+}
+
+/**
+ * How far a box on screen must move to clear `lines` ({@link LineClearance}),
+ * the lines read through `project`: the camera's, affine, so its inverse
+ * takes the box back to the frame to find the cells it covers. Null when
+ * `project` folds the plane flat.
+ */
+function lineClearance(lines: LayerLabelLines, project: (point: Point) => Point): LineClearance | null {
+  const o = project({ x: 0, y: 0 });
+  const ex = project({ x: 1, y: 0 });
+  const ey = project({ x: 0, y: 1 });
+  // On screen, o + (a b; c d) · p; back in the frame, each coordinate p·x + q·y + r of the screen's.
+  const [a, b, c, d] = [ex.x - o.x, ey.x - o.x, ex.y - o.y, ey.y - o.y];
+  const det = a * d - b * c;
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-12) return null;
+  const [px, qx, py, qy] = [d / det, -b / det, -c / det, a / det];
+  const [rx, ry] = [-(px * o.x + qx * o.y), -(py * o.x + qy * o.y)];
+  const { ends, cells, columns, rows, cellWidth, cellHeight } = lines;
+  return (minX, minY, maxX, maxY, dx, dy) => {
+    // The box's bounds in the frame: a linear map's least and most over a box are at its corners.
+    const fMinX = px * (px > 0 ? minX : maxX) + qx * (qx > 0 ? minY : maxY) + rx;
+    const fMaxX = px * (px > 0 ? maxX : minX) + qx * (qx > 0 ? maxY : minY) + rx;
+    const fMinY = py * (py > 0 ? minX : maxX) + qy * (qy > 0 ? minY : maxY) + ry;
+    const fMaxY = py * (py > 0 ? maxX : minX) + qy * (qy > 0 ? maxY : minY) + ry;
+    if (fMaxX < lines.minX || fMinX > lines.maxX || fMaxY < lines.minY || fMinY > lines.maxY) return 0;
+    const box = [(minX + maxX) / 2, (minY + maxY) / 2, (maxX - minX) / 2, (maxY - minY) / 2] as const;
+    let past = 0;
+    const lastRow = cellOf(fMaxY, lines.minY, cellHeight, rows);
+    const lastColumn = cellOf(fMaxX, lines.minX, cellWidth, columns);
+    for (let row = cellOf(fMinY, lines.minY, cellHeight, rows); row <= lastRow; row += 1) {
+      for (let column = cellOf(fMinX, lines.minX, cellWidth, columns); column <= lastColumn; column += 1) {
+        for (const k of cells[row * columns + column]!) {
+          const [ax, ay, bx, by] = [ends[k * 4]!, ends[k * 4 + 1]!, ends[k * 4 + 2]!, ends[k * 4 + 3]!];
+          // Its ends on screen.
+          const [sax, say] = [o.x + a * ax + b * ay, o.y + c * ax + d * ay];
+          const [sbx, sby] = [o.x + a * bx + b * by, o.y + c * bx + d * by];
+          if (!segmentCrossesBoxAt(sax, say, sbx, sby, minX, minY, maxX, maxY)) continue;
+          past = Math.max(past, segmentExit([sax, say, sbx, sby], box, dx, dy));
+          if (past === Infinity) return past;
+        }
+      }
+    }
+    return past;
+  };
+}
+
+/** How {@link placeLabels} fits letters to the pane: its box, and the lines it draws. */
 export interface LayerLabelPlacing {
   /** The pane's box, CSS px; null before it is measured. */
   readonly frame?: { readonly width: number; readonly height: number } | null;
-  /** How wide the line along a face's edge is drawn, CSS px. */
+  /** How wide the line along a face's edge is drawn, CSS px: every line the pane draws. */
   readonly linePx?: number;
+  /**
+   * Every line the pane draws, in its frame: a letter set beside its face
+   * keeps clear of each as of its own face. Read through `project`, which
+   * must then be affine, as a camera is.
+   */
+  readonly lines?: LayerLabelLines | null;
 }
 
 /** A letter placed on a pane, CSS px of the canvas box: its centre and its box. */
@@ -412,18 +579,28 @@ export function chipFits(at: Point, size: { width: number; height: number }, reg
 
 /** Whether the segment `a`–`b` passes through the open box. */
 function segmentCrossesBox(a: Point, b: Point, minX: number, minY: number, maxX: number, maxY: number): boolean {
-  // Liang–Barsky clipping against the box, strictly inside.
+  return segmentCrossesBoxAt(a.x, a.y, b.x, b.y, minX, minY, maxX, maxY);
+}
+
+/** {@link segmentCrossesBox}, the segment from `(ax, ay)` to `(bx, by)`. */
+function segmentCrossesBoxAt(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): boolean {
+  // Liang–Barsky clipping against the box, strictly inside; side by side, so a pane's thousands of lines allocate nothing.
   let t0 = 0;
   let t1 = 1;
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const edges: [number, number][] = [
-    [-dx, a.x - minX],
-    [dx, maxX - a.x],
-    [-dy, a.y - minY],
-    [dy, maxY - a.y],
-  ];
-  for (const [p, q] of edges) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  for (let side = 0; side < 4; side += 1) {
+    const p = side === 0 ? -dx : side === 1 ? dx : side === 2 ? -dy : dy;
+    const q = side === 0 ? ax - minX : side === 1 ? maxX - ax : side === 2 ? ay - minY : maxY - ay;
     if (p === 0) {
       if (q <= 0) return false;
     } else {
@@ -476,30 +653,74 @@ const BESIDE_REACH_PX = 160;
 const BESIDE_STEP_PX = 2;
 
 /**
+ * Points beside a face, nearest first, ties in {@link BESIDE_WAYS}' order:
+ * the first clear of every line the pane draws that is `wanted`, else null;
+ * those clear of the lines it passed over on the way, all of them when none
+ * was wanted; and those clear of the face alone.
+ */
+interface BesideSpots {
+  readonly wanted: Point | null;
+  readonly clear: readonly Point[];
+  readonly any: readonly Point[];
+}
+
+const NO_BESIDE: BesideSpots = { wanted: null, clear: [], any: [] };
+
+/**
  * Points just beside a face on screen, nearest first: from `from`, a point of
  * the face, out each way to where a chip of `size` first clears the face's
  * `outline` by {@link LABEL_OFF_GAP_PX} past the line along it (`lineHalfPx`,
- * half its drawn width). So the letter sits against the face
- * it names, whatever the face's shape, never across another part of it.
+ * half its drawn width). So the letter sits against the face it names,
+ * whatever the face's shape, never across another part of it (`any`).
+ *
+ * `clear` goes on out each way, in the same steps, to where the chip clears
+ * every line the pane draws by as much (`clearance`), so it covers no crease
+ * either. Each look skips the steps where a line it crosses still would, and
+ * the ways are taken nearest first, so the search stops at the first spot
+ * that is `wanted` without walking the others out. With no lines, `clear` is
+ * `any`.
  */
 function besideSpots(
   outline: readonly Point[],
   from: Point,
   size: { width: number; height: number },
-  lineHalfPx: number
-): Point[] {
-  if (outline.length < 3) return [];
-  const found: { at: Point; reach: number }[] = [];
-  for (const [dx, dy] of BESIDE_WAYS) {
-    for (let reach = BESIDE_STEP_PX; reach <= BESIDE_REACH_PX; reach += BESIDE_STEP_PX) {
-      const at = { x: from.x + dx * reach, y: from.y + dy * reach };
-      if (!boxTouchesRing({ ...at, ...size }, outline, lineHalfPx + LABEL_OFF_GAP_PX)) {
-        found.push({ at, reach });
-        break;
-      }
-    }
+  lineHalfPx: number,
+  clearance: LineClearance | null,
+  wanted: (at: Point) => boolean
+): BesideSpots {
+  if (outline.length < 3) return NO_BESIDE;
+  const gap = lineHalfPx + LABEL_OFF_GAP_PX;
+  const [halfW, halfH] = [size.width / 2 + gap, size.height / 2 + gap];
+  const at = ([dx, dy]: readonly [number, number], reach: number) => ({ x: from.x + dx * reach, y: from.y + dy * reach });
+  const touches = (way: readonly [number, number], reach: number) =>
+    boxTouchesRing({ ...at(way, reach), ...size }, outline, gap);
+  // Out of the face each way, in steps.
+  const ways: { way: readonly [number, number]; out: number; reach: number }[] = [];
+  for (const way of BESIDE_WAYS) {
+    let reach = BESIDE_STEP_PX;
+    while (reach <= BESIDE_REACH_PX && touches(way, reach)) reach += BESIDE_STEP_PX;
+    if (reach <= BESIDE_REACH_PX) ways.push({ way, out: reach, reach });
   }
-  return found.sort((a, b) => a.reach - b.reach).map(({ at }) => at);
+  const any = [...ways].sort((a, b) => a.reach - b.reach).map(({ way, reach }) => at(way, reach));
+  // On out past the lines, the nearest way first: a way's reach only grows, so the first clear is the nearest.
+  const clear: Point[] = [];
+  while (ways.length > 0) {
+    const next = ways.reduce((best, way) => (way.reach < best.reach ? way : best));
+    const p = at(next.way, next.reach);
+    const past = clearance ? clearance(p.x - halfW, p.y - halfH, p.x + halfW, p.y + halfH, next.way[0], next.way[1]) : 0;
+    // A convex face, left behind, stays behind; the check is only for a face that isn't.
+    if (past === 0 && (next.reach === next.out || !touches(next.way, next.reach))) {
+      clear.push(p);
+      if (wanted(p)) return { wanted: p, clear, any };
+      ways.splice(ways.indexOf(next), 1);
+      continue;
+    }
+    // The next step past every line crossed here: every step before it still crosses one of them.
+    const beyond = Math.ceil((next.reach + past) / BESIDE_STEP_PX - 1e-9) * BESIDE_STEP_PX;
+    next.reach = Math.max(next.reach + BESIDE_STEP_PX, beyond);
+    if (next.reach > BESIDE_REACH_PX) ways.splice(ways.indexOf(next), 1);
+  }
+  return { wanted: null, clear, any };
 }
 
 /**
@@ -518,16 +739,21 @@ function besideSpots(
  * face along the pane's edge takes its letter on the side away from it.
  * `linePx` is how wide the line along a face's edge is drawn on screen (a
  * crease at its line width and zoom): a chip keeps clear of half of it as
- * well as of the ring ({@link LABEL_EDGE_ROOM_PX}).
+ * well as of the ring ({@link LABEL_EDGE_ROOM_PX}). `lines`, every line the
+ * pane draws, keeps a letter set beside its face off every crease, not only
+ * its own face's: the first place tried is clear of the lines and the other
+ * letters, and only then do the fallbacks come, which cover a letter before a
+ * line.
  */
 export function placeLabels(
   labels: readonly LayerPaneLabel[],
   spotsOf: (face: LayerFace) => LayerLabelSpots | null,
   textOf: (face: LayerFace) => string,
   project: (point: Point) => Point,
-  { frame = null, linePx = 0 }: LayerLabelPlacing = {}
+  { frame = null, linePx = 0, lines = null }: LayerLabelPlacing = {}
 ): LayerPlacedLabel[] {
   const room = linePx / 2 + LABEL_EDGE_ROOM_PX;
+  const clearance = lines ? lineClearance(lines, project) : null;
   const rank = ({ face, keep }: LayerPaneLabel) => (keep ? 0 : 2) + (spotsOf(face)?.visible === false ? 1 : 0);
   const ordered = labels
     .map((label, order) => ({ label, order, rank: rank(label) }))
@@ -554,14 +780,17 @@ export function placeLabels(
     let at = inside.find((p) => clear(box(p))) ?? null;
     let off = false;
     if (!at && keep) {
-      // Beside the face on screen, clear of the rest; else inside it over another letter; else beside it whatever it covers.
+      // Beside the face on screen, clear of the lines and the rest; else inside it over another letter; else
+      // beside it whatever it covers, another letter before a line.
       const outline = spots.outline.map(project);
       const from = spots.spots[0] ? project(spots.spots[0].at) : ringCentroid(outline);
-      const around = from ? besideSpots(outline, from, size, linePx / 2) : [];
-      const onScreen = frame ? around.filter((p) => chipInFrame(p, size, frame)) : around;
-      const besideClear = onScreen.find((p) => clear(box(p)));
-      at = besideClear ?? inside[0] ?? onScreen[0] ?? around[0] ?? null;
-      off = at !== null && (besideClear !== undefined || inside.length === 0);
+      const shown = (p: Point) => !frame || chipInFrame(p, size, frame);
+      const around = from
+        ? besideSpots(outline, from, size, linePx / 2, clearance, (p) => shown(p) && clear(box(p)))
+        : NO_BESIDE;
+      const onScreen = (points: readonly Point[]) => points.filter(shown);
+      at = around.wanted ?? inside[0] ?? onScreen(around.clear)[0] ?? onScreen(around.any)[0] ?? around.any[0] ?? null;
+      off = at !== null && (around.wanted !== null || inside.length === 0);
     }
     if (!at) continue;
     placed.push({ face, text, tone, under, off, x: at.x, y: at.y, ...size });
