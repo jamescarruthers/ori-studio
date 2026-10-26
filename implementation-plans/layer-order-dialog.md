@@ -545,8 +545,9 @@ disagrees, the artboard wins):
   strengthens the tints (Round3:473, 883).
 - The faint subject tint is on the crease pattern only (spec §6.4).
 - Each pane has its own zoom toolbar, and Fit frames both (Round3:385-389,
-  421-425). Each pane fits its own content (the crease pattern it came from;
-  the folded figure itself), filling about 70% of the pane: in your words
+  421-425). Each pane fits its own content (the crease pattern it came from,
+  the host's `region`, never the rest of a document of many; the folded
+  figure itself), filling about 70% of the pane: in your words
   (2026-10-26), "it should not fill totally edge to edge, but like 70% or
   something larger than what it currently does".
 - The flash is one 1.6 s fade (Round3:172-176).

@@ -5,7 +5,6 @@ import { PaperPane } from '../../cp-workspace/surface/PaperPane';
 import type { CpSurfaceControls, CpSurfaceFrameScales } from '../../cp-workspace/surface/useCpSurface';
 import type { WheelGesturePreference } from '../../lib/wheelGesture';
 import type { LayerFace } from '../../layer-order/engine/faceIndex';
-import { LAYER_ORDER_PANE_FIT_SHARE } from '../../layer-order/panes/layerPaneFigure';
 import { sameLayerPaneHit, type LayerPaneHit, type LayerPanesEvents } from '../../layer-order/panes/layerPaneInput';
 import type { LayerPaneChannels } from '../../layer-order/panes/useLayerOrderPanes';
 import { useLayerPanePointer } from '../../layer-order/panes/useLayerPanePointer';
@@ -82,7 +81,6 @@ export function LayerOrderPane({
         onPick={pointer.onPick}
         onHover={pointer.onHover}
         contentBounds={channels.contentBounds}
-        fitShare={LAYER_ORDER_PANE_FIT_SHARE}
         framingKey={framingKey}
         keepInViewKey={channels.keepInViewKey}
         keepInViewBounds={channels.keepInViewBounds}
