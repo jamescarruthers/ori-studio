@@ -120,7 +120,10 @@ const reset: DiagramLinkedPoseAction = { id: 'reset', label: 'Reset Pose', disab
 function linkedPose(): DiagramLinkedPose {
   return {
     actions: [reset],
+    toolbar: [reset],
     layerOrder: null,
+    layerOrderEdit: null,
+    editLayerOrder: async () => false,
     spatial: null,
     onCamera: () => {},
     registerLiveView: () => () => {},

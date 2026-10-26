@@ -183,7 +183,10 @@ describe('showCreasePatternSide', () => {
 function openPose(verbs: Partial<DiagramLinkedPose>): DiagramLinkedPose {
   return {
     actions: [],
+    toolbar: [],
     layerOrder: null,
+    layerOrderEdit: null,
+    editLayerOrder: async () => false,
     spatial: null,
     onCamera: () => {},
     registerLiveView: () => () => {},

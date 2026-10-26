@@ -6,8 +6,8 @@ import type { DiagramCpRender } from '../document/diagramDocument';
  * Where a Diagram step opens the Layer order dialog
  * (`implementation-plans/layer-order-dialog.md`, row H7, the approved Entry
  * points and States boards): the Step pane's Layer order row — Edit…, and
- * what its note line says (D11) — and the flag in its Picture section, whose
- * action is Review… (D14).
+ * what its note line says (D11) — the flag in its Picture section, whose
+ * action is Review… (D14), and the Pose toolbar's Edit order… (H8).
  *
  * Read from the step's saved source alone: the record's constraints and its
  * summary, never the engine (approach 5), so nothing here loads or spawns
@@ -138,6 +138,29 @@ export function buildDiagramStepLayerOrderRow(
           kind: 'status',
         };
   return { edit, note };
+}
+
+/**
+ * The Pose toolbar's Edit order… (H8, the approved Pose toolbar board): the
+ * Layer order row's Edit… under the toolbar's own word, held for the same
+ * reasons — on a 3D step with its reason as its hint (D13), as Spread Layers
+ * is held there. `name` is its tooltip; the toolbar names the button by its
+ * word, so what is read is what is shown. Null for a step shown any other way.
+ */
+export function buildDiagramPoseLayerOrderEntry(
+  state: DiagramStepLayerOrderState,
+  deps: DiagramStepLayerOrderDeps
+): DiagramStepLayerOrderEntry | null {
+  const { t } = deps;
+  if (state.render.mode !== 'folded-flat' && state.render.mode !== 'folded-3d') return null;
+  return entry(
+    state,
+    deps,
+    'edit',
+    t('panels:diagram.layerOrder.editOrder', 'Edit order…'),
+    // Its tooltip, as the approved board words it; its accessible name is the word it shows.
+    t('panels:diagram.layerOrder.editOrderName', 'Edit layer order…')
+  );
 }
 
 /**
