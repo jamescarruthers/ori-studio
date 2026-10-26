@@ -1049,18 +1049,22 @@ const VIEWPORT_SHORTCUTS: ShortcutDefinition[] = [
 /**
  * "Fold with layer order…" (`implementation-plans/layer-order-dialog.md`, row
  * H5): fold the selected creases with a layer order chosen in the Layer order
- * dialog. Ori Studio's own verb, so no upstream action and no Oriedita layout
- * chord. Unbound, as Reset View Rotation is: the selection toolbar's button
- * is the way in, and a key is for anyone who binds one in Settings ▸
- * Shortcuts, where it reads Unassigned until then.
+ * dialog. Ori Studio's own verb, so no upstream action. Shift+G, Fold's G
+ * with Shift, under either layout (the owner's ask, 2026-10-26): upstream
+ * binds no Shift+G, so the Oriedita layout keeps it
+ * ({@link buildOrieditaDefaultChords}). Fold's Petal Fold holds Shift+G too,
+ * in the `fold` scope, which is pushed only in Fold's own context and so is
+ * never in a stack beside `crease-pattern`.
  *
  * In the crease-pattern scope and through its executor, as Fold estimate's G
- * is (`handleCpShortcutAction`), so a key bound to it acts on the creases
- * selected on the Edit canvas and nowhere else. Its id is in that executor's
- * `cp.action.` space, though no Oriedita tool carries it: the executor runs it
- * before looking the id up as a tool.
+ * is (`handleCpShortcutAction`), so the key acts on the creases selected on
+ * the Edit canvas and nowhere else. Its id is in that executor's `cp.action.`
+ * space, though no Oriedita tool carries it: the executor runs it before
+ * looking the id up as a tool.
  */
 export const FOLD_WITH_LAYER_ORDER_SHORTCUT_ID = 'cp.action.fold-with-layer-order' satisfies OristudioCpActionId;
+
+const FOLD_WITH_LAYER_ORDER_CHORDS = normalizeDefaultChords({ shift: true, key: 'g' });
 
 const FOLD_WITH_LAYER_ORDER_SHORTCUT: ShortcutDefinition = {
   id: FOLD_WITH_LAYER_ORDER_SHORTCUT_ID,
@@ -1068,8 +1072,8 @@ const FOLD_WITH_LAYER_ORDER_SHORTCUT: ShortcutDefinition = {
   category: cpCategoryLabel('folding'),
   scope: 'crease-pattern',
   target: 'cp-action',
-  defaultChord: null,
-  defaultChords: [],
+  defaultChord: FOLD_WITH_LAYER_ORDER_CHORDS[0] ?? null,
+  defaultChords: FOLD_WITH_LAYER_ORDER_CHORDS,
 };
 
 /** The crease-pattern tools' bindings, with Fold with layer order… right after Fold estimate, the one with G. */

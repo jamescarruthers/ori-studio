@@ -23,6 +23,14 @@ describe('selectionFoldActions', () => {
     expect(fold).toHaveBeenCalledTimes(1);
   });
 
+  it('names the key that runs each verb on the selection: G’s, then Shift+G’s', () => {
+    const { list } = actions('flat');
+    expect(list.map((action) => action.shortcutId)).toEqual([
+      'cp.action.folding-estimate',
+      'cp.action.fold-with-layer-order',
+    ]);
+  });
+
   it('holds Fold with layer order…, saying why, on creases that fold in 3D; Fold folds them', () => {
     const { list } = actions('spatial');
     expect(list[0]).toMatchObject({ id: 'fold', disabled: false });

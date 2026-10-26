@@ -375,6 +375,16 @@ describe('CpSelectionToolbar', () => {
       expect(button()?.querySelector('svg mask')).not.toBeNull();
     });
 
+    it('names its key in its tooltip, as Fold names G', async () => {
+      seedStore(LEFT_SHEET);
+      await act(async () => renderToolbar(root, container));
+      await act(async () => {
+        button()!.focus();
+        await Promise.resolve();
+      });
+      expect(document.body.textContent).toContain('Fold with layer order… (Shift+G)');
+    });
+
     it('folds the sheet’s creases for the dialog, and dismisses like every action', async () => {
       const prepare = vi.fn(async () => ({ status: 'unavailable', reason: 'cancelled' }) as const);
       useWorkspaceStore.setState({ prepareOristudioCpLayerOrderFold: prepare });
