@@ -657,6 +657,19 @@ pub enum Committing {
     TimedOut(TimedOut),
 }
 
+/// A show's verdict (`layer_show`: undo and redo putting back an exact
+/// order). Only [`Showing::Shown`] changed the session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Showing {
+    /// The order given is on screen, with the constraints given committed.
+    Shown(CommitDone),
+    /// Not a complete order of the session's that fits the creases and the
+    /// constraints: nothing changed.
+    Refused,
+    /// Checking the order ran out of time: nothing changed.
+    TimedOut(TimedOut),
+}
+
 /// The smallest set of constraints that clash (E6's `Clash`): every member
 /// necessary, dropping any one leaves an order, unless `minimal` is false
 /// (the limits ran out first; the set still can't fit). Indices into the

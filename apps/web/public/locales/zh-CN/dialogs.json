@@ -357,6 +357,10 @@
         "text": "此 FOLD 文件描述的是已经折好的纸。请改为导入平整的折痕图。",
         "title": "是折叠形态，而不是折痕图"
       },
+      "layerOrder": {
+        "text": "无法应用此层序。没有导入任何内容。",
+        "title": "无法应用此层序"
+      },
       "noFigure": {
         "text": "请先在编辑中把折痕图折平，然后从它的折叠模型开始。",
         "title": "编辑中没有折叠模型"
@@ -581,13 +585,15 @@
       "nothingToUndo": "没有可撤销的",
       "redo": "重做",
       "redoShortcut": "重做（{{shortcut}}）",
+      "redoWaits": "重做需等待正在进行的更改",
       "remove": "删除：{{sentence}}",
       "reveal": "将 {{face}} 放入构建器",
       "separator": "，",
       "title": "约束",
       "titleCount_other": "约束 · {{count}}",
       "undo": "撤销",
-      "undoShortcut": "撤销（{{shortcut}}）"
+      "undoShortcut": "撤销（{{shortcut}}）",
+      "undoWaits": "撤销需等待正在进行的更改"
     },
     "lost": "层叠顺序意外停止。没有任何改动。",
     "lostLoad": "层叠顺序未能加载。请检查网络连接，然后重试。",

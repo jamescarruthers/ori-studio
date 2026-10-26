@@ -170,6 +170,37 @@ describe('the inspector’s effect runner', () => {
     starts.mockRestore();
   });
 
+  it('undo puts the exact order back (`show`), and commits the list instead should that be refused', async () => {
+    const h = await harness();
+    const opening = h.state().shownOrder;
+    expect(opening).not.toBeNull();
+    for (const direction of ['next', 'previous'] as const) {
+      if (h.state().history.past.length > 0) break;
+      h.host.dispatch({ type: 'step', direction });
+      await settle();
+    }
+    expect(h.state().history.past).toEqual([{ kind: 'step', order: opening }]);
+    const stepped = h.state().shownOrder;
+    expect(stepped).not.toEqual(opening);
+    const before = h.backend.calls.length;
+    h.host.dispatch({ type: 'undo' });
+    await settle();
+    // No search, and the position read again for the order put back.
+    expect(h.backend.calls.slice(before)).toEqual(['show', 'position']);
+    expect(h.state().shownOrder).toEqual(opening);
+    expect(h.state().history.future).toEqual([{ kind: 'step', order: stepped }]);
+    // Refused (which an order the session showed never is): the list is committed for the closest order, and
+    // the history moves all the same, so an undo never sticks.
+    const refuse = vi.spyOn(h.backend, 'show').mockResolvedValue({ verdict: 'refused' });
+    const asked = h.backend.calls.length;
+    h.host.dispatch({ type: 'redo' });
+    await settle();
+    expect(refuse).toHaveBeenCalledOnce();
+    expect(h.backend.calls.slice(asked, asked + 2)).toEqual(['commit', 'order']);
+    expect(h.state().history).toEqual({ past: [{ kind: 'step', order: opening }], future: [] });
+    refuse.mockRestore();
+  });
+
   it('asks nothing for a count slice: the runtime slices between calls', async () => {
     const h = await harness();
     const calls = h.backend.calls.length;

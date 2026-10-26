@@ -6660,7 +6660,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -6674,7 +6675,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -13337,7 +13342,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -13351,7 +13357,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -20016,7 +20026,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -20030,7 +20041,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -26321,7 +26336,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -26333,7 +26349,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -32624,7 +32644,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -32636,7 +32657,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -39299,7 +39324,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -39313,7 +39339,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -45976,7 +46006,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -45990,7 +46021,11 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -52281,7 +52316,8 @@
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
     "toasts:layerOrder.unavailableReload": "aaf518398b89",
-    "dialogs:layerOrder.openingLong": "fe78dcca106d",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d",
     "panels:diagram.pose.layerOrderPatternChanged": "0defad894a81",
     "toasts:diagram.layerOrder.lostLoadOffline": "9be8b222c98b",
     "toasts:diagram.layerOrder.lostLoadReload": "5e2bcb332bb1",
@@ -52293,6 +52329,10 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052",
+    "dialogs:layerOrder.openingLong": "fe78dcca106d"
   }
 }

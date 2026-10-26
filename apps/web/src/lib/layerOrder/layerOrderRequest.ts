@@ -102,9 +102,10 @@ export interface LayerOrderLook {
  * - `edit_figure`: Layer order… on an Edit folded figure;
  * - `edit_pattern`: Fold with layer order… on an Edit selection, before any figure exists;
  * - `diagram_step`: a Diagram step's Layer order row;
- * - `pose`: the Pose toolbar.
+ * - `pose`: the Pose toolbar;
+ * - `fold_import`: Fold's Import CP, choosing an imported crease pattern's order (H10).
  */
-export type LayerOrderRequestSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
+export type LayerOrderRequestSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose' | 'fold_import';
 
 export interface LayerOrderRequest {
   /** Which host asked, for the dialog's analytics (`LayerOrderRequestSurface`). */

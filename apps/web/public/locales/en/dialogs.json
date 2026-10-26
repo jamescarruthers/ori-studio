@@ -367,6 +367,10 @@
         "text": "This FOLD file describes paper already folded. Import the flat crease pattern instead.",
         "title": "A folded form, not a crease pattern"
       },
+      "layerOrder": {
+        "text": "Fold couldn’t land this layer order. Nothing was imported.",
+        "title": "Couldn’t land this layer order"
+      },
       "noFigure": {
         "text": "Fold the crease pattern flat in Edit first, then start from its folded figure.",
         "title": "No folded figure in Edit"
@@ -598,6 +602,7 @@
       "nothingToUndo": "Nothing to undo",
       "redo": "Redo",
       "redoShortcut": "Redo ({{shortcut}})",
+      "redoWaits": "Redo waits for the change in progress",
       "remove": "Remove {{sentence}}",
       "reveal": "Put {{face}} in the builder",
       "separator": ",",
@@ -605,7 +610,8 @@
       "titleCount_one": "Constraints · {{count}}",
       "titleCount_other": "Constraints · {{count}}",
       "undo": "Undo",
-      "undoShortcut": "Undo ({{shortcut}})"
+      "undoShortcut": "Undo ({{shortcut}})",
+      "undoWaits": "Undo waits for the change in progress"
     },
     "lost": "Layer order stopped unexpectedly. Nothing was changed.",
     "lostLoad": "Layer order couldn’t load. Check your connection, then try again.",

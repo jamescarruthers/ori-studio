@@ -24,11 +24,13 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   picked,
   play,
   position,
   rowKey,
   sidesOf,
+  trashOf,
   withOneConstraint,
   type Played,
 } from './layerOrderModel.fixtures';
@@ -379,19 +381,20 @@ describe('the constraints list and its history', () => {
   function removedAndLanded(): { one: Played; removed: Played; rowId: number } {
     const one = withOneConstraint();
     const rowId = one.state.rows.committed[0]!.id;
-    const asked = play(one.state, { type: 'rows_removed', ids: [rowId] });
+    const asked = play(one.state, trashOf(one.state, rowId));
     return { one, removed: commits(asked, OPEN_PAIRS, SPOTS), rowId };
   }
 
   it('remove re-solves for the order closest to the one on screen (Round3 removeCons)', () => {
     const one = withOneConstraint();
     const rowId = one.state.rows.committed[0]!.id;
-    const asked = play(one.state, { type: 'rows_removed', ids: [rowId] });
+    const asked = play(one.state, trashOf(one.state, rowId));
     expect(lastOf(asked.effects, 'commit')).toMatchObject({ constraints: [], token: null });
     const landed = commits(asked, OPEN_PAIRS, SPOTS, changedSpots([1]));
     expect(landed.state.rows.committed).toEqual([]);
     expect(landed.state.flash?.changed).toEqual(changedSpots([1]));
-    expect(landed.state.history.past).toHaveLength(2);
+    // One undo step.
+    expect(landed.state.history.past).toHaveLength(one.state.history.past.length + 1);
   });
 
   it('undo commits the earlier list, never an order, and redo the later (Round3 undo, redo)', () => {
@@ -435,11 +438,14 @@ describe('the constraints list and its history', () => {
     expect(undone.state.rows.committed.map((row) => row.constraint)).toEqual([[2, 0, 1]]);
   });
 
-  it('after undo the builder keeps its sentence unless the object is no longer open (Round3 commit)', () => {
-    const { removed } = removedAndLanded();
-    const built = fits(picked(removed.state, 2, 0));
-    const undone = commits(play(built.state, { type: 'undo' }), Uint32Array.of(2, 3, 4, 5));
-    expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [] });
+  it('after a remove the builder keeps its sentence unless the object is no longer open (Round3 commit)', () => {
+    const one = withOneConstraint(Uint32Array.of(2, 3, 4, 5));
+    const built = picked(one.state, 2, 3);
+    const removed = commits(play(built.state, trashOf(built.state, one.state.rows.committed[0]!.id)), Uint32Array.of(0, 2, 4, 5));
+    expect(removed.state.sentence).toMatchObject({ subject: 2, objects: [] });
+    // Undo brings back the sentence that was on screen before the remove, with the list.
+    const undone = commits(play(removed.state, { type: 'undo' }), Uint32Array.of(2, 3, 4, 5));
+    expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [3] });
   });
 
   it('a row click puts its subject in the builder; with nothing left to choose the hint says so, quietly', () => {
@@ -594,7 +600,7 @@ describe('restored records: rows by status', () => {
   it('removing a carried row needs no commit, is an entry undo puts back, and Apply writes back only the rows kept', () => {
     const { state } = opened(AFTER_EDIT, { hasRecord: true });
     const ambiguous = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'rows_removed', ids: [ambiguous] });
+    const removed = play(state, trashOf(state, ambiguous));
     expect(effectsOf(removed.effects, 'commit')).toEqual([]);
     expect(removed.state.rows.carried.map((row) => row.facts.index)).toEqual([3]);
     const undone = play(removed.state, { type: 'undo' });
@@ -664,7 +670,7 @@ describe('restored records: rows by status', () => {
     it('removing a clashing row re-checks the rows left that can apply, and they land together', () => {
       const state = clashing();
       const [first, second, waiting, ambiguous] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'rows_removed', ids: [first!] });
+      const removed = play(state, trashOf(state, first!));
       expect(lastOf(removed.effects, 'commit')).toMatchObject({ constraints: [[0, 2, 1], [4, 5, -1]], token: null });
       expect(hintLine(removed.state)).toEqual({ tone: 'busy', action: null, text: { key: 'attention_checking' } });
 
@@ -675,15 +681,27 @@ describe('restored records: rows by status', () => {
         [waiting, [4, 5, -1]],
       ]);
       expect(landed.state.rows.carried.map((row) => row.id)).toEqual([ambiguous]);
-      // The settle is not an entry: there is nothing to undo back into a clash.
-      expect(listControls(landed.state).undo).toBe(false);
       expect(hintLine(landed.state)?.text.key).toBe('pick_face');
+
+      // The removal and its re-check are one undo step (#539's review): undo brings back the clash, with the
+      // row and the order it had, and redo settles the rows again.
+      expect(landed.state.history.past.map((entry) => entry.kind)).toEqual(['list']);
+      const undo = dispatch(landed.state, { type: 'undo' });
+      expect(lastOf(undo.effects, 'commit')).toMatchObject({ constraints: [], order: orderOf(SPOTS) });
+      const undone = commits(undo, OPEN_PAIRS, SPOTS);
+      expect(undone.state.settle).toEqual({ kind: 'clash', rows: [first, second], explain: null });
+      expect(undone.state.rows).toEqual(state.rows);
+      expect(applyState(undone.state)).toEqual({ enabled: false, why: 'clash' });
+      expect(listControls(undone.state)).toMatchObject({ undo: false, redo: true });
+      const redone = commits(play(undone.state, { type: 'redo' }), Uint32Array.of(2, 3));
+      expect(redone.state.settle).toEqual({ kind: 'settled' });
+      expect(redone.state.rows).toEqual(landed.state.rows);
     });
 
     it('removing a row outside the clashing set re-checks nothing: the set still clashes', () => {
       const state = clashing();
       const [first, second, , ambiguous] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'rows_removed', ids: [ambiguous!] });
+      const removed = play(state, trashOf(state, ambiguous!));
       expect(effectsOf(removed.effects, 'commit')).toEqual([]);
       expect(removed.state.rows.carried.map((row) => row.id)).not.toContain(ambiguous);
       expect(removed.state.settle).toEqual({ kind: 'clash', rows: [first, second], explain: null });
@@ -692,7 +710,7 @@ describe('restored records: rows by status', () => {
     it('rows that still clash after a removal are explained again, down to the smallest set', () => {
       const state = clashing();
       const [first, second, waiting] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'rows_removed', ids: [first!] });
+      const removed = play(state, trashOf(state, first!));
       const commit = lastOf(removed.effects, 'commit');
       expect(commit.constraints).toEqual([[0, 2, 1], [4, 5, -1]]);
       const still = play(removed.state, {
@@ -757,7 +775,7 @@ describe('restored records: rows by status', () => {
 
     it('after a removal, Keep trying retries the re-check, never the restore that would bring the row back', () => {
       const { state } = opened(OUT, { hasRecord: true });
-      const removed = play(state, { type: 'rows_removed', ids: [state.rows.carried[0]!.id] });
+      const removed = play(state, trashOf(state, state.rows.carried[0]!.id));
       const commit = lastOf(removed.effects, 'commit');
       expect(commit.constraints).toEqual([[4, 5, -1]]);
       const out = play(removed.state, { type: 'committed', request: commit.request, facts: { verdict: 'timed_out' } });
@@ -871,7 +889,13 @@ describe('solutions: the count and the stepper', () => {
     const moved = play(stepping.state, {
       type: 'stepped',
       request: step.request,
-      facts: { verdict: 'moved', changed: changedSpots([0]), position: position(3, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([0]),
+        position: position(3, 9),
+        stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+        order: orderOf(SPOTS_TWO_OVER_ZERO),
+      },
     });
     expect(moved.state.rows).toBe(built.state.rows);
     expect(moved.state.shown).toEqual(sidesOf(SPOTS_TWO_OVER_ZERO));

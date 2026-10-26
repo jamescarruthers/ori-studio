@@ -260,6 +260,23 @@ export type LayerCommitted =
   | LayerCantFit
   | LayerTimedOut;
 
+/**
+ * The order on screen, packed one bit per pair of the session's (bit `v % 8`
+ * of byte `v / 8`, set when the pair's smaller face is above): what
+ * `layer_order` reads and `layer_show` puts back. Meaningless to another session.
+ */
+export type LayerOrderBits = Uint8Array;
+
+/**
+ * `layer_show`'s answer: undo and redo putting back an earlier order exactly,
+ * with no search. `shown` is a commit's answer; `refused` is an order that
+ * does not fit the creases and the constraints. Only `shown` changed the session.
+ */
+export type LayerShown =
+  | (Omit<Extract<LayerCommitted, { verdict: 'committed' }>, 'verdict'> & { verdict: 'shown' })
+  | { verdict: 'refused' }
+  | LayerTimedOut;
+
 /** The record as one compact JSON string, byte for byte `encodeLayerOrderRecord`'s. */
 export type LayerSaveOutcome = { status: 'ok'; json: string } | LayerRefused;
 
@@ -397,8 +414,15 @@ export interface LayerOrderBridge {
   layer_preview(session: number, candidate: Int32Array, limits?: LayerLimits): LayerPreviewed;
   /** Any list, whatever is committed (the dialog's rows after a clash, plus one). Never commits; `cant_fit.constraints` index it. */
   layer_preview_list(session: number, constraints: LayerConstraintTriples, limits?: LayerLimits): LayerPreviewed;
-  /** Add, remove, undo, redo and Clear all are each a whole new list. */
+  /** Add, remove and Clear all are each a whole new list. */
   layer_commit(session: number, constraints: LayerConstraintTriples, limits?: LayerLimits): LayerCommitted;
+  /** The order on screen, packed: what `layer_show` puts back. */
+  layer_order(session: number): LayerOrderBits;
+  /**
+   * Undo and redo: `constraints` committed and `order` (`layer_order`'s, from earlier) on screen
+   * exactly, with no search. A cursor counting the same constraints stays good.
+   */
+  layer_show(session: number, constraints: LayerConstraintTriples, order: LayerOrderBits, limits?: LayerLimits): LayerShown;
   /**
    * Add by a preview: its `token` and the list it checked. Adopted with no
    * search (so it cannot time out) while it is the session's last preview;

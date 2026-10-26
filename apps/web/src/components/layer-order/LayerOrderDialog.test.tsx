@@ -722,6 +722,54 @@ describe('the Layer order dialog’s inspector, bound (U10)', () => {
     if (answer.kind === 'applied') expect(answer.applied.record.constraints).toHaveLength(1);
   });
 
+  it('⌘Z undoes every action, back to the subject’s pick, and ⇧⌘Z redoes them (your words, 2026-10-26)', async () => {
+    mount();
+    const { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    const subject = () => button(/^Subject:/).getAttribute('aria-label');
+    const objects = () => button(/^Objects:/).getAttribute('aria-label');
+    await sentence('C', 'D');
+    await until(() => button('Add constraint').getAttribute('aria-disabled') === null, 'the preview fit');
+    click(button('Add constraint'));
+    await until(() => rows().length === 1, 'the row landed');
+    expect(subject()).toBe('Subject: pick a face');
+    // The Add: the row goes, and its sentence comes back.
+    act(() => {
+      expect(runModalHistory('undo')).toBe(true);
+    });
+    await until(() => rows().length === 0 && /face C/.test(subject() ?? ''), 'the Add undone');
+    expect(objects()).toMatch(/^Objects: D\./);
+    // The object's pick, then the subject's: no engine call, at once.
+    act(() => {
+      expect(runModalHistory('undo')).toBe(true);
+    });
+    expect(objects()).toBe('Objects: pick faces C overlaps');
+    act(() => {
+      expect(runModalHistory('undo')).toBe(true);
+    });
+    expect(subject()).toBe('Subject: pick a face');
+    expect(runModalHistory('undo')).toBe(false);
+    // And forward again, to the row.
+    act(() => {
+      expect(runModalHistory('redo')).toBe(true);
+    });
+    act(() => {
+      expect(runModalHistory('redo')).toBe(true);
+    });
+    expect(objects()).toMatch(/^Objects: D\./);
+    act(() => {
+      expect(runModalHistory('redo')).toBe(true);
+    });
+    await until(() => rows().length === 1, 'the Add redone');
+    expect(subject()).toBe('Subject: pick a face');
+    // Opened once, added once: undo and redo report nothing.
+    expect(events()).toEqual(['layer order dialog opened', 'layer constraint added']);
+    click(button('Apply'));
+    const answer = await outcome;
+    expect(answer.kind).toBe('applied');
+    if (answer.kind === 'applied') expect(answer.applied.record.constraints).toHaveLength(1);
+  });
+
   it('Cancel mid-check closes at once: the worker goes, and nothing is reported', async () => {
     let held: { release(): void } | null = null;
     makeBackend = () => {

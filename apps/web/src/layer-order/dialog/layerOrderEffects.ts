@@ -29,7 +29,15 @@
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import type { LayerOrderLimits, LayerSolutionCount } from '../engine/layerOrderEngine';
 import type { LayerOrderFact } from '../model/layerOrderAnalytics';
-import { commitFacts, explainFacts, previewFacts, stepFacts } from '../model/layerOrderEngineFacts';
+import {
+  commitFacts,
+  explainFacts,
+  previewFacts,
+  shownFacts,
+  stepFacts,
+  type LayerCommitFacts,
+  type LayerOrderBits,
+} from '../model/layerOrderEngineFacts';
 import type { LayerOrderAction, LayerOrderDialogState, LayerOrderEffect } from '../model/layerOrderState';
 import { openLayerOrderSession } from './layerOrderSession';
 import type { LayerOrderSessionEngine } from './useLayerOrderSession';
@@ -66,6 +74,29 @@ export function runLayerOrderEffects(
   host: LayerOrderEffectHost
 ): void {
   for (const effect of effects) runLayerOrderEffect(effect, state, host);
+}
+
+/** Read only for an answer that changed the order on screen. */
+const NO_ORDER: LayerOrderBits = new Uint8Array();
+
+/**
+ * A commit's answer, with the order it landed on. An undo or redo with an
+ * order to put back asks for it exactly (`show`, no search); should that be
+ * refused or run out, which an order the session showed with those
+ * constraints never should, it commits the list for the closest fitting
+ * order instead, so an undo never sticks.
+ */
+async function committedFacts(
+  engine: LayerOrderSessionEngine,
+  effect: Extract<LayerOrderEffect, { type: 'commit' }>
+): Promise<LayerCommitFacts> {
+  const { token, constraints, order, limits } = effect;
+  if (order) {
+    const shown = await engine.show(constraints, order, limits);
+    if (shown.verdict === 'shown') return shownFacts(shown, order);
+  }
+  const answer = token === null ? await engine.commit(constraints, limits) : await engine.commitPreview(token, constraints, limits);
+  return commitFacts(answer, answer.verdict === 'committed' ? await engine.order() : NO_ORDER);
 }
 
 /** Ask the engine with `ask`, and answer the model with `then`'s action; a call that fails, or can't be made, is `failed`. */
@@ -125,13 +156,11 @@ function runLayerOrderEffect(effect: LayerOrderEffect, state: LayerOrderDialogSt
       );
       return;
     case 'commit': {
-      const { token, constraints, limits } = effect;
-      answered(
-        host,
-        'commit',
-        (engine) => (token === null ? engine.commit(constraints, limits) : engine.commitPreview(token, constraints, limits)),
-        (answer) => ({ type: 'committed', request: effect.request, facts: commitFacts(answer) })
-      );
+      answered(host, 'commit', (engine) => committedFacts(engine, effect), (facts) => ({
+        type: 'committed',
+        request: effect.request,
+        facts,
+      }));
       return;
     }
     case 'solutions_restart': {
@@ -158,11 +187,15 @@ function runLayerOrderEffect(effect: LayerOrderEffect, state: LayerOrderDialogSt
       }));
       return;
     case 'step':
-      answered(host, 'step', (engine) => engine.step(effect.by, effect.direction, effect.limits), (stepped) => ({
-        type: 'stepped',
-        request: effect.request,
-        facts: stepFacts(stepped),
-      }));
+      answered(
+        host,
+        'step',
+        async (engine) => {
+          const stepped = await engine.step(effect.by, effect.direction, effect.limits);
+          return stepFacts(stepped, stepped.verdict === 'moved' ? await engine.order() : NO_ORDER);
+        },
+        (facts) => ({ type: 'stepped', request: effect.request, facts })
+      );
       return;
     case 'flash':
       // The panes fade it, and say when it ends (`onFlashEnded`).

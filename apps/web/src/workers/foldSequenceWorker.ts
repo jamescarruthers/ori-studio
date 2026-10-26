@@ -81,6 +81,7 @@ import { swivelReach, type FoldSwivelReach, type FoldSwivelReachAsk } from '../f
 import type {
   FoldExported,
   FoldImportFingerprinted,
+  FoldImportLayerOpening,
   FoldImportLimits,
   FoldImportOpened,
   FoldImportSource,
@@ -405,6 +406,23 @@ const api = {
     choice: readonly number[]
   ): Promise<FoldEngineOutcome<FoldImportFingerprinted>> {
     return changing((calls) => calls.importPick(importHandle, choice));
+  },
+
+  /** Open an import onto the Layer order dialog (row H10): its source, the order `choice` picks over its faces, Fold's look. */
+  async importLayerOpening(
+    importHandle: number,
+    choice: readonly number[]
+  ): Promise<FoldEngineOutcome<FoldImportLayerOpening>> {
+    return changing((calls) => calls.importLayerOpening(importHandle, choice));
+  },
+
+  /** Land the order the Layer order dialog's Apply chose, with its fingerprint and op. */
+  async importPickLayerOrder(
+    importHandle: number,
+    digest: string,
+    relations: Uint32Array
+  ): Promise<FoldEngineOutcome<FoldImportFingerprinted>> {
+    return changing((calls) => calls.importPickLayerOrder(importHandle, digest, relations));
   },
 
   /** Start from Edit's folded figure: the kernel's paper scene of it. */
