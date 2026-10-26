@@ -87,8 +87,11 @@ export interface LayerOrderDialogFrameProps {
   readonly applyRefusal: LayerRefusal | null;
   /**
    * A line beside Cancel and Apply about the order the dialog opened on (D19:
-   * "Edit’s order can’t fold here…"), in the quiet tone; pointing at it calls
-   * `onHover`. Apply's refusal takes its place while there is one.
+   * "Edit’s order can’t fold here…"; a host's own, such as D12's stale
+   * order), in the quiet tone; pointing at it calls `onHover`. Apply's
+   * refusal takes its place while there is one. One line with its whole text
+   * as its title where a pointer can hover; on a phone or under a finger, it
+   * wraps to three lines over Cancel and Apply.
    */
   readonly note?: { readonly text: string; readonly onHover?: (on: boolean) => void } | null;
 }
@@ -183,7 +186,7 @@ export function LayerOrderDialogFrame({
       history={history}
       footer={
         applyRefusal ? (
-          <p className={styles.footNote} role="alert">
+          <p className={styles.footNote} data-layout={phonePane === null ? 'wide' : 'narrow'} role="alert">
             <CircleAlert size={14} className={styles.footIcon} aria-hidden="true" />
             {applyRefusalText(t, applyRefusal)}
           </p>
@@ -191,6 +194,7 @@ export function LayerOrderDialogFrame({
           <p
             className={styles.footNote}
             data-tone="info"
+            data-layout={phonePane === null ? 'wide' : 'narrow'}
             role="status"
             title={note.text}
             onPointerEnter={() => note.onHover?.(true)}
