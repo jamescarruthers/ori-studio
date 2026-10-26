@@ -396,6 +396,18 @@ export interface LayerOrderSolutionCalls {
 /** What the worker exposes, and what the runtime hands its owner, guarded. */
 export interface LayerOrderEngine extends LayerOrderSessionCalls, LayerOrderSolutionCalls {}
 
+/**
+ * The name a worker is spawned with for each role (`layerOrderRuntime.ts`):
+ * how the one worker file knows whose it is, and so whether a step also
+ * counts on (`layerOrderStepsCount`, E9).
+ */
+export const LAYER_ORDER_WORKER_NAMES = { dialog: 'layer-order-dialog', host: 'layer-order-host' } as const;
+
+/** A worker's role, by the name it was spawned with: the dialog's, or else a host's. */
+export function layerOrderWorkerRole(name: string): keyof typeof LAYER_ORDER_WORKER_NAMES {
+  return name === LAYER_ORDER_WORKER_NAMES.dialog ? 'dialog' : 'host';
+}
+
 // ---------------------------------------------------------------------------
 // When a call fails: the codes and the trap envelope, in a leaf of their own
 // (`layerOrderCallFailures.ts`) so the dialog's gateway can read them without

@@ -15,9 +15,11 @@ import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import {
   KEEP_TRYING_FACTOR,
   LAYER_ORDER_LIMITS,
+  LAYER_ORDER_WORKER_NAMES,
   constraintSeen,
   constraintVerb,
   keepTrying,
+  layerOrderWorkerRole,
   layerPositionEnds,
   packConstraints,
   spotCount,
@@ -119,6 +121,14 @@ describe('the stepper’s ends, every pager’s', () => {
     expect(layerPositionEnds(at(3, 3, false), 'next')).toEqual({ first: false, last: true, only: false });
     // The last, proved, but not the only one: a solution listed before the first found may yet be.
     expect(layerPositionEnds(at(1, 1, false), 'next')).toEqual({ first: false, last: true, only: false });
+  });
+});
+
+describe('a worker’s role', () => {
+  it('is read from the name the runtime spawns it with, a host’s unless it is the dialog’s', () => {
+    expect(layerOrderWorkerRole(LAYER_ORDER_WORKER_NAMES.dialog)).toBe('dialog');
+    expect(layerOrderWorkerRole(LAYER_ORDER_WORKER_NAMES.host)).toBe('host');
+    expect(layerOrderWorkerRole('')).toBe('host');
   });
 });
 

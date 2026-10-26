@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS } from '../layer-order/engine/layerOrderEngine.fixtures';
-import type { LayerOrderBridge, LayerSolutionCount } from '../layer-order/engine/layerOrderWire';
+import type { LayerOrderBridge, LayerSolutionCaps, LayerSolutionCount } from '../layer-order/engine/layerOrderWire';
 import { LAYER_ORDER_RECORD_MAX_BYTES, type LayerOrderRecord } from '../lib/layerOrder/layerOrderRecord';
 import { createLayerOrderBridgeBackend } from './layerOrderBridgeBackend';
 
@@ -77,7 +77,8 @@ function stubBridge() {
       log.push(`step ${session}:${cursor}`);
       return { verdict: 'end' as const };
     }),
-    layer_solutions_start: vi.fn((session: number) => {
+    layer_open_pairs: vi.fn(() => Uint32Array.of(0, 1)),
+    layer_solutions_start: vi.fn((session: number, _caps?: LayerSolutionCaps) => {
       cursors += 1;
       log.push(`start ${session}:${cursors}`);
       return cursors;
@@ -161,6 +162,38 @@ describe('createLayerOrderBridgeBackend', () => {
       'close cursor 1:2',
       'close 1',
     ]);
+  });
+
+  it('starts each cursor saying whether its steps count on, by the pairs open as it starts (E9)', () => {
+    const { bridge, asBridge } = stubBridge();
+    const asked: number[] = [];
+    const backend = createLayerOrderBridgeBackend(asBridge, {
+      caps: { storedBits: 1 << 20 },
+      countInSteps: (openPairs) => {
+        asked.push(openPairs);
+        return openPairs <= 1;
+      },
+    });
+    backend.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    backend.step({ picture: 'front' }, 'next', FAKE_LIMITS);
+    expect(bridge.layer_solutions_start).toHaveBeenLastCalledWith(1, { storedBits: 1 << 20, countInSteps: true });
+    // A commit leaves more pairs open (more than the threshold here): the next cursor's steps spend nothing on the count.
+    bridge.layer_open_pairs.mockReturnValue(Uint32Array.of(0, 1, 0, 2));
+    backend.commit([[0, 1, 1]], FAKE_LIMITS);
+    backend.countSlice(FAKE_LIMITS);
+    expect(bridge.layer_solutions_start).toHaveBeenLastCalledWith(1, { storedBits: 1 << 20, countInSteps: false });
+    // Read once per cursor, as it starts.
+    backend.step({ picture: 'front' }, 'next', FAKE_LIMITS);
+    expect(asked).toEqual([1, 2]);
+  });
+
+  it('leaves whether a step counts on to the wire when it is not told', () => {
+    const { bridge, asBridge } = stubBridge();
+    const backend = createLayerOrderBridgeBackend(asBridge);
+    backend.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    backend.step({ picture: 'front' }, 'next', FAKE_LIMITS);
+    expect(bridge.layer_solutions_start).toHaveBeenLastCalledWith(1, undefined);
+    expect(bridge.layer_open_pairs).not.toHaveBeenCalled();
   });
 
   it('starts a cursor the bridge calls stale again on the spot, under a new epoch', () => {

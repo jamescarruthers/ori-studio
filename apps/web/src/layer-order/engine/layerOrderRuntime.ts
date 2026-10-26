@@ -207,7 +207,7 @@ export interface LayerOrderRuntime {
 
 export interface LayerOrderRuntimeOptions {
   readonly role: LayerOrderEngineRole;
-  /** Starts a worker. The default spawns `workers/layerOrderWorker.ts`; tests pass a fake. */
+  /** Starts a worker. The default spawns `workers/layerOrderWorker.ts`, named for `role`; tests pass a fake. */
   readonly spawn?: () => Worker;
   /**
    * What one slice of the count may spend, while counting is on
@@ -217,8 +217,22 @@ export interface LayerOrderRuntimeOptions {
   readonly count?: LayerOrderLimits;
 }
 
-function spawnLayerOrderWorker(): Worker {
-  return new Worker(new URL('../../workers/layerOrderWorker.ts', import.meta.url), { type: 'module' });
+/**
+ * The worker for `role`, named for it (`LAYER_ORDER_WORKER_NAMES`), which is
+ * how it knows whether a step also counts on (E9). Written out per role: the
+ * bundler reads a worker's options only as literals (`engines/engineHost.ts`),
+ * and bundles the one file once for both.
+ */
+function spawnLayerOrderWorker(role: LayerOrderEngineRole): Worker {
+  return role === 'dialog'
+    ? new Worker(new URL('../../workers/layerOrderWorker.ts', import.meta.url), {
+        type: 'module',
+        name: 'layer-order-dialog',
+      })
+    : new Worker(new URL('../../workers/layerOrderWorker.ts', import.meta.url), {
+        type: 'module',
+        name: 'layer-order-host',
+      });
 }
 
 interface Live {
@@ -238,7 +252,7 @@ function sameCount(a: LayerSolutionCount, b: LayerSolutionCount): boolean {
 const NOTHING_TO_COUNT: ReadonlySet<string> = new Set([LAYER_ORDER_CALL_FAILURES.sessionNotOpen, 'unknown_layer_session']);
 
 export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): LayerOrderRuntime {
-  const spawn = options.spawn ?? spawnLayerOrderWorker;
+  const spawn = options.spawn ?? (() => spawnLayerOrderWorker(options.role));
   const sliceLimits = options.count ?? LAYER_ORDER_COUNT_SLICE;
   /** A slice's limits while the count is on; null while it is off, which is how every runtime starts. */
   let slice: LayerOrderLimits | null = null;

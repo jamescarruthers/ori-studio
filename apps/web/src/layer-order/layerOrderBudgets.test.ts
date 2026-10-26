@@ -4,6 +4,7 @@ import {
   LAYER_ORDER_COUNT_SLICE,
   LAYER_ORDER_LABEL_CAP,
   layerOrderCountStarts,
+  layerOrderStepsCount,
 } from './layerOrderBudgets';
 
 /**
@@ -48,5 +49,15 @@ describe('the Layer order dialog’s budgets, as census 2 set them', () => {
     expect(LAYER_ORDER_COUNT_SLICE).toEqual({ maxNodes: 1_000, fastNodes: 128, deadlineMs: 30 });
     expect(CENSUS_2.sliceMs.p50).toBeLessThan(LAYER_ORDER_COUNT_SLICE.deadlineMs + 5);
     expect(CENSUS_2.sliceMs.max).toBeLessThan(100);
+  });
+
+  it('count in a host’s steps where the count starts, and never in the dialog’s, which counts in slices (E9)', () => {
+    expect(layerOrderStepsCount('host', CENSUS_2.openPairs.corpusMax)).toBe(true);
+    expect(layerOrderStepsCount('host', LAYER_ORDER_COUNT_MAX_OPEN_PAIRS)).toBe(true);
+    expect(layerOrderStepsCount('host', LAYER_ORDER_COUNT_MAX_OPEN_PAIRS + 1)).toBe(false);
+    expect(layerOrderStepsCount('host', CENSUS_2.openPairs.iguana)).toBe(false);
+    expect(layerOrderStepsCount('dialog', 0)).toBe(false);
+    expect(layerOrderStepsCount('dialog', CENSUS_2.openPairs.corpusMax)).toBe(false);
+    expect(layerOrderStepsCount('dialog', CENSUS_2.openPairs.iguana)).toBe(false);
   });
 });

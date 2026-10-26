@@ -16,7 +16,9 @@
  *   position; closed and started again (a new `epoch`) when the committed
  *   constraints change: a commit that committed, a restore. A step keeps it,
  *   as E6 does. Should the bridge still call a cursor stale, it is started
- *   again on the spot, so the count never stops on it.
+ *   again on the spot, so the count never stops on it. Whether its steps
+ *   also count on (E9's `countInSteps`) is decided as it starts, by the
+ *   pairs open then ({@link LayerOrderBridgeBackendOptions.countInSteps}).
  *
  * Everything else is the bridge's answer as it is, minus the handle, with
  * constraints as tuples and the record as `LayerOrderRecord`. A refusal is a
@@ -49,6 +51,13 @@ import type { LayerOrderBackend } from './layerOrderWorkerApi';
 export interface LayerOrderBridgeBackendOptions {
   /** How far a count goes before it reads "at least"; E6's defaults when left out (E8 sets them). */
   readonly caps?: LayerSolutionCaps;
+  /**
+   * Whether a step also counts on (E9's `countInSteps`), for a cursor started
+   * on a session that leaves `openPairs` pairs open, read as each cursor
+   * starts: the worker's `layerOrderStepsCount` for its role. The wire's
+   * default (it does) when left out.
+   */
+  readonly countInSteps?: (openPairs: number) => boolean;
 }
 
 /** A thrown code the bridge uses for a cursor that counted other constraints. */
@@ -118,11 +127,18 @@ export function createLayerOrderBridgeBackend(
     if (gone && session) bridge.layer_solutions_close(session.handle, gone.handle);
   };
 
+  /** What a cursor starts with on `now`: the caps, and whether its steps count on, by the pairs open now. */
+  const capsOf = (now: Session): LayerSolutionCaps | undefined => {
+    const { caps, countInSteps } = options;
+    if (!countInSteps) return caps;
+    return { ...caps, countInSteps: countInSteps(bridge.layer_open_pairs(now.handle).length / 2) };
+  };
+
   /** The session's cursor, started if there is none. */
   const cursorOf = (now: Session): Cursor => {
     if (!cursor) {
       epoch += 1;
-      cursor = { handle: bridge.layer_solutions_start(now.handle, options.caps), epoch };
+      cursor = { handle: bridge.layer_solutions_start(now.handle, capsOf(now)), epoch };
     }
     return cursor;
   };
