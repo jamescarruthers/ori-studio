@@ -978,7 +978,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U8: panes (#518)
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
-- [ ] U10: inspector
+- [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)

@@ -155,7 +155,7 @@ fn observed(layers: &LayerSessions, session: u32) -> Observed {
         front: layers.stacks(session, ViewSide::Front).expect("front"),
         back: layers.stacks(session, ViewSide::Back).expect("back"),
         relations: layers.oriedita_relations(session).expect("relations"),
-        record: layers.save(session).expect("save"),
+        record: layers.save(session, None).expect("save"),
     }
 }
 
@@ -190,7 +190,7 @@ fn folds_with(source: &FoldSource, relations: &[u32]) {
 }
 
 fn saved_json(layers: &LayerSessions, session: u32) -> String {
-    match layers.save(session) {
+    match layers.save(session, None) {
         Ok(Saving::Saved { json }) => json,
         other => panic!("{other:?}"),
     }
@@ -674,8 +674,24 @@ fn a_restore_whose_constraints_clash_commits_none_and_marks_the_clash() {
     };
     // A save writes them back: nothing the user made is dropped.
     assert_eq!(saved_constraints(&layers), 2);
-    // The clashing row's trash button.
+    // A dialog names the carried rows to write back by record index; the
+    // session keeps every one.
+    let kept = |layers: &LayerSessions, keep: &[usize]| {
+        let Ok(Saving::Saved { json }) = layers.save(restored_session, Some(keep)) else {
+            panic!("the save");
+        };
+        let RecordRead::Read { record, .. } = read_record(&json) else {
+            panic!("the record reads");
+        };
+        record.constraints.len()
+    };
+    assert_eq!(kept(&layers, &[]), 0);
+    assert_eq!(kept(&layers, &[1]), 1);
+    assert_eq!(kept(&layers, &[0, 1, 9]), 2);
+    assert_eq!(layers.carried(restored_session), Ok(back.carried.clone()));
+    // A removal from the session, by record index.
     assert_eq!(layers.remove_carried(restored_session, 1), Ok(true));
+    assert_eq!(layers.remove_carried(restored_session, 1), Ok(false));
     assert_eq!(layers.remove_carried(restored_session, 7), Ok(false));
     assert_eq!(saved_constraints(&layers), 1);
     // The builder previews the rows it shows, then commits them: the
@@ -793,7 +809,7 @@ fn a_session_opens_on_the_order_its_host_shows() {
     wrong.swap(2 * forced, 2 * forced + 1);
     match layers.open_showing(&source, &wrong, &defaults()) {
         Ok(Opening::Opened(opened)) => match opened.opened_on {
-            OpenedOnWire::Closest { moved, ignored } => {
+            OpenedOnWire::Closest { moved, ignored, .. } => {
                 assert!(moved >= 1, "{moved}");
                 assert_eq!(ignored, 0);
             }
@@ -1126,7 +1142,7 @@ fn a_closed_session_is_gone_and_its_handle_is_never_reused() {
             .expect_err("closed"),
     );
     gone(layers.oriedita_relations(first).expect_err("closed"));
-    gone(layers.save(first).expect_err("closed"));
+    gone(layers.save(first, None).expect_err("closed"));
     // The other session is untouched, and a new one takes a new handle.
     assert!(layers.open_pairs(second).is_ok());
     assert_eq!(open(&mut layers, &source).session, 3);

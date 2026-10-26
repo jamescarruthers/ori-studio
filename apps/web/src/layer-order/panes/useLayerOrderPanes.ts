@@ -50,6 +50,7 @@ import type { LayerOrderSessionStatus } from '../dialog/useLayerOrderSession';
 import type { FaceLetters, LayerFace } from '../engine/faceIndex';
 import type { LayerSide } from '../engine/layerOrderEngine';
 import {
+  creaseSegments,
   foldedOutlinesOf,
   foldedPaneFrame,
   foldedPaneToUser,
@@ -64,6 +65,7 @@ import {
   ringsBounds,
   stackDepth,
   xrayFaceAlpha,
+  type LayerPaneSegment,
 } from './layerPaneFigure';
 import type { LayerPaneHit, LayerPaneId } from './layerPaneInput';
 import {
@@ -128,6 +130,8 @@ export interface LayerPaneChannels {
   /** What must still show across a new {@link keepInViewKey}: the folded figure itself. */
   readonly keepInViewBounds: UserBounds | null;
   readonly rings: readonly LayerPaneRingMark[];
+  /** The crease a notice names ({@link LayerFaceMarks.crease}), in the pane's frame: drawn beside its line. */
+  readonly litCrease: readonly LayerPaneSegment[];
   /** The spots fading, in the pane's frame, and which flash they are. */
   readonly flash: { readonly n: number; readonly spots: readonly (readonly Point[])[] } | null;
   readonly labels: readonly LayerPaneLabel[];
@@ -138,6 +142,21 @@ export interface LayerPaneChannels {
 const NO_FACES: ReadonlySet<LayerFace> = new Set();
 const NO_OVERLAY: PaperPaneOverlay = {};
 const NO_SPOTS = () => null;
+const NO_SEGMENTS: readonly LayerPaneSegment[] = [];
+
+/** The crease `marks` names, on `scene`, in `frame`'s coordinates: none when it names none. */
+function useLitCrease(
+  scene: OristudioCpFoldedPaperScene | null,
+  crease: LayerFaceMarks['crease'],
+  frame: 'pattern' | 'folded'
+): readonly LayerPaneSegment[] {
+  const a = crease?.[0] ?? null;
+  const b = crease?.[1] ?? null;
+  return useMemo(
+    () => (scene && a !== null && b !== null ? creaseSegments(scene, [a, b], frame) : NO_SEGMENTS),
+    [scene, a, b, frame]
+  );
+}
 
 /** What `--face-pick` is when nothing has set it: the dark type's (`applyTheme`'s `FACE_PICK_COLORS`). */
 const PICK_FALLBACK: Rgba = [0xa7 / 255, 0x8b / 255, 0xfa / 255, 1];
@@ -212,6 +231,7 @@ export function useSplitMarks(marks: LayerFaceMarks): { base: LayerFaceMarks; ma
   const row = useListByValue(marks.row);
   const undecidedFront = useListByValue(marks.undecided.front);
   const undecidedBack = useListByValue(marks.undecided.back);
+  const crease = useListByValue(marks.crease ?? []);
   const { picking, subject, clashStrong, changed, flash, pointed } = marks;
   const base = useMemo<LayerFaceMarks>(
     () => ({
@@ -226,8 +246,9 @@ export function useSplitMarks(marks: LayerFaceMarks): { base: LayerFaceMarks; ma
       changed,
       flash,
       undecided: { front: undecidedFront, back: undecidedBack },
+      crease: crease.length === 2 ? [crease[0]!, crease[1]!] : null,
     }),
-    [picking, pickable, subject, objects, clash, clashStrong, changed, flash, undecidedFront, undecidedBack]
+    [picking, pickable, subject, objects, clash, clashStrong, changed, flash, undecidedFront, undecidedBack, crease]
   );
   const full = useMemo<LayerFaceMarks>(
     () => (pointed === null && row.length === 0 ? base : { ...base, pointed, row }),
@@ -335,6 +356,7 @@ export function useLayerPatternPane({
     () => (pointerPaint.rings.length === 0 ? baseRings : [...baseRings, ...ringMarks([pointerPaint], ringOf)]),
     [baseRings, pointerPaint, ringOf]
   );
+  const litCrease = useLitCrease(facesScene, base.crease, 'pattern');
   return {
     id: 'pattern',
     scene: null,
@@ -352,6 +374,7 @@ export function useLayerPatternPane({
     keepInViewKey: null,
     keepInViewBounds: null,
     rings,
+    litCrease,
     flash: null,
     labels: letters,
     labelSpots,
@@ -470,6 +493,7 @@ export function useLayerFoldedPane({
     () => (pointerPaint.rings.length === 0 ? baseRings : [...baseRings, ...ringMarks([pointerPaint], ringOf)]),
     [baseRings, pointerPaint, ringOf]
   );
+  const litCrease = useLitCrease(kernel, base.crease, 'folded');
   if (!shown) return null;
   return {
     id: 'folded',
@@ -488,6 +512,7 @@ export function useLayerFoldedPane({
     keepInViewKey: side,
     keepInViewBounds: figureBounds,
     rings,
+    litCrease,
     flash,
     labels: letters,
     labelSpots,

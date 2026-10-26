@@ -59,23 +59,13 @@ export interface AppKeyboardActions {
 }
 
 export function handleAppKeyDown(event: KeyboardEvent, actions: AppKeyboardActions): boolean {
-  // A key aimed into an open menu is not a shortcut. The runtime asks the same
-  // of its own callers, but the deselect fallback below is this function's
-  // alone: without the layer check here, Escape aimed at a context menu would
-  // still clear the project selection behind it. A form control is the
-  // runtime's to sort out (it lets Save through and nothing else), so the
-  // fallback checks for one itself.
-  if (
-    event.defaultPrevented ||
-    isOpenLayerTarget(event.target) ||
-    actions.isReadingSitePage?.() ||
-    actions.isCommandDialogOpen?.()
-  ) {
+  if (event.defaultPrevented || actions.isReadingSitePage?.() || actions.isCommandDialogOpen?.()) {
     return false;
   }
 
   // A dialog that owns every key: nothing behind it acts, wherever the key was
-  // aimed. The dialog on top may claim Undo and Redo for a history of its own;
+  // aimed. The dialog on top may claim Undo and Redo for a history of its own,
+  // from a menu it opened too (the dispatcher leaves that menu every other key);
   // nothing else reaches the runtime, and no Escape reaches the deselect below.
   if (isShortcutBarrierTarget(event.target) || isShortcutBarrierOpen()) {
     return handleDialogShortcutKeyDown(event, {
@@ -84,6 +74,14 @@ export function handleAppKeyDown(event: KeyboardEvent, actions: AppKeyboardActio
       menu: actions.handleMenuAction,
     });
   }
+
+  // A key aimed into an open menu is not a shortcut. The runtime asks the same
+  // of its own callers, but the deselect fallback below is this function's
+  // alone: without the layer check here, Escape aimed at a context menu would
+  // still clear the project selection behind it. A form control is the
+  // runtime's to sort out (it lets Save through and nothing else), so the
+  // fallback checks for one itself.
+  if (isOpenLayerTarget(event.target)) return false;
 
   // The runtime is asked first, always. It used to be asked second, behind a
   // branch that handed Escape to the project-selection deselect for every

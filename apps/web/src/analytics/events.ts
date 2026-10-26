@@ -2105,6 +2105,18 @@ export const ANALYTICS_EVENTS = {
   appUpdateRelaunched: 'app update relaunched',
   appUpdateFailed: 'app update failed',
   appUpdateDismissed: 'app update dismissed',
+  /**
+   * The Layer order dialog (`implementation-plans/layer-order-dialog.md`,
+   * "Analytics"; spec §10). Built as facts by its pure model
+   * (`layer-order/model/layerOrderAnalytics.ts`) and sent by
+   * `trackLayerOrderFact` (`trackLayerOrder.ts`): enums and buckets only,
+   * never a face, a letter or an exact count. The hosts' `layer constraints
+   * need attention` is beside the fold events.
+   */
+  layerOrderDialogOpened: 'layer order dialog opened',
+  layerConstraintAdded: 'layer constraint added',
+  layerConstraintBlocked: 'layer constraint blocked',
+  layerOrderDialogClosed: 'layer order dialog closed',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

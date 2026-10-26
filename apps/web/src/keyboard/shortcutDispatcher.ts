@@ -194,14 +194,27 @@ function keyReachesDispatch(target: EventTarget | null, barrier: Element | undef
   return holder === null || holder === barrier;
 }
 
+/**
+ * Was the open layer `target` sits in opened from inside `barrier`: a menu the
+ * dialog portalled out of itself, whose open trigger (`aria-controls`) is the
+ * dialog's? Then the dialog's own ⌘/Ctrl chords (Undo, Redo) still reach it.
+ */
+function layerOpenedInside(target: EventTarget | null, barrier: Element | undefined): boolean {
+  if (!barrier || !(target instanceof Element)) return false;
+  const layer = target.closest('[role="menu"]');
+  if (!layer || !layer.id) return false;
+  return Array.from(barrier.querySelectorAll('[aria-controls]')).some((el) => el.getAttribute('aria-controls') === layer.id);
+}
+
 export function handleShortcutKeyDown(
   event: KeyboardEvent,
   options: ShortcutDispatchOptions
 ): boolean {
+  const inLayer = isOpenLayerTarget(event.target);
   if (
     event.defaultPrevented ||
     event.isComposing ||
-    isOpenLayerTarget(event.target) ||
+    (inLayer && !layerOpenedInside(event.target, options.insideBarrier)) ||
     !keyReachesDispatch(event.target, options.insideBarrier)
   ) {
     return false;
@@ -209,6 +222,8 @@ export function handleShortcutKeyDown(
 
   const chord = keyChordFromKeyboardEvent(event);
   if (!chord) return false;
+  // A dialog's own menu keeps every key but a ⌘/Ctrl chord: its arrows, typeahead, Enter and Escape.
+  if (inLayer && !chord.primary) return false;
   // A form control keeps its keys, except a chord declared `inFormControls`
   // and held with ⌘/Ctrl — so a Save rebound to a bare letter still types it.
   // One that takes no typing has no ⌘/Ctrl chord to keep.

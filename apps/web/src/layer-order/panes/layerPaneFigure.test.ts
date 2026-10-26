@@ -3,7 +3,9 @@ import { cpModelToSvg } from '../../lib/creasePatternViewport';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { DEFAULT_FOLDED_MODEL } from '../../lib/orieditaNativeMetadata';
 import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
+import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import {
+  creaseSegments,
   foldedPaneFrame,
   foldedPaneToUser,
   foldedPivot,
@@ -229,5 +231,53 @@ describe('Fit (Round3’s fitAll)', () => {
   it('never frames less than the folded figure', () => {
     const wide = { minX: 0, minY: 0, maxX: 500, maxY: 20 };
     expect(side(foldedPaneFrame(wide, 1))).toEqual({ width: 500, height: 500 });
+  });
+});
+
+describe('the crease two faces meet at', () => {
+  // A 20 by 10 strip folded in half at x = 10: face 1 (x 10–20) folds over face 0.
+  const folded = (): OristudioCpFoldedPaperScene => {
+    const sheet = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+      { x: 20, y: 0 },
+      { x: 20, y: 10 },
+    ];
+    const face = (points: number[], outline: { x: number; y: number }[]) => ({
+      outline,
+      points,
+      front_up: true,
+      edges: [],
+    });
+    return {
+      schema_version: 3,
+      flipped: false,
+      sheet: 20,
+      faces: [
+        face([0, 1, 2, 3], [sheet[0]!, sheet[1]!, sheet[2]!, sheet[3]!]),
+        // Its far edge lands on x = 0; the crease stays at x = 10.
+        face([1, 4, 5, 2], [{ x: 10, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 10 }, { x: 10, y: 10 }]),
+      ],
+      subfaces: [],
+      aux_lines: [],
+      sheet_points: sheet,
+    };
+  };
+
+  it('is the side both faces step along, on the crease pattern and on the folded paper', () => {
+    expect(creaseSegments(folded(), [0, 1], 'pattern')).toEqual([[{ x: 10, y: 0 }, { x: 10, y: 10 }]]);
+    // Read off the first face named, so along its own ring's way round.
+    expect(creaseSegments(folded(), [1, 0], 'pattern')).toEqual([[{ x: 10, y: 10 }, { x: 10, y: 0 }]]);
+    expect(creaseSegments(folded(), [0, 1], 'folded')).toEqual([[{ x: 10, y: 0 }, { x: 10, y: 10 }]]);
+  });
+
+  it('is nothing for faces that share no side, a face the scene lacks, or a scene that names no points', () => {
+    // The Z fixture names each face's corners apart.
+    expect(creaseSegments(zScene(), [0, 1], 'pattern')).toEqual([]);
+    expect(creaseSegments(folded(), [0, 9], 'folded')).toEqual([]);
+    const unnamed = folded();
+    expect(creaseSegments({ ...unnamed, faces: unnamed.faces.map((f) => ({ ...f, points: [] })) }, [0, 1], 'pattern')).toEqual([]);
   });
 });

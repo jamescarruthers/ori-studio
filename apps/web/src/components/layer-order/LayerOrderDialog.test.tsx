@@ -27,6 +27,7 @@ import {
   type LayerOrderDialogOutcome,
 } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { resetLayerOrderDialogStoreForTest } from '../../layer-order/dialog/layerOrderDialogStore';
+import { runModalHistory } from '../../keyboard/dialogShortcuts';
 import { isShortcutBarrierOpen } from '../../keyboard/shortcutDispatcher';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
@@ -34,12 +35,20 @@ import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { byRole, queryByRole } from '../../test/roleQueries';
 import { MODAL_FULL_SCREEN_QUERY } from '../ui/ModalFrame';
+import { TooltipProvider } from '../ui/Tooltip';
 import { LayerOrderDialogMount } from './LayerOrderDialogMount';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
+
+/** The analytics layer's one door: every event the dialog sends. */
+const analytics = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock('../../analytics/runtime', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../analytics/runtime')>()),
+  track: analytics.track,
+}));
 
 // The panes draw on WebGL, which jsdom has none of: stubbed whole, as the panes' own test stubs it.
 vi.mock('../../cp-workspace/renderer/reglRenderer', () => ({
@@ -130,6 +139,7 @@ beforeEach(() => {
   budget.starts = null;
   boom.whenReady = false;
   monitoring.reportError.mockClear();
+  analytics.track.mockClear();
   vi.stubGlobal('Worker', SpyWorker);
   host = document.createElement('div');
   document.body.append(host);
@@ -143,8 +153,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The mount, as the app root renders it: inside the app's tooltip provider. */
 function mount() {
-  act(() => root.render(<LayerOrderDialogMount />));
+  act(() =>
+    root.render(
+      <TooltipProvider>
+        <LayerOrderDialogMount />
+      </TooltipProvider>
+    )
+  );
 }
 
 /** Let the fake worker's messages, a task each, and the renders they cause land. */
@@ -154,9 +171,13 @@ async function flush(turns = 10) {
   });
 }
 
-/** Wait, two seconds at most, for `check`: the first open also loads the dialog's chunk. */
-async function until(check: () => boolean, what: string) {
-  const deadline = Date.now() + 2_000;
+/**
+ * Wait for `check`, two seconds at most; the first open also loads the
+ * dialog's chunk, its inspector and menus with it, which a cold run of this
+ * file takes longer over.
+ */
+async function until(check: () => boolean, what: string, ms = 2_000) {
+  const deadline = Date.now() + ms;
   while (!check() && Date.now() < deadline) await flush(5);
   if (!check()) throw new Error(`never: ${what}`);
 }
@@ -176,7 +197,7 @@ async function opened(request: LayerOrderRequest = REQUEST): Promise<{ outcome: 
   act(() => {
     outcome = openLayerOrderDialog(request);
   });
-  await until(() => dialog() !== null, 'the dialog opened');
+  await until(() => dialog() !== null, 'the dialog opened', 10_000);
   return { outcome };
 }
 
@@ -209,7 +230,8 @@ function refusing(refusal: LayerRefusal, times = Infinity): LayerOrderLimits[] {
 }
 
 describe('the Layer order dialog’s door', () => {
-  it('spawns no worker and loads no dialog code until a host opens it; a prefetch loads code only', async () => {
+  // The first open of the file loads the dialog's chunk cold.
+  it('spawns no worker and loads no dialog code until a host opens it; a prefetch loads code only', { timeout: 20_000 }, async () => {
     mount();
     await flush();
     expect(dialog()).toBeNull();
@@ -295,7 +317,10 @@ describe('the Layer order dialog’s session', () => {
     // The closest order that folds, 0 over 1 over 2 over 3, as the host's kernel takes it.
     expect(Array.from(answer.applied.relations)).toEqual([0, 1, 0, 2, 0, 3, 1, 2, 1, 3, 2, 3]);
     expect(answer.applied.record.constraints).toEqual([]);
-    expect(spawned[0]!.backend.calls.slice(-2)).toEqual(['save', 'relations']);
+    // The count's slices, and the stepper's position read again after each, run between calls; of the rest,
+    // Apply's two come last.
+    const counting = new Set(['countSlice', 'position']);
+    expect(spawned[0]!.backend.calls.filter((call) => !counting.has(call)).slice(-2)).toEqual(['save', 'relations']);
     await flush();
     expect(spawned[0]!.terminated).toBe(true);
   });
@@ -594,6 +619,124 @@ describe('the Layer order dialog’s session', () => {
     click(button('Cancel'));
     await expect(next).resolves.toEqual({ kind: 'cancelled' });
     vi.mocked(console.error).mockRestore();
+  });
+});
+
+describe('the Layer order dialog’s inspector, bound (U10)', () => {
+  const key = (element: Element, keyName: string) =>
+    act(() => element.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true })));
+  const rows = () => [...openDialog().querySelectorAll('li')].map((row) => row.querySelector('button')?.getAttribute('aria-label'));
+  const events = () => analytics.track.mock.calls.map(([event]) => event as string);
+
+  /** Build "subject in front of object" from the keyboard face menus, as a keyboard user does. */
+  async function sentence(subject: string, object: string) {
+    key(button(/^Subject:/), 'Enter');
+    click(byRole(document.body, 'menuitemradio', `Face ${subject}`));
+    key(button(/^Objects:/), 'Enter');
+    click(byRole(document.body, 'menuitemcheckbox', `Face ${object}`));
+    key(byRole(document.body, 'menuitemcheckbox', `Face ${object}`), 'Escape');
+    await flush();
+  }
+
+  it('reports its open, an Add and its close, each once, enums and buckets only', async () => {
+    mount();
+    const { outcome } = await opened({ ...REQUEST, surface: 'edit_figure' });
+    await until(isReady, 'the session opened');
+    expect(analytics.track).toHaveBeenCalledWith('layer order dialog opened', {
+      surface: 'edit_figure',
+      face_count_bucket: '<=20',
+      solutions_bucket: 'pending',
+    });
+    await sentence('C', 'D');
+    await until(() => button('Add constraint').getAttribute('aria-disabled') === null, 'the preview fit');
+    click(button('Add constraint'));
+    await until(() => rows().length === 1, 'the row landed');
+    expect(analytics.track).toHaveBeenCalledWith('layer constraint added', {
+      verb: 'in_front_of',
+      subject_origin: 'menu',
+      object_origin: 'menu',
+      object_count_bucket: '<=1',
+    });
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+    expect(events()).toEqual(['layer order dialog opened', 'layer constraint added', 'layer order dialog closed']);
+    expect(analytics.track.mock.calls[2]![1]).toMatchObject({ outcome: 'cancelled', constraint_count_bucket: '<=1' });
+  });
+
+  it('undoes and redoes through the modal history, as ⌘Z, ⇧⌘Z and the menu bar reach it', async () => {
+    mount();
+    const { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    await sentence('C', 'D');
+    await until(() => button('Add constraint').getAttribute('aria-disabled') === null, 'the preview fit');
+    click(button('Add constraint'));
+    await until(() => rows().length === 1, 'the row landed');
+    const [added] = rows();
+    act(() => {
+      expect(runModalHistory('undo')).toBe(true);
+    });
+    await until(() => rows().length === 0, 'undo landed');
+    act(() => {
+      expect(runModalHistory('redo')).toBe(true);
+    });
+    await until(() => rows().length === 1, 'redo landed');
+    expect(rows()).toEqual([added]);
+    // Nothing left to redo: the history says so, and the menu bar's Redo goes nowhere.
+    expect(runModalHistory('redo')).toBe(false);
+    click(button('Apply'));
+    const answer = await outcome;
+    expect(answer.kind).toBe('applied');
+    if (answer.kind === 'applied') expect(answer.applied.record.constraints).toHaveLength(1);
+  });
+
+  it('Cancel mid-check closes at once: the worker goes, and nothing is reported', async () => {
+    let held: { release(): void } | null = null;
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      held = backend.hold('previewList');
+      return backend;
+    };
+    mount();
+    const { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    await sentence('C', 'D');
+    expect(button('Add constraint').title).toBe('Checking C in front of D');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+    expect(spawned[0]!.terminated).toBe(true);
+    held!.release();
+    await flush();
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+  });
+
+  it('a crash mid-check loses the session; Try again opens it fresh, live again', async () => {
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      backend.hold('previewList');
+      return backend;
+    };
+    mount();
+    await opened();
+    await until(isReady, 'the session opened');
+    await sentence('C', 'D');
+    act(() => spawned[0]!.crash());
+    await until(() => alert(/stopped unexpectedly/) !== null, 'the loss showed');
+    expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+    makeBackend = () => createFakeLayerOrderBackend();
+    click(button('Try again'));
+    await until(isReady, 'the reopen');
+    expect(button('Subject: pick a face').getAttribute('aria-current')).toBe('true');
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    expect(monitoring.reportError.mock.calls[0]![1]).toMatchObject({ surface: 'layer-order:engine' });
+  });
+
+  it('says why it opened on another order when the host’s can’t fold (D19)', async () => {
+    mount();
+    await opened(CANT_FOLD_REQUEST);
+    await until(isReady, 'the session opened');
+    expect(byRole(openDialog(), 'status', /can’t fold here/).textContent).toBe(
+      'The order shown can’t fold here. Showing the nearest order that folds.'
+    );
   });
 });
 
