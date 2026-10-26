@@ -924,7 +924,10 @@ export type OristudioCpSelectionLayerOrderOpening =
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
    * - `cancelled`: stopped while it folded.
    *
-   * Every one but `busy` and `cancelled` has said why, or needs to say nothing.
+   * `blocked` and `failed` have said why, as an error; `spatial`,
+   * `undetermined` and `moved` are no fault and say nothing here, for the
+   * press says them as a message (`layerOrderPressToasts.ts`); the rest need
+   * say nothing.
    */
   | {
       status: 'unavailable';
@@ -1345,8 +1348,9 @@ export interface CreasePatternSliceActions {
    * Callers bracket it as one undo entry (`applyFoldedFigureLayerOrder`,
    * `openFoldedFigureLayerOrder.ts`); the bracket holds the fold it replaces
    * until the entry has taken it. When the crease pattern changed or was
-   * replaced since `press` (`foldPress.ts`), it writes nothing and says so:
-   * figure `id` may then be another document's.
+   * replaced since `press` (`foldPress.ts`), it writes nothing, and its
+   * caller says so as a message (`layerOrderPressToasts.ts`): figure `id` may
+   * then be another document's.
    *
    * With `refold` (the opening's, D12), the dialog was opened on the
    * figure's creases as they are now: the Apply is its refold too, and the

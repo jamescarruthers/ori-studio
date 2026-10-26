@@ -60,7 +60,8 @@ import { foldedFigureGesture } from './foldedFigureGesture';
 import { reselectFoldableLineIds } from './foldedFigureStaleness';
 import { foldedFigureLayerOrderDialogRecord } from './foldedFigureLayerOrderState';
 import { refoldFoldedFigure } from './foldedFigureVerbs';
-import { foldPressMoved, foldPressMovedMessage, markFoldPress, type FoldPress } from './foldPress';
+import { foldPressMoved, markFoldPress, type FoldPress } from './foldPress';
+import { sayLayerOrderPressRefusal } from './layerOrderPressToasts';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type FoldedFigureLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
@@ -198,7 +199,8 @@ export async function openFoldedFigureLayerOrder(
   const opening = await store.getState().prepareOristudioCpFigureLayerOrder(id);
   if (opening.status !== 'ready') {
     // An engine that never loaded is said once, as the dialog's gateway says
-    // it; every other way out has said what it had to, or has nothing to say.
+    // it, an error; a kernel failure has said itself, an error too. Every
+    // other way out is no fault, and is a message or nothing.
     if (opening.reason === 'unavailable') {
       toast.error(t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
     }
@@ -220,7 +222,7 @@ export async function openFoldedFigureLayerOrder(
     // A crease edited or another document opened while the fold was read or
     // made: its Apply would be refused, so the dialog does not open.
     if (foldPressMoved(press, state)) {
-      toast.error(foldPressMovedMessage(t));
+      sayLayerOrderPressRefusal('moved', t);
       return 'not-opened';
     }
     const shown = state.oristudioCpFoldedFigures.find((entry) => entry.id === id) ?? figure;
@@ -232,7 +234,7 @@ export async function openFoldedFigureLayerOrder(
     // Refold draws (the dialog opened on it), so the Apply is that Refold (D12),
     // on the crease pattern the press found, as any Apply.
     if (outcome.kind === 'unchanged' && opening.refold && request.record === null) {
-      if (foldPressMoved(press, store.getState())) toast.error(foldPressMovedMessage(t));
+      if (foldPressMoved(press, store.getState())) sayLayerOrderPressRefusal('moved', t);
       else await refoldFoldedFigure(id, t);
     }
     return outcome.kind;
@@ -265,5 +267,7 @@ export async function applyFoldedFigureLayerOrder(
     () =>
       useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied, press, refold ? { refold } : undefined)
   );
+  // Refused because the creases moved since the press: no fault, so a message.
+  if (done === false && foldPressMoved(press, useWorkspaceStore.getState())) sayLayerOrderPressRefusal('moved', t);
   return done === true;
 }

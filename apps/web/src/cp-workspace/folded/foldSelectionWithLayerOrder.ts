@@ -42,6 +42,8 @@ import { uprightRotationForView } from '../annotations/annotationTransform';
 import { cpOverlayViewStore } from '../cpOverlayViewStore';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
+import { foldPressMoved } from './foldPress';
+import { isLayerOrderPressRefusal, sayLayerOrderPressRefusal } from './layerOrderPressToasts';
 import { editFigureLook, editFigureView, type EditFigureView } from './openFoldedFigureLayerOrder';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
@@ -89,8 +91,11 @@ export async function foldSelectionWithLayerOrder(
   // The dialog's code, while the creases fold: loads, never spawns.
   prefetchLayerOrderDialog();
   const opening = await store.getState().prepareOristudioCpLayerOrderFold(lineIds);
-  // Each way out has said what it had to (`oristudioCpError`), or has nothing to say.
-  if (opening.status !== 'ready') return 'not-opened';
+  if (opening.status !== 'ready') {
+    // No fault: said as a message. A fault has said itself, as an error (`oristudioCpError`).
+    if (isLayerOrderPressRefusal(opening.reason)) sayLayerOrderPressRefusal(opening.reason, t);
+    return 'not-opened';
+  }
   try {
     // The crease pattern the selection lies on, out of however many the canvas holds.
     const document = store.getState().oristudioCpDocument?.document;
@@ -99,13 +104,16 @@ export async function foldSelectionWithLayerOrder(
     const outcome = await openLayerOrderDialog(request);
     // Folded as the press found the creases, and only if they are still there (`foldPress.ts`).
     const { press, figure } = opening;
+    let folded: boolean | undefined;
     if (outcome.kind === 'applied') {
       const { source, relations, record } = outcome.applied;
-      await foldWithChosenOrderAsEntry(opening.lineIds, { source, relations, record, press, figure }, t);
+      folded = await foldWithChosenOrderAsEntry(opening.lineIds, { source, relations, record, press, figure }, t);
     } else if (outcome.kind === 'unchanged') {
       const none = new Uint32Array();
-      await foldWithChosenOrderAsEntry(opening.lineIds, { source: request.source, relations: none, record: null, press, figure }, t);
+      folded = await foldWithChosenOrderAsEntry(opening.lineIds, { source: request.source, relations: none, record: null, press, figure }, t);
     }
+    // Refused because the creases moved since the press: no fault, so a message.
+    if (folded === false && foldPressMoved(press, store.getState())) sayLayerOrderPressRefusal('moved', t);
     return outcome.kind;
   } finally {
     await opening.release();

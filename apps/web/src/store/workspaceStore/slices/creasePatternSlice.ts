@@ -190,7 +190,7 @@ import {
 } from '../../../cp-workspace/folded/foldedFigureState';
 import { holdFoldedFigureAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 import { nextFoldedFigureId } from '../../../cp-workspace/folded/foldedFigureIds';
-import { foldPressMoved, foldPressMovedMessage, markFoldPress } from '../../../cp-workspace/folded/foldPress';
+import { foldPressMoved, markFoldPress } from '../../../cp-workspace/folded/foldPress';
 import {
   foldedFigureAwaitsFlatRefold,
   foldedFigureDetachedLayerOrder,
@@ -1553,10 +1553,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     return null;
   }
 
-  /** A Layer order press whose crease pattern changed or went (`foldPress.ts`): nothing written, and why. */
+  /**
+   * A Layer order press whose crease pattern changed or went (`foldPress.ts`):
+   * nothing written. No fault, so no error either: the press, which knows its
+   * mark, says why as a message (`layerOrderPressToasts.ts`).
+   */
   function refuseMovedPress(): false {
-    const message = foldPressMovedMessage(i18n.t);
-    set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
     return false;
   }
 
@@ -4392,6 +4394,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
 
     prepareOristudioCpLayerOrderFold: async (scopedLineIds) => {
       const oristudioCpDocument = get().oristudioCpDocument;
+      // A refusal with a message is said as Fold says its own, an error; the
+      // expected ones (`spatial`, `moved`, `undetermined`) write nothing here,
+      // and the press says them as a message (`layerOrderPressToasts.ts`).
       const refuse = (
         reason: Extract<OristudioCpSelectionLayerOrderOpening, { status: 'unavailable' }>['reason'],
         message?: string
@@ -4406,12 +4411,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const route = resolveFoldRoute(oristudioCpDocument.document, scopedLineIds);
       if (route.kind === 'none') return refuse('blocked', 'Select one or more foldable crease-pattern lines first');
       // A layer order is a flat fold's (D2); the selection toolbar says so before a press.
-      if (route.kind === 'spatial') {
-        return refuse(
-          'spatial',
-          i18n.t('panels:creasePattern.selectionToolbar.foldWithLayerOrder3d', 'Layer order works on flat folds')
-        );
-      }
+      if (route.kind === 'spatial') return refuse('spatial');
       // One press at a time, from the press until its dialog has closed and its Apply folded.
       if (selectionLayerOrderPending) return refuse('busy');
       selectionLayerOrderPending = true;
@@ -4440,7 +4440,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const moved = () => {
           if (!foldPressMoved(press, get())) return null;
           release();
-          return refuse('moved', foldPressMovedMessage(i18n.t));
+          return refuse('moved');
         };
         const movedWhileFolding = moved();
         if (movedWhileFolding) return movedWhileFolding;
@@ -4450,11 +4450,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // (`in_closure`, `not_found`, out of `budget`): the same creases a
         // plain Fold draws see-through, so the same D3 refusal, never "no flat
         // folded form", which Fold says only of creases it cannot draw at all.
-        const undetermined = () =>
-          refuse(
-            'undetermined',
-            i18n.t('errors:cp.layerOrderUndeterminedSelection', 'Layer order couldn’t be determined for these creases.')
-          );
+        const undetermined = () => refuse('undetermined');
         if (folded.status !== 'folded') return undetermined();
         const { snapshot } = folded;
         if (
@@ -4493,7 +4489,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       } catch (error) {
         if (isFoldCancellation(error)) return refuse('cancelled');
         // A fold of creases that changed under it: that, not the kernel's words, is why.
-        if (foldPressMoved(press, get())) return refuse('moved', foldPressMovedMessage(i18n.t));
+        if (foldPressMoved(press, get())) return refuse('moved');
         const normalized = engineError(error);
         set({ oristudioCpError: normalized.message, error: normalized });
         return { status: 'unavailable', reason: 'failed' };

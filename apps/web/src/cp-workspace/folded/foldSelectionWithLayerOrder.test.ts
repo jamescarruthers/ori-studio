@@ -130,6 +130,10 @@ vi.mock('../../layer-order/dialog/layerOrderDialogGateway', async (importOrigina
   };
 });
 
+/** The app's toasts, by kind: a refusal that is no fault is a message, never an error. */
+const toasts = vi.hoisted(() => ({ message: vi.fn(), error: vi.fn(), success: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toasts }));
+
 /** The canvas's sheet index, as each test sets it: none unless it says. */
 const sheets = vi.hoisted(() => ({ index: null as import('../../engine/oristudioCpSheetIndex').CpSheetIndex | null }));
 vi.mock('../sheets/cpSheetIndex', async (importOriginal) => ({
@@ -303,6 +307,8 @@ beforeEach(async () => {
   dialog.requests.length = 0;
   dialog.answer = async () => ({ kind: 'cancelled' });
   sheets.index = null;
+  toasts.message.mockReset();
+  toasts.error.mockReset();
   analytics.track.mockReset();
   useSettingsStore.setState({ foldWarningEnabled: true });
   useWorkspaceStore.setState({
@@ -314,9 +320,22 @@ beforeEach(async () => {
     oristudioCpHistoryPast: [],
     oristudioCpHistoryFuture: [],
     oristudioCpError: null,
+    error: null,
     dirty: false,
   });
 });
+
+/**
+ * `text` said as the app's ordinary message, as a refusal that is no fault
+ * is: no error toast, and no error for `GlobalToasts` to show as "Ori Studio
+ * error".
+ */
+function saidAsMessage(text: string) {
+  expect(toasts.message).toHaveBeenCalledWith(text);
+  expect(toasts.error).not.toHaveBeenCalled();
+  expect(state().error).toBeNull();
+  expect(state().oristudioCpError).toBeNull();
+}
 
 describe('Fold with layer order…', () => {
   it('opens the dialog on the selection’s own fold, as the figure Apply makes would look', async () => {
@@ -447,45 +466,50 @@ describe('Fold with layer order…', () => {
     expect(arena.live.size).toBe(0);
   });
 
-  it('a fold that fails opens nothing, says why and leaves nothing', async () => {
+  it('a fold that fails opens nothing, leaves nothing, and says why as the fault it is: an error', async () => {
     kernel.next = ['fail'];
 
     await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
     expect(dialog.requests).toEqual([]);
     expect(state().oristudioCpError).toBe('The crease pattern could not be folded');
+    // `GlobalToasts` shows this one as "Ori Studio error"; nothing says it as a message.
+    expect(state().error).toMatchObject({ message: 'The crease pattern could not be folded' });
+    expect(toasts.message).not.toHaveBeenCalled();
     expect(arena.live.size).toBe(0);
   });
 
-  it('creases Oriedita finds no layer order for open nothing (D3), and their fold is let go', async () => {
+  it('creases Oriedita finds no layer order for open nothing (D3), say so as a message, and their fold is let go', async () => {
     kernel.next = ['unsolved'];
 
     await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
     expect(dialog.requests).toEqual([]);
-    expect(state().oristudioCpError).toBe('Layer order couldn’t be determined for these creases.');
+    saidAsMessage('Layer order couldn’t be determined for these creases.');
     expect(arena.freed).toEqual([0]);
     expect(arena.live.size).toBe(0);
   });
 
   // What the kernel answers for such creases with no order given (`in_closure` on
   // `failing_global_flat_fold.ori`, which a plain Fold draws see-through): the same D3
-  // refusal, not "These creases have no flat folded form to draw".
-  it('a fold the kernel refuses for want of an order says D3’s words too, and holds nothing', async () => {
+  // refusal, not "These creases have no flat folded form to draw", and no fault, so a
+  // message rather than an "Ori Studio error".
+  it('a fold the kernel refuses for want of an order says D3’s words as a message, not an error, and holds nothing', async () => {
     kernel.next = ['refuse'];
 
     await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
     expect(dialog.requests).toEqual([]);
-    expect(state().oristudioCpError).toBe('Layer order couldn’t be determined for these creases.');
+    saidAsMessage('Layer order couldn’t be determined for these creases.');
+    expect(toasts.message).toHaveBeenCalledOnce();
     expect(arena.live.size).toBe(0);
   });
 
-  it('creases that fold in 3D are refused before anything folds', async () => {
+  it('creases that fold in 3D are refused before anything folds, as a message', async () => {
     useWorkspaceStore.setState({
       oristudioCpDocument: cpState(LINES.map((segment) => ({ ...segment, fold_magnitude: FOLD_MAGNITUDE_FULL / 2 }))),
     });
 
     await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
     expect(kernel.folds).toEqual([]);
-    expect(state().oristudioCpError).toBe('Layer order works on flat folds');
+    saidAsMessage('Layer order works on flat folds');
   });
 
   it('a second press while the first folds is refused, and folds nothing', async () => {
@@ -608,7 +632,7 @@ describe('what a Layer order press found open', () => {
 
     await expect(press).resolves.toBe('not-opened');
     expect(dialog.requests).toEqual([]);
-    expect(state().oristudioCpError).toBe(MOVED);
+    saidAsMessage(MOVED);
     expect(arena.freed).toEqual([0]);
     expect(arena.live.size).toBe(0);
   });
@@ -624,7 +648,7 @@ describe('what a Layer order press found open', () => {
     expect(figures()).toEqual([]);
     expect(state().oristudioCpHistoryPast).toEqual([]);
     expect(state().dirty).toBe(false);
-    expect(state().oristudioCpError).toBe(MOVED);
+    saidAsMessage(MOVED);
     expect(foldEvents('fold attempted')).toEqual([]);
     expect(arena.live.size).toBe(0);
   });
@@ -639,7 +663,7 @@ describe('what a Layer order press found open', () => {
     expect(kernel.folds).toEqual([[]]);
     expect(figures()).toEqual([]);
     expect(state().oristudioCpHistoryPast).toEqual([]);
-    expect(state().oristudioCpError).toBe(MOVED);
+    saidAsMessage(MOVED);
     expect(arena.live.size).toBe(0);
   });
 
@@ -696,7 +720,7 @@ describe('what a Layer order press found open', () => {
       expect(kernel.folds).toEqual([]);
       expect(figures()).toEqual([there]);
       expect(state().oristudioCpHistoryPast).toEqual([]);
-      expect(state().oristudioCpError).toBe(MOVED);
+      saidAsMessage(MOVED);
     });
 
     it('a crease edited while its dialog is open: Apply writes nothing', async () => {
@@ -710,7 +734,7 @@ describe('what a Layer order press found open', () => {
       expect(kernel.folds).toEqual([]);
       expect(figures()).toEqual([figure]);
       expect(state().oristudioCpHistoryPast).toEqual([]);
-      expect(state().oristudioCpError).toBe(MOVED);
+      saidAsMessage(MOVED);
     });
 
     it('nothing moved: Apply sets the order, as before', async () => {
