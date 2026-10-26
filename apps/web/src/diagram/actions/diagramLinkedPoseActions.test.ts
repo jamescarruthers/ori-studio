@@ -220,7 +220,11 @@ describe('the linked pose verbs', () => {
           busy: false,
           solutions: { discovered: 1, hasNext: false },
           constrained: true,
-          place: { position: { index, total: { n, exact } }, counted: true, ...(ended ? { ended } : {}) },
+          place: {
+            position: { index, total: { n, exact } },
+            counted: true,
+            ...(ended ? { ended: { previous: ended === 'previous', next: ended === 'next' } } : {}),
+          },
           record,
           stale,
         },
@@ -231,8 +235,10 @@ describe('the linked pose verbs', () => {
       return { previous: verb('previous-solution'), next: verb('next-solution') };
     };
     // The solutions that fit, counted by the pictures of a side: never the fold's layer orders.
-    expect(constrained(1, 3, false).previous).toMatchObject({ disabled: true, hint: 'This is its first solution' });
+    expect(constrained(1, 3, true).previous).toMatchObject({ disabled: true, hint: 'This is its first solution' });
     expect(constrained(1, 3, false).next.disabled).toBe(false);
+    // Not final, ‹ goes on looking at the first found: the count may list one before it (E9).
+    expect(constrained(1, 3, false).previous.disabled).toBe(false);
     // Not final: the count may find more, so › goes on looking.
     expect(constrained(3, 3, false).next.disabled).toBe(false);
     // The Step pane's never wraps on a constrained step (its unconstrained one does, D23): final, it waits.
@@ -272,7 +278,8 @@ describe('the linked pose verbs', () => {
     const flat = { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 } as const;
     const at = (index: number, n: number, exact: boolean, counted = true) => ({ position: { index, total: { n, exact } }, counted });
     expect(solutionPlaceLabel(flat, null, t)).toBeNull();
-    expect(solutionPlaceLabel(flat, at(2, 3, false), t)).toEqual({ count: '2 of 3+' });
+    // Not "2 of 3+" until the count is final: the index counts the solutions found so far, not their rank (E9).
+    expect(solutionPlaceLabel(flat, at(2, 3, false), t)).toEqual({ count: 'Solution 2' });
     expect(solutionPlaceLabel(flat, at(2, 3, true), t)).toEqual({ count: '2 of 3' });
     // Too large to count (D7): the stepper steps with no total.
     expect(solutionPlaceLabel(flat, at(3, 3, false, false), t)).toEqual({ count: 'Solution 3' });

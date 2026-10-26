@@ -504,12 +504,21 @@ describe('buildFoldedFigureProperties', () => {
     }
 
     it('reads where the cursor stands in the frontier’s words, its note kept', async () => {
+      // Until the count is final the index counts the solutions found so far, not their rank (E9): no total.
       await at(CONSTRAINED, 2, 3, { exact: false });
       expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({
-        readout: '2 of 3+',
+        readout: 'Solution 2',
         note: { kind: 'status', text: '2 constraints' },
         previous: { disabled: false },
         next: { disabled: false },
+      });
+      // And ‹ stays at the first found: the count may yet list one before it.
+      await at(CONSTRAINED, 1, 3, { exact: false });
+      expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({ readout: 'Solution 1', previous: { disabled: false } });
+      await at(CONSTRAINED, 1, 3);
+      expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({
+        readout: '1 of 3',
+        previous: { disabled: true, hint: 'This is its first solution' },
       });
       await at(CONSTRAINED, 3, 3);
       expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({

@@ -189,7 +189,7 @@ describe('the store’s subscription', () => {
     const withSide = (state: 'Front0' | 'Back1') =>
       ({ ...FIGURE_HELD, snapshot: { model: { state }, shown_order: 'given' } }) as unknown as OristudioCpFoldedFigureEntry;
     // The › that found nothing proved that way ends (E9).
-    const front = { position: solutionPosition(2, 3), counted: true, ended: 'next' };
+    const front = { position: solutionPosition(2, 3), counted: true, ended: { previous: false, next: true } };
     expect(foldedSolutionPlace(FIGURE_HELD)).toEqual(front);
 
     // Turned over: asked for the back. Then back again before the back's answer came.

@@ -170,6 +170,52 @@ export function spotCount(stacks: LayerStacks): number {
 }
 
 // ---------------------------------------------------------------------------
+// The stepper's ends
+
+/**
+ * The ways a step proved nothing lies from the order on screen (its `end`,
+ * E9), each kept once proved: ‹ proved first stays proved after a › that ran
+ * out or ended too. They hold for that order only, so whoever keeps them lets
+ * them go when the order moves or the stepper steps by something else.
+ */
+export interface LayerProvedEnds {
+  readonly previous: boolean;
+  readonly next: boolean;
+}
+
+/** Neither way proved. */
+export const NO_PROVED_ENDS: LayerProvedEnds = Object.freeze({ previous: false, next: false });
+
+/** `proved`, with a step's `end` that way proved too. */
+export function withProvedEnd(
+  proved: LayerProvedEnds | null | undefined,
+  direction: 'next' | 'previous'
+): LayerProvedEnds {
+  return { ...(proved ?? NO_PROVED_ENDS), [direction]: true };
+}
+
+/**
+ * Whether `position` is at either end of the stepper's fixed order, for every
+ * ‹ and › that steps through it, the dialog's and the hosts' alike: the first
+ * and the last once the total is exact, or a way a step proved nothing lies
+ * (`proved`, E9) whatever the count says.
+ *
+ * Before the total is exact, `index` counts the solutions found so far, not
+ * their rank: a step back may still find one the count lists before the
+ * first found, so ‹ stays even at 1. `only` is the one solution there is:
+ * both ends at once, so an unfinished count says it once both are proved.
+ */
+export function layerPositionEnds(
+  position: LayerPosition,
+  proved?: LayerProvedEnds | null
+): { first: boolean; last: boolean; only: boolean } {
+  const { index, total } = position;
+  const first = proved?.previous === true || (total.exact && index <= 1);
+  const last = proved?.next === true || (total.exact && index >= total.n);
+  return { first, last, only: first && last && total.n <= 1 };
+}
+
+// ---------------------------------------------------------------------------
 // Limits
 
 /**
@@ -389,6 +435,18 @@ export interface LayerOrderSolutionCalls {
 
 /** What the worker exposes, and what the runtime hands its owner, guarded. */
 export interface LayerOrderEngine extends LayerOrderSessionCalls, LayerOrderSolutionCalls {}
+
+/**
+ * The name a worker is spawned with for each role (`layerOrderRuntime.ts`):
+ * how the one worker file knows whose it is, and so whether a step also
+ * counts on (`layerOrderStepsCount`, E9).
+ */
+export const LAYER_ORDER_WORKER_NAMES = { dialog: 'layer-order-dialog', host: 'layer-order-host' } as const;
+
+/** A worker's role, by the name it was spawned with: the dialog's, or else a host's. */
+export function layerOrderWorkerRole(name: string): keyof typeof LAYER_ORDER_WORKER_NAMES {
+  return name === LAYER_ORDER_WORKER_NAMES.dialog ? 'dialog' : 'host';
+}
 
 // ---------------------------------------------------------------------------
 // When a call fails: the codes and the trap envelope, in a leaf of their own

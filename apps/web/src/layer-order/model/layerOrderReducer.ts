@@ -47,6 +47,8 @@ import {
 } from './layerOrderDecisions';
 import {
   LAYER_ORDER_LIMITS,
+  NO_PROVED_ENDS,
+  withProvedEnd,
   type LayerChangedSpots,
   type LayerCommitFacts,
   type LayerConstraint,
@@ -55,6 +57,7 @@ import {
   type LayerOpenFacts,
   type LayerOrderBits,
   type LayerOrderLimits,
+  type LayerPosition,
   type LayerPreviewFacts,
   type LayerStacks,
   type LayerStepBy,
@@ -158,7 +161,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     pointedVerb: null,
     ...NO_PREVIEWS,
     blocked: null,
-    solutions: { runs: true, generation: 0, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+    solutions: freshSolutions(true, 0),
     hover: { face: null, slot: null, row: null, reason: false },
     view: { side: init.side ?? 'front', xray: init.xray, openSpots: false },
     flash: null,
@@ -319,17 +322,11 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
           limits: LAYER_ORDER_COUNT_SLICE,
         });
       }
-      return {
-        ...state,
-        solutions: { ...solutions, count, position: action.position, positionBy: stepByKey(action.by) },
-      };
+      return { ...state, solutions: { ...positionedAt(solutions, action.position, action.by), count } };
     }
     case 'solutions_positioned':
       if (action.generation !== state.solutions.generation) return state;
-      return {
-        ...state,
-        solutions: { ...state.solutions, position: action.position, positionBy: stepByKey(action.by) },
-      };
+      return { ...state, solutions: positionedAt(state.solutions, action.position, action.by) };
     case 'stepped':
       return stepped(state, action, effects);
     case 'engine_lost': {
@@ -364,12 +361,15 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'sentence_cleared':
       if (!builderLive(state)) return state;
       // Clear starts afresh: a sentence built again is reported again if it is blocked.
-      return { ...edited(state, withSentence(state, clearSentence(state.sentence))), blocked: null };
+      return { ...withoutStepRanOut(edited(state, withSentence(state, clearSentence(state.sentence)))), blocked: null };
     case 'verb_pointed':
       return state.pointedVerb === action.verb ? state : { ...state, pointedVerb: action.verb };
     case 'verb_set':
       if (!builderLive(state)) return state;
-      return edited(state, { ...state, sentence: setVerb(state.sentence, action.verb), pointedVerb: null });
+      // An edit like a pick: the line is the sentence's check now, a step's running out let go.
+      return withoutStepRanOut(
+        edited(state, { ...state, sentence: setVerb(state.sentence, action.verb), pointedVerb: null })
+      );
     case 'reason_hovered':
       return state.hover.reason === action.on ? state : { ...state, hover: { ...state.hover, reason: action.on } };
     case 'add':
@@ -438,8 +438,37 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
 
 function withSentence(state: LayerOrderDialogState, sentence: LayerSentence): LayerOrderDialogState {
   if (sentence === state.sentence) return state;
-  // A pick closes the verb menu and lets go of the reason (Round3 `setSubject`, `setObject`).
-  return { ...state, sentence, pointedVerb: null, hover: { ...state.hover, reason: false } };
+  // A pick closes the verb menu and lets go of the reason (Round3 `setSubject`, `setObject`), and of a
+  // step's running out: the line is the sentence's now, and the message never comes back stale.
+  return withoutStepRanOut({ ...state, sentence, pointedVerb: null, hover: { ...state.hover, reason: false } });
+}
+
+/** The solutions of a new generation: nothing counted, read or proved yet. */
+function freshSolutions(runs: boolean, generation: number): LayerOrderDialogState['solutions'] {
+  return { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' }, ended: NO_PROVED_ENDS };
+}
+
+/** A step that ran out, said: let go, so the hint line is the builder's again (E9). */
+function withoutStepRanOut(state: LayerOrderDialogState): LayerOrderDialogState {
+  if (state.solutions.step.kind !== 'timed_out') return state;
+  return { ...state, solutions: { ...state.solutions, step: { kind: 'idle' } } };
+}
+
+/**
+ * The solutions with the order on screen read at `position` by `by`. A read
+ * never moves the order, so the ends a step proved of it stay: before the
+ * count is exact its index moves as the count finds solutions before it, and
+ * a read for another side, late, proves nothing either way. What does move
+ * the order or what the stepper steps by lets them go where it happens (a
+ * step that moved, an order put back, an open or commit, `repositioned`), and
+ * an end is only kept when proved by what the stepper steps by (`stepped`).
+ */
+function positionedAt(
+  solutions: LayerOrderDialogState['solutions'],
+  position: LayerPosition,
+  by: LayerStepBy
+): LayerOrderDialogState['solutions'] {
+  return { ...solutions, position, positionBy: stepByKey(by) };
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +543,14 @@ function repositioned(
   const { step } = next.solutions;
   return {
     ...next,
-    solutions: { ...next.solutions, position: null, positionBy: null, step: step.kind === 'pending' ? step : { kind: 'idle' } },
+    solutions: {
+      ...next.solutions,
+      position: null,
+      positionBy: null,
+      step: step.kind === 'pending' ? step : { kind: 'idle' },
+      // What a step proved, it proved by what it stepped by.
+      ended: NO_PROVED_ENDS,
+    },
   };
 }
 
@@ -592,7 +628,7 @@ function opened(
     sentence: EMPTY_SENTENCE,
     pointedVerb: null,
     ...NO_PREVIEWS,
-    solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+    solutions: freshSolutions(runs, generation),
     hover: { face: null, slot: null, row: null, reason: false },
     flash: null,
     baseline: openedBaseline(facts, state.recordNeedsAttention),
@@ -913,7 +949,7 @@ function committed(
       sentence,
       pointedVerb: commit.via === 'add' ? null : state.pointedVerb,
       ...NO_PREVIEWS,
-      solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+      solutions: freshSolutions(runs, generation),
     },
     commit.rows,
     history
@@ -955,7 +991,8 @@ function orderPutBack(
       settle: commit.restore?.settle ?? state.settle,
       previews: cantFitsOnly(state.previews),
       lastPreview: null,
-      solutions: { ...state.solutions, position: null, positionBy: null, step: { kind: 'idle' } },
+      // Another order on screen: nothing a step proved holds of it (E9).
+      solutions: { ...state.solutions, position: null, positionBy: null, step: { kind: 'idle' }, ended: NO_PROVED_ENDS },
     },
     commit.rows,
     history
@@ -1173,6 +1210,10 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
     effects.push({ type: 'open', request: id, how: 'restore', limits });
     return { ...next, settle: { kind: 'restoring', request: id, limits }, lastPreview: null };
   }
+  // A step that ran out (E9), the newest on the line, before a sentence's check: the same way again,
+  // later, going on from what it proved.
+  const ranOut = state.solutions.step;
+  if (ranOut.kind === 'timed_out') return step(state, ranOut.direction, effects, keepTryingLimits(ranOut.limits));
   const entry = displayedPreview(state);
   if (entry?.kind === 'timed_out' && quiet(state)) {
     return askPreview(state, entry.candidates, keepTryingLimits(entry.limits), effects);
@@ -1194,22 +1235,19 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
 function step(
   state: LayerOrderDialogState,
   direction: 'next' | 'previous',
-  effects: LayerOrderEffect[]
+  effects: LayerOrderEffect[],
+  limits: LayerOrderLimits = LAYER_ORDER_LIMITS.step
 ): LayerOrderDialogState {
   if (state.phase.kind !== 'open' || state.settle.kind !== 'settled' || !quiet(state)) return state;
   const by = currentStepBy(state);
   const [id, next] = request(movedOn(state));
-  effects.push({
-    type: 'step',
-    request: id,
-    generation: state.solutions.generation,
-    by,
-    direction,
-    limits: LAYER_ORDER_LIMITS.step,
-  });
+  effects.push({ type: 'step', request: id, generation: state.solutions.generation, by, direction, limits });
   const move: LayerHistoryMove<LayerUndoEntry> = { kind: 'record', entry: { kind: 'step', order: state.shownOrder } };
   const at = state.history.past.length;
-  return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by, move, at } } };
+  return {
+    ...next,
+    solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by, limits, move, at } },
+  };
 }
 
 function stepped(
@@ -1221,11 +1259,17 @@ function stepped(
   if (pending.kind !== 'pending' || pending.request !== action.request) return state;
   const { facts } = action;
   // A step that ends or runs out moves nothing, the history included, and the session keeps its preview.
+  // An end is proved (E9), by what it stepped by: kept with any proved the other way from the same order,
+  // unless the stepper steps by something else since (turned over, X-rayed while it ran).
   if (facts.verdict === 'end') {
-    return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction: pending.direction } } };
+    const { direction } = pending;
+    const same = stepByKey(pending.by) === stepByKey(currentStepBy(state));
+    const ended = same ? withProvedEnd(state.solutions.ended, direction) : state.solutions.ended;
+    return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction }, ended } };
   }
   if (facts.verdict === 'timed_out') {
-    return { ...state, solutions: { ...state.solutions, step: { kind: 'timed_out', direction: pending.direction } } };
+    const step = { kind: 'timed_out', direction: pending.direction, limits: pending.limits } as const;
+    return { ...state, solutions: { ...state.solutions, step } };
   }
   // The order on screen changed, and no constraint did: the fits go (the session's preview too), a
   // can't-fit and its explain stay, and the flash shows what moved.
@@ -1241,6 +1285,8 @@ function stepped(
       position: facts.position,
       positionBy: stepByKey(pending.by),
       step: { kind: 'idle' },
+      // Another order: nothing is proved of it yet.
+      ended: NO_PROVED_ENDS,
     },
   };
   // Turned over or X-rayed while it ran: the stepper reads its position again for what it steps by now.

@@ -312,6 +312,8 @@ beforeEach(async () => {
   analytics.track.mockClear();
   toasts.toast.mockClear();
   toasts.toast.error.mockClear();
+  toasts.toast.message.mockClear();
+  toasts.toast.dismiss.mockClear();
   useWorkspaceStore.setState({
     activePanelId: 'crease-pattern',
     oristudioCpDocument: cpState(),
@@ -664,7 +666,11 @@ describe('a press that moves nothing', () => {
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
     expect(toasts.toast).not.toHaveBeenCalled();
     expect(toasts.toast.error).not.toHaveBeenCalled();
-    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true, ended: 'previous' });
+    expect(foldedSolutionPlace(figureNow())).toEqual({
+      position: solutionPosition(1, 3),
+      counted: true,
+      ended: { previous: true, next: false },
+    });
     expect(cycled()).toEqual([]);
   });
 
@@ -680,10 +686,11 @@ describe('a press that moves nothing', () => {
     expect(foldedSolutionPlace(figureNow())).toEqual({
       position: solutionPosition(4, 4, false),
       counted: true,
-      ended: 'next',
+      ended: { previous: false, next: true },
     });
   });
 
+  // Running out of time is an answer, not a fault: said calmly (a message), the rest as errors.
   it.each([
     [
       'an engine that didn’t load',
@@ -691,6 +698,7 @@ describe('a press that moves nothing', () => {
       'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.',
       true,
       'Reload',
+      'error',
     ],
     [
       'a lost engine',
@@ -698,6 +706,7 @@ describe('a press that moves nothing', () => {
       'Layer order stopped unexpectedly, so the figure wasn’t changed.',
       true,
       undefined,
+      'error',
     ],
     [
       'a restore out of time (D10)',
@@ -705,6 +714,7 @@ describe('a press that moves nothing', () => {
       'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.',
       false,
       'Keep trying',
+      'message',
     ],
     [
       'a step out of time',
@@ -712,6 +722,7 @@ describe('a press that moves nothing', () => {
       'Couldn’t find another solution in time, so the figure wasn’t changed.',
       false,
       'Keep trying',
+      'message',
     ],
     [
       'a record that needs attention',
@@ -719,6 +730,7 @@ describe('a press that moves nothing', () => {
       'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.',
       true,
       undefined,
+      'error',
     ],
     [
       'a solution too large to save',
@@ -726,17 +738,24 @@ describe('a press that moves nothing', () => {
       'This layer order is too large to save with the figure, so it is unchanged.',
       true,
       undefined,
+      'error',
     ],
-  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, offered) => {
+  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, offered, how) => {
     const figure = seed();
     const cursor = script(answer as LayerOrderSolutionStep);
     await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
     expect(figureNow()).toBe(figure);
     expect(history()).toEqual([]);
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
-    expect(toasts.toast.error).toHaveBeenCalledTimes(1);
-    const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
+    expect(toasts.toast[how]).toHaveBeenCalledTimes(1);
+    expect(toasts.toast[how === 'error' ? 'message' : 'error']).not.toHaveBeenCalled();
+    const [text, options] = toasts.toast[how].mock.calls[0] as [string, { id?: string; action?: { label: string } }];
     expect(text).toBe(said);
+    // Each kind under an id of its own, the other kind's dismissed: sonner merges a toast into what its id
+    // last showed, so a message under an error's id would be drawn as the error.
+    const ids = { error: 'layer-order-step-0', message: 'layer-order-step-0-timed-out' };
+    expect(options.id).toBe(ids[how]);
+    expect(toasts.toast.dismiss).toHaveBeenCalledWith(ids[how === 'error' ? 'message' : 'error']);
     // Out of time offers to keep trying, longer; a load that failed, the reload that alone retries it.
     expect(options.action?.label).toBe(offered);
     // An engine gone, a record it can't restore or an order it can't save takes the cursor with it;
@@ -766,15 +785,15 @@ describe('a press that moves nothing', () => {
     const cursor = script({ outcome: 'timed_out', stage: 'restore' }, { outcome: 'timed_out', stage: 'step' }, movedTo(2, 3));
     await showAnotherFoldedSolution(figure.id, t);
     const keepTrying = () => {
-      const calls = toasts.toast.error.mock.calls;
+      const calls = toasts.toast.message.mock.calls;
       (calls.at(-1)![1] as { action: { onClick: () => void } }).action.onClick();
     };
     keepTrying();
     await vi.waitFor(() => expect(cursor.triesAsked).toHaveLength(2));
-    await vi.waitFor(() => expect(toasts.toast.error).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(toasts.toast.message).toHaveBeenCalledTimes(2));
     // Each try says so under a toast of its own: one shown again under the id Keep trying just
     // dismissed would be lost in its exit.
-    const ids = toasts.toast.error.mock.calls.map(([, options]) => (options as { id: string }).id);
+    const ids = toasts.toast.message.mock.calls.map(([, options]) => (options as { id: string }).id);
     expect(new Set(ids).size).toBe(2);
     keepTrying();
     await vi.waitFor(() => expect(figureNow().handle).toBe(9));
@@ -799,6 +818,7 @@ describe('a press that moves nothing', () => {
     for (const meanwhile of ['undo', 'delete'] as const) {
       dropFoldedSolutionCursor();
       toasts.toast.error.mockClear();
+      toasts.toast.message.mockClear();
       const figure = seed();
       await foldedFigureGesture.run('verb', 'Rotate folded form', () =>
         state().setOristudioCpFoldedFigurePlacement(figure.id, { rotation: 1 })

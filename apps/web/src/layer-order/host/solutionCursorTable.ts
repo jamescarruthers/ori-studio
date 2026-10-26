@@ -44,7 +44,12 @@
  *
  * Store-free and host-free: the host hands it its things and its world.
  */
-import type { LayerStepBy } from '../engine/layerOrderEngine';
+import {
+  layerPositionEnds,
+  withProvedEnd,
+  type LayerProvedEnds,
+  type LayerStepBy,
+} from '../engine/layerOrderEngine';
 import { onLayerOrderDialogOpen } from '../dialog/layerOrderDialogGateway';
 import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
@@ -126,12 +131,13 @@ export interface SolutionTurn<Target, World, Mark, Opened extends SolutionCursor
 }
 
 /**
- * Where the order a thing shows lies, and the way a step from it last found
- * nothing: an end E9 proved, so that verb waits there even before the count
- * is final. Any step that moves, or a turn over, reads a new place without it.
+ * Where the order a thing shows lies, and the ways a step from it found
+ * nothing: ends E9 proved, each kept, so that verb waits there even before
+ * the count is final. Any step that moves, or a turn over, reads a new place
+ * without them.
  */
 export interface SolutionPlace extends LayerOrderSolutionPlace {
-  readonly ended?: 'next' | 'previous';
+  readonly ended?: LayerProvedEnds;
 }
 
 export interface SolutionCursorTable<Target, World, Mark, Opened extends SolutionCursorOpening> {
@@ -387,14 +393,23 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
               moved = true;
               landing = { by: stepByKey(by), value: { position: answer.position, counted: answer.counted } };
               break;
-            case 'end':
+            case 'end': {
               // Nothing moved: where it stands is known now, for the readout, and that way is proved
-              // to end (E9), so its verb waits there.
+              // to end (E9), so its verb waits there; the other way's proof, of the same order by the
+              // same thing, stays, though the index moved as the count found solutions before it.
+              const key = stepByKey(by);
+              const before = cursor.place;
+              const same = before?.by === key;
               cursor.place = {
-                by: stepByKey(by),
-                value: { position: answer.position, counted: answer.counted, ended: direction },
+                by: key,
+                value: {
+                  position: answer.position,
+                  counted: answer.counted,
+                  ended: withProvedEnd(same ? before.value.ended : null, direction),
+                },
               };
               break;
+            }
             case 'timed_out':
               // Kept, for Keep trying on the same session.
               break;
@@ -447,16 +462,15 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
 }
 
 /**
- * A place's ends, for a pager's ‹ and ›: `first` on the first solution, or
- * once a ‹ proved nothing lies before it; `last` on the last once the count
- * is final, or once a › proved nothing lies after it (E9); `only` when that
- * last is the one solution there is. A stepper through a fixed order waits at
- * either end rather than wrapping round.
+ * A place's ends, for a pager's ‹ and ›, as the dialog's stepper has them
+ * (`layerPositionEnds`): `first` and `last` once the count is final, or each
+ * way a step proved nothing lies (E9); `only` when the one solution there is.
+ * Before the count is final ‹ stays even at 1, since the index counts the
+ * solutions found so far, not their rank. A stepper through a fixed order
+ * waits at either end rather than wrapping round.
  */
 export function solutionPlaceEnds(place: SolutionPlace): { first: boolean; last: boolean; only: boolean } {
-  const { index, total } = place.position;
-  const last = place.ended === 'next' || (total.exact && index >= total.n);
-  return { first: index <= 1 || place.ended === 'previous', last, only: last && total.n <= 1 };
+  return layerPositionEnds(place.position, place.ended);
 }
 
 /**

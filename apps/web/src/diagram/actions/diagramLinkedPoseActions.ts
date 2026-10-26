@@ -185,8 +185,8 @@ export function layerOrderLabel(
 /**
  * Where a constrained flat step stands among the solutions that fit its
  * record (H9), for the Step pane's pager: what its solutions cursor last
- * answered, in the words Edit's Properties pane reads too ("2 of 3+",
- * "Solution 3" while the count is skipped, `solutionPlaceCount`). Null at
+ * answered, in the words Edit's Properties pane reads too ("2 of 3" once the
+ * count is final, "Solution 2" until then, `solutionPlaceCount`). Null at
  * rest, before a press has asked: the host never counts (D11), and the pane
  * keeps the readout's width. Null for any other render.
  */

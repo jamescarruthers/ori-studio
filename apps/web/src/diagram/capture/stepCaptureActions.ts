@@ -503,14 +503,17 @@ export function sayLayerOrderLost(loadFailed: boolean, id?: string): void {
 }
 
 /**
- * The toast id of a step's ‹ › message, by how many times the user has kept
+ * The toast ids of a step's ‹ › messages, by how many times the user has kept
  * trying, as Edit's are (`foldedFigureVerbs.ts`): presses at the same try
  * replace one another, and each Keep trying gets a fresh one, since clicking
  * it dismisses its toast and a toast shown again under that id while it
- * leaves is lost in its exit.
+ * leaves is lost in its exit. A calm message and an error each have their
+ * own, since sonner merges a toast into what its id last showed (an error's
+ * look included); showing either dismisses the other.
  */
-function stepSolutionToastId(tries: number): string {
-  return `diagram-layer-order-step-${tries}`;
+function stepSolutionToastIds(tries: number): { readonly error: string; readonly calm: string } {
+  const error = `diagram-layer-order-step-${tries}`;
+  return { error, calm: `${error}-timed-out` };
 }
 
 /**
@@ -521,9 +524,9 @@ function stepSolutionToastId(tries: number): string {
  * - the engine didn't load, with Reload, the only retry there is (offline:
  *   reconnect first), or it stopped;
  * - the record couldn't be checked in time (D10), or the search for the next
- *   solution ran out (E9's `timed_out`): each with Keep trying
- *   (`keepTrying`), which asks again on the same worker with longer limits,
- *   and the step goes on from what it proved;
+ *   solution ran out (E9's `timed_out`): each a calm message, not an error,
+ *   with Keep trying (`keepTrying`), which asks again that way on the same
+ *   worker with longer limits, and the step goes on from what it proved;
  * - the next solution is too large to save with the step, or the engine
  *   refused the step's creases;
  * - its constraints clash with its pattern as it is now. Said so it reads
@@ -539,14 +542,20 @@ function stepSolutionToastId(tries: number): string {
  */
 export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying: () => void, tries = 0): void {
   const t = i18n.t;
-  const id = stepSolutionToastId(tries);
+  const ids = stepSolutionToastIds(tries);
   const keepTryingAction = { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying };
+  // An error shows under the error id, and replaces a calm message of the same try.
+  const id = ids.error;
   switch (press.status) {
     case 'lost':
+      toast.dismiss(ids.calm);
       sayLayerOrderLost(press.cause === 'load', id);
       return;
     case 'timed_out':
-      toast.error(
+      // Running out of time is an answer, not a fault: said calmly, as Edit's figures say it, under an id
+      // no error has held.
+      toast.dismiss(ids.error);
+      toast.message(
         press.stage === 'step'
           ? t(
               'toasts:diagram.layerOrder.stepNotFoundInTime',
@@ -556,10 +565,11 @@ export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying:
               'toasts:diagram.layerOrder.stepCheckTimedOut',
               'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.'
             ),
-        { id, action: keepTryingAction }
+        { id: ids.calm, action: keepTryingAction }
       );
       return;
     case 'too-large':
+      toast.dismiss(ids.calm);
       toast.error(
         t(
           'toasts:diagram.layerOrder.stepTooLarge',
@@ -569,6 +579,7 @@ export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying:
       );
       return;
     case 'unrestored':
+      toast.dismiss(ids.calm);
       toast.error(
         press.why === 'clash'
           ? t(

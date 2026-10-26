@@ -68,7 +68,7 @@ vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
   ensureCpSheetIndex: vi.fn(async () => sheets),
   peekCpSheetIndex: vi.fn(() => sheets),
 }));
-const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn() }));
+const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn(), dismiss: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
 // The host engine's door: each cursor a press opens is the test's to script; a capture's restore applies.
 const hostEngine = vi.hoisted(() => ({ open: vi.fn(), resolveLayerOrder: vi.fn() }));
@@ -299,7 +299,11 @@ describe('the cursor’s life', () => {
     expect(toasts.error).not.toHaveBeenCalled();
     expect(toasts.message).not.toHaveBeenCalled();
     // The count has not settled, and still › waits there; ‹ goes back.
-    expect(pager(stepId).place).toEqual({ position: solutionPosition(2, 3, false), counted: true, ended: 'next' });
+    expect(pager(stepId).place).toEqual({
+      position: solutionPosition(2, 3, false),
+      counted: true,
+      ended: { previous: false, next: true },
+    });
     expect(pager(stepId).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
     expect(pager(stepId).previous.disabled).toBe(false);
   });
@@ -313,16 +317,19 @@ describe('the cursor’s life', () => {
     await pose.run({ verb: 'next-solution' });
     expect(state().diagramHistory.past).toHaveLength(entries);
     type Said = [string, { id: string; action: { label: string; onClick: () => void } }];
-    const [said, first] = toasts.error.mock.calls[0]! as Said;
+    // Said calmly: running out of time is an answer, not a fault.
+    expect(toasts.error).not.toHaveBeenCalled();
+    const [said, first] = toasts.message.mock.calls[0]! as Said;
     expect(said).toBe('Couldn’t find another solution in time, so this step wasn’t changed.');
     expect(first.action.label).toBe('Keep trying');
     expect(pager(stepId).next.disabled).toBe(false);
     // Keep trying: the same direction again, on the same worker, with longer limits; its toast a fresh one,
     // since clicking Keep trying dismisses the one it came from.
     first.action.onClick();
-    await vi.waitFor(() => expect(toasts.error).toHaveBeenCalledTimes(2));
-    const [, second] = toasts.error.mock.calls[1]! as Said;
-    expect([first.id, second.id]).toEqual(['diagram-layer-order-step-0', 'diagram-layer-order-step-1']);
+    await vi.waitFor(() => expect(toasts.message).toHaveBeenCalledTimes(2));
+    const [, second] = toasts.message.mock.calls[1]! as Said;
+    // Under an id of the calm kind's own: sonner would draw a message under an error's id as the error.
+    expect([first.id, second.id]).toEqual(['diagram-layer-order-step-0-timed-out', 'diagram-layer-order-step-1-timed-out']);
     second.action.onClick();
     await vi.waitFor(() => expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_2)));
     expect(cursor.triesAsked).toEqual([0, 1, 2]);
@@ -653,7 +660,8 @@ describe('what it steps from', () => {
 });
 
 describe('a press that moves nothing writes nothing', () => {
-  // By cause (H6's review): each its own words; running out of time offers Keep trying and keeps the cursor.
+  // By cause (H6's review): each its own words; running out of time offers Keep trying and keeps the cursor,
+  // said calmly (a message, not an error): it is an answer, not a fault.
   it.each([
     // Only a reload retries a load that failed: Reload, the toast's one action.
     [
@@ -662,14 +670,23 @@ describe('a press that moves nothing writes nothing', () => {
       'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.',
       'Reload',
       true,
+      'error',
     ],
-    ['lost', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined, true],
+    [
+      'lost',
+      { outcome: 'lost', cause: 'crashed' },
+      'Layer order stopped unexpectedly, so this step wasn’t changed.',
+      undefined,
+      true,
+      'error',
+    ],
     [
       'its record not checked in time',
       { outcome: 'timed_out', stage: 'restore' },
       'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.',
       'Keep trying',
       false,
+      'message',
     ],
     [
       'the next not found in time',
@@ -677,6 +694,7 @@ describe('a press that moves nothing writes nothing', () => {
       'Couldn’t find another solution in time, so this step wasn’t changed.',
       'Keep trying',
       false,
+      'message',
     ],
     [
       'too large',
@@ -684,6 +702,7 @@ describe('a press that moves nothing writes nothing', () => {
       'The next layer order is too large to save with this step, so it wasn’t changed.',
       undefined,
       true,
+      'error',
     ],
     [
       'refused',
@@ -691,6 +710,7 @@ describe('a press that moves nothing writes nothing', () => {
       'Layer order can’t step through this step’s solutions, so it wasn’t changed.',
       undefined,
       true,
+      'error',
     ],
     [
       // Said so it reads without a flag: a stale step waits for a Refresh, and a flagged one for Review….
@@ -699,8 +719,9 @@ describe('a press that moves nothing writes nothing', () => {
       'This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.',
       undefined,
       true,
+      'error',
     ],
-  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, said, action, spent) => {
+  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, said, action, spent, how) => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
     const cursor = script(answer as LayerOrderSolutionStep);
@@ -713,11 +734,15 @@ describe('a press that moves nothing writes nothing', () => {
     expect(state().dirty).toBe(false);
     expect(pictureOf(stepId)).toBe(picture);
     expect(sourceOf(stepId).layerOrder).toBe(JSON_AT_REST);
-    expect(toasts.error).toHaveBeenCalledOnce();
-    const [text, options] = toasts.error.mock.calls[0]! as [string, { id?: string; action?: { label: string } }];
+    expect(toasts[how]).toHaveBeenCalledOnce();
+    expect(toasts[how === 'error' ? 'message' : 'error']).not.toHaveBeenCalled();
+    const [text, options] = toasts[how].mock.calls[0]! as [string, { id?: string; action?: { label: string } }];
     expect(text).toBe(said);
-    // One toast at a time for a step's presses at the same try; a Keep trying's is a fresh one.
-    expect(options.id).toBe('diagram-layer-order-step-0');
+    // One toast at a time for a step's presses at the same try (a Keep trying's is a fresh one): each kind
+    // under an id of its own, the other kind's dismissed, since sonner merges a toast into what its id held.
+    const ids = { error: 'diagram-layer-order-step-0', message: 'diagram-layer-order-step-0-timed-out' };
+    expect(options.id).toBe(ids[how]);
+    expect(toasts.dismiss).toHaveBeenCalledWith(ids[how === 'error' ? 'message' : 'error']);
     expect(options.action?.label).toBe(action);
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
     expect(analytics.trackDiagramPicturePosed).not.toHaveBeenCalled();

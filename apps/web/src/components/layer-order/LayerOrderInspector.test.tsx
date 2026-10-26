@@ -136,7 +136,29 @@ describe('the status and its stepper', () => {
     expect(status().textContent).toBe('At least 4 solutions');
     // The running number stays out of the live region: it says the count is running, once.
     expect(spoken().textContent).toBe('Counting solutions…');
-    expect(byRole(host, 'group', 'Solution shown').textContent).toBe('2 of 4+');
+    // Not "2 of 4+": until the count ends, the index counts the solutions found so far, not their rank (E9).
+    expect(byRole(host, 'group', 'Solution shown').textContent).toBe('Solution 2');
+  });
+
+  it('keeps ‹ at the first found while the count runs, and waits there once it is final (E9)', () => {
+    draw(counted(opened(), count(4, 4, 10, false), position(1, 4, false)));
+    expect(byRole(host, 'group', 'Solution shown').textContent).toBe('Solution 1');
+    expect(button('Previous solution').getAttribute('aria-disabled')).not.toBe('true');
+    act(() => root.unmount());
+    root = createRoot(host);
+    draw(counted(opened(), count(4, 4, 10), position(1, 4)));
+    expect(byRole(host, 'group', 'Solution shown').textContent).toBe('1 of 4');
+    expect(button('Previous solution').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('says a step that ran out calmly, with Keep trying (E9)', () => {
+    const counting = counted(opened(), count(4, 4, 10, false), position(2, 4, false));
+    const stepping = play(counting, { type: 'step', direction: 'next' });
+    const { request } = lastOf(stepping.effects, 'step');
+    draw(play(stepping.state, { type: 'stepped', request, facts: { verdict: 'timed_out' } }).state);
+    expect(hint().textContent).toContain('Couldn’t find the next solution in time.');
+    click(button('Keep trying'));
+    expect(sent).toEqual([{ type: 'keep_trying' }]);
   });
 
   it('announces a count that stopped at its cap as its lower bound, once it has stopped', () => {

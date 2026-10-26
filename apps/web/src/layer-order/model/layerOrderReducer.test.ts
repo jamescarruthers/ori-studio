@@ -799,7 +799,7 @@ describe('solutions: the count and the stepper', () => {
     expect(statusView(state)).toEqual({ dot: 'open', text: { key: 'none' }, tooltip: null, stepper: null });
   });
 
-  it('a count still running reads “at least N”, steps “n of N+”, and asks for the next slice', () => {
+  it('a count still running reads “at least N”, steps with the total unfinished, and asks for the next slice', () => {
     const { state } = opened();
     const counting = dispatch(state, {
       type: 'solutions_counted',
@@ -816,7 +816,14 @@ describe('solutions: the count and the stepper', () => {
       dot: 'open',
       text: { key: 'solutions', count: { n: 4, exact: false } },
       tooltip: null,
-      stepper: { index: 2, total: { n: 4, exact: false }, previous: true, next: true, busy: false },
+      stepper: {
+        index: 2,
+        total: { n: 4, exact: false },
+        previous: true,
+        next: true,
+        busy: false,
+        waits: { previous: null, next: null },
+      },
     });
   });
 
@@ -921,6 +928,229 @@ describe('solutions: the count and the stepper', () => {
       facts: { verdict: 'end' },
     });
     expect(statusView(ended.state)?.stepper).toMatchObject({ previous: true, next: false });
+  });
+
+  it('keeps ‹ at 1 until the total is exact: a solution the count lists before the first found may yet be (E9)', () => {
+    const { state } = opened();
+    const at = (index: number, exact: boolean) =>
+      statusView(
+        dispatch(state, {
+          type: 'solutions_counted',
+          generation: 1,
+          by: { picture: 'front' },
+          count: count(4, 4, 4, exact),
+          position: position(index, 4, exact),
+        }).state
+      )?.stepper;
+    expect(at(1, false)).toMatchObject({ index: 1, previous: true, next: true });
+    expect(at(1, true)).toMatchObject({ index: 1, previous: false, next: true });
+    expect(at(4, true)).toMatchObject({ index: 4, previous: true, next: false });
+  });
+
+  it('a ‹ that proves nothing lies before waits there, the total unfinished', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(1, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'previous' });
+    const ended = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'end' },
+    });
+    expect(statusView(ended.state)?.stepper).toMatchObject({ index: 1, previous: false, next: true });
+  });
+
+  it('a step that runs out says so calmly, and Keep trying steps that way again, later each time (E9)', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(2, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'previous' });
+    const first = lastOf(stepping.effects, 'step');
+    const ranOut = play(stepping.state, { type: 'stepped', request: first.request, facts: { verdict: 'timed_out' } });
+    expect(hintLine(ranOut.state)).toEqual({
+      tone: 'quiet',
+      action: 'keep_trying',
+      text: { key: 'step_timed_out', direction: 'previous' },
+    });
+    // Nothing moved, and the stepper is free.
+    expect(statusView(ranOut.state)?.stepper).toMatchObject({ index: 2, previous: true, next: true, busy: false });
+
+    const again = play(ranOut.state, { type: 'keep_trying' });
+    const second = lastOf(again.effects, 'step');
+    expect(second).toMatchObject({ direction: 'previous', by: { picture: 'front' }, limits: keepTrying(LAYER_ORDER_LIMITS.step) });
+    const ranOutAgain = play(again.state, { type: 'stepped', request: second.request, facts: { verdict: 'timed_out' } });
+    const third = lastOf(play(ranOutAgain.state, { type: 'keep_trying' }).effects, 'step');
+    expect(third.limits).toEqual(keepTrying(keepTrying(LAYER_ORDER_LIMITS.step)));
+  });
+
+  it('a step that ran out gives the hint line back to a sentence under way', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(2, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'next' });
+    const ranOut = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'timed_out' },
+    });
+    expect(hintLine(ranOut.state)?.text).toEqual({ key: 'step_timed_out', direction: 'next' });
+    const building = play(ranOut.state, { type: 'face_picked', face: 2, origin: 'pattern' });
+    expect(hintLine(building.state)?.text.key).not.toBe('step_timed_out');
+  });
+
+  /** A press of ‹ or › from `from`, answered `verdict`. */
+  function pressed(from: LayerOrderDialogState, direction: 'next' | 'previous', verdict: 'end' | 'timed_out'): Played {
+    const stepping = play(from, { type: 'step', direction });
+    return play(stepping.state, { type: 'stepped', request: lastOf(stepping.effects, 'step').request, facts: { verdict } });
+  }
+
+  /** `state` counted at `index` of `n`, the count unfinished. */
+  function countingAt(state: LayerOrderDialogState, index: number, n: number): LayerOrderDialogState {
+    return dispatch(state, {
+      type: 'solutions_counted',
+      generation: state.solutions.generation,
+      by: { picture: 'front' },
+      count: count(n, n, n, false),
+      position: position(index, n, false),
+    }).state;
+  }
+
+  it('a step that runs out while a sentence is under way is the newest on the line, until the next pick or Clear', () => {
+    const subject = play(countingAt(opened().state, 2, 4), { type: 'face_picked', face: 2, origin: 'pattern' });
+    expect(hintLine(subject.state)?.text.key).not.toBe('step_timed_out');
+    const ranOut = pressed(subject.state, 'next', 'timed_out');
+    expect(hintLine(ranOut.state)).toEqual({ tone: 'quiet', action: 'keep_trying', text: { key: 'step_timed_out', direction: 'next' } });
+    // Pointing at a face doesn't take the line from it.
+    expect(hintLine(play(ranOut.state, { type: 'face_hovered', face: 3 }).state)?.text.key).toBe('step_timed_out');
+    // The next pick does, for good: a Clear later never brings the message back.
+    const object = play(ranOut.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    expect(object.state.solutions.step).toEqual({ kind: 'idle' });
+    expect(hintLine(object.state)?.text.key).not.toBe('step_timed_out');
+    const cleared = play(object.state, { type: 'sentence_cleared' });
+    expect(hintLine(cleared.state)?.text.key).not.toBe('step_timed_out');
+    // A Clear lets it go as well.
+    expect(play(ranOut.state, { type: 'sentence_cleared' }).state.solutions.step).toEqual({ kind: 'idle' });
+  });
+
+  it('a step that ran out lets the line go to a verb changed too: the sentence’s check is said', () => {
+    const subject = play(countingAt(opened().state, 2, 4), { type: 'face_picked', face: 2, origin: 'pattern' });
+    const sentence = play(subject.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const ranOut = pressed(sentence.state, 'next', 'timed_out');
+    expect(hintLine(ranOut.state)?.text.key).toBe('step_timed_out');
+    const verb = ranOut.state.sentence.verb === 'behind' ? 'in_front_of' : 'behind';
+    const changed = play(ranOut.state, { type: 'verb_set', verb });
+    expect(changed.state.sentence.verb).toBe(verb);
+    expect(changed.state.solutions.step).toEqual({ kind: 'idle' });
+    // The changed sentence is checked, and the line says so rather than the step's old news.
+    expect(lastOf(changed.effects, 'preview')).toBeDefined();
+    expect(hintLine(changed.state)).toMatchObject({ tone: 'busy', text: { key: 'checking' } });
+  });
+
+  it('keeps both ends a step proved from the order on screen: neither undoes the other (E9)', () => {
+    const counting = countingAt(opened().state, 1, 1);
+    const back = pressed(counting, 'previous', 'end').state;
+    expect(statusView(back)?.stepper).toMatchObject({ previous: false, next: true, waits: { previous: 'first', next: null } });
+    // A › that runs out proves nothing, and takes nothing back.
+    const ranOut = pressed(back, 'next', 'timed_out').state;
+    expect(statusView(ranOut)?.stepper).toMatchObject({ previous: false, next: true });
+    // A › that ends: both wait, the one solution there is, though the count is unfinished.
+    const both = pressed(ranOut, 'next', 'end').state;
+    expect(both.solutions.ended).toEqual({ previous: true, next: true });
+    expect(statusView(both)?.stepper).toMatchObject({ previous: false, next: false, waits: { previous: 'only', next: 'only' } });
+    // A slice of the count read at the same place keeps them.
+    expect(countingAt(both, 1, 1).solutions.ended).toEqual({ previous: true, next: true });
+  });
+
+  it('keeps a proved end through the count’s slices, though the index moves as it finds solutions before (E9)', () => {
+    const last = pressed(countingAt(opened().state, 5, 5), 'next', 'end').state;
+    expect(statusView(last)?.stepper?.next).toBe(false);
+    // The count finds three more, all before the order on screen: its index moves to 8, and › stays proved.
+    const later = countingAt(last, 8, 8);
+    expect(later.solutions.ended).toEqual({ previous: false, next: true });
+    expect(statusView(later)?.stepper).toMatchObject({ index: 8, next: false, waits: { next: 'last' } });
+    // And again on the next slice.
+    expect(statusView(countingAt(later, 11, 11))?.stepper?.next).toBe(false);
+  });
+
+  it('keeps an end proved by a step that ran while the figure turned over and back, once its reads arrive', () => {
+    const at = countingAt(opened().state, 5, 5);
+    const stepping = play(at, { type: 'step', direction: 'next' });
+    // Turned over and straight back while it ran: the stepper steps by the front again, its position read anew.
+    const turned = play(stepping.state, { type: 'side_set', side: 'back' }, { type: 'side_set', side: 'front' });
+    const ended = play(turned.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'end' },
+    }).state;
+    expect(ended.solutions.ended).toEqual({ previous: false, next: true });
+    // The reads asked by the turns land, the back's late: the front's proof stays.
+    const backRead = dispatch(ended, {
+      type: 'solutions_positioned',
+      generation: ended.solutions.generation,
+      by: { picture: 'back' },
+      position: position(2, 5, false),
+    }).state;
+    const frontRead = dispatch(backRead, {
+      type: 'solutions_positioned',
+      generation: ended.solutions.generation,
+      by: { picture: 'front' },
+      position: position(5, 5, false),
+    }).state;
+    expect(frontRead.solutions.ended).toEqual({ previous: false, next: true });
+    expect(statusView(frontRead)?.stepper?.next).toBe(false);
+  });
+
+  it('lets proved ends go when the order moves, or is stepped by something else', () => {
+    const back = pressed(countingAt(opened().state, 2, 4), 'previous', 'end');
+    expect(back.state.solutions.ended).toEqual({ previous: true, next: false });
+    // Moved: another order, nothing proved of it.
+    const stepping = play(back.state, { type: 'step', direction: 'next' });
+    const moved = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([0]),
+        position: position(3, 4, false),
+        stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+        order: orderOf(SPOTS_TWO_OVER_ZERO),
+      },
+    });
+    expect(moved.state.solutions.ended).toEqual({ previous: false, next: false });
+    expect(statusView(moved.state)?.stepper?.previous).toBe(true);
+    // X-ray: steps by every layer order now.
+    expect(play(back.state, { type: 'xray_set', on: true }).state.solutions.ended).toEqual({ previous: false, next: false });
+  });
+
+  it('holds Keep trying back while a change to the list is in the worker, and ‹ › name no end then', () => {
+    const one = withOneConstraint();
+    const ranOut = pressed(countingAt(one.state, 2, 4), 'next', 'timed_out');
+    const removing = play(ranOut.state, { type: 'clear_all' });
+    expect(removing.state.commit.kind).toBe('pending');
+    // Keep trying could ask nothing yet: the message stays, without it.
+    expect(hintLine(removing.state)).toEqual({ tone: 'quiet', action: null, text: { key: 'step_timed_out', direction: 'next' } });
+    expect(play(removing.state, { type: 'keep_trying' }).effects).toEqual([]);
+    // Both wait for the check, at no end: neither says "This is the first solution".
+    expect(statusView(removing.state)?.stepper).toMatchObject({
+      previous: false,
+      next: false,
+      waits: { previous: null, next: null },
+    });
   });
 });
 

@@ -11,6 +11,7 @@
  * module holds them and checks each value against them.
  */
 import type { LayerOrderLimits } from './engine/layerOrderEngine';
+import type { LayerOrderEngineRole } from './engine/layerOrderRuntime';
 
 /**
  * D7's label cap: once a subject is picked, the hovered face plus the
@@ -59,4 +60,16 @@ export const LAYER_ORDER_COUNT_SLICE = {
  */
 export function layerOrderCountStarts(openPairs: number): boolean {
   return openPairs <= LAYER_ORDER_COUNT_MAX_OPEN_PAIRS;
+}
+
+/**
+ * Whether a step also counts on (E9's `countInSteps`, a tenth of its limits
+ * held back for the count), on a cursor started over `openPairs` open pairs
+ * by a worker in `role`. Only a host's: nothing else advances its count, and
+ * only where the count starts at all. The dialog counts in slices of its own
+ * (`LAYER_ORDER_COUNT_SLICE`), or chose not to count, so its steps spend all
+ * their limits on the step.
+ */
+export function layerOrderStepsCount(role: LayerOrderEngineRole, openPairs: number): boolean {
+  return role === 'host' && layerOrderCountStarts(openPairs);
 }

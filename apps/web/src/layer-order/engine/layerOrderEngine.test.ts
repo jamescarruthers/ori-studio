@@ -15,9 +15,14 @@ import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import {
   KEEP_TRYING_FACTOR,
   LAYER_ORDER_LIMITS,
+  LAYER_ORDER_WORKER_NAMES,
+  NO_PROVED_ENDS,
   constraintSeen,
   constraintVerb,
   keepTrying,
+  layerOrderWorkerRole,
+  layerPositionEnds,
+  withProvedEnd,
   packConstraints,
   spotCount,
   unpackConstraints,
@@ -94,6 +99,50 @@ describe('limits', () => {
   it('count spots from the stacks’ offsets', () => {
     expect(spotCount({ offsets: Uint32Array.of(0, 2, 5), faces: new Uint32Array(5) })).toBe(2);
     expect(spotCount({ offsets: new Uint32Array(), faces: new Uint32Array() })).toBe(0);
+  });
+});
+
+describe('the stepper’s ends, every pager’s', () => {
+  const at = (index: number, n: number, exact: boolean) => ({ index, total: { n, exact } });
+
+  it('are the first and the last once the total is exact', () => {
+    expect(layerPositionEnds(at(1, 3, true))).toEqual({ first: true, last: false, only: false });
+    expect(layerPositionEnds(at(2, 3, true))).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(3, 3, true))).toEqual({ first: false, last: true, only: false });
+    expect(layerPositionEnds(at(1, 1, true))).toEqual({ first: true, last: true, only: true });
+  });
+
+  it('leave ‹ at 1 until then: the index counts the solutions found so far, not their rank (E9)', () => {
+    expect(layerPositionEnds(at(1, 3, false))).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(1, 1, false), null)).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(4, 4, false))).toEqual({ first: false, last: false, only: false });
+  });
+
+  it('wait each way a step proved to end, whatever the count says', () => {
+    const previous = withProvedEnd(null, 'previous');
+    const next = withProvedEnd(NO_PROVED_ENDS, 'next');
+    expect(layerPositionEnds(at(1, 3, false), previous)).toEqual({ first: true, last: false, only: false });
+    expect(layerPositionEnds(at(3, 3, false), next)).toEqual({ first: false, last: true, only: false });
+    // The last, proved, but not the only one: a solution listed before the first found may yet be.
+    expect(layerPositionEnds(at(1, 1, false), next)).toEqual({ first: false, last: true, only: false });
+  });
+
+  it('keep both proved ends: the one solution there is, the count unfinished', () => {
+    const both = withProvedEnd(withProvedEnd(null, 'previous'), 'next');
+    expect(both).toEqual({ previous: true, next: true });
+    // Proving one way again keeps the other.
+    expect(withProvedEnd(both, 'previous')).toEqual({ previous: true, next: true });
+    expect(layerPositionEnds(at(1, 1, false), both)).toEqual({ first: true, last: true, only: true });
+    // Both ends of an order the count has found others beside: no claim of one.
+    expect(layerPositionEnds(at(2, 3, false), both)).toEqual({ first: true, last: true, only: false });
+  });
+});
+
+describe('a worker’s role', () => {
+  it('is read from the name the runtime spawns it with, a host’s unless it is the dialog’s', () => {
+    expect(layerOrderWorkerRole(LAYER_ORDER_WORKER_NAMES.dialog)).toBe('dialog');
+    expect(layerOrderWorkerRole(LAYER_ORDER_WORKER_NAMES.host)).toBe('host');
+    expect(layerOrderWorkerRole('')).toBe('host');
   });
 });
 

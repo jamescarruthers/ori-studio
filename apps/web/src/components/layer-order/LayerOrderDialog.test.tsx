@@ -20,7 +20,11 @@ import {
   fakeLayerOrderScene,
   type FakeLayerOrderBackend,
 } from '../../layer-order/engine/layerOrderEngine.fixtures';
-import type { LayerOrderLimits, LayerRefusal } from '../../layer-order/engine/layerOrderEngine';
+import {
+  LAYER_ORDER_WORKER_NAMES,
+  type LayerOrderLimits,
+  type LayerRefusal,
+} from '../../layer-order/engine/layerOrderEngine';
 import {
   openLayerOrderDialog,
   prefetchLayerOrderDialog,
@@ -243,7 +247,8 @@ describe('the Layer order dialog’s door', () => {
     expect(spawned).toHaveLength(1);
     // The dialog's own worker file, as Vite names a worker it bundles.
     expect(new URL(spawned[0]!.url).pathname).toMatch(/\/src\/workers\/layerOrderWorker\.ts$/);
-    expect(spawned[0]!.options).toEqual({ type: 'module' });
+    // Named for its role: the worker reads from it that its steps spend nothing on the count (E9).
+    expect(spawned[0]!.options).toEqual({ type: 'module', name: LAYER_ORDER_WORKER_NAMES.dialog });
 
     click(button('Cancel'));
     await expect(outcome).resolves.toEqual({ kind: 'cancelled' });

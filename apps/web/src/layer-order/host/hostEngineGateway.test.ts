@@ -15,6 +15,7 @@ import {
   FakeLayerOrderWorker,
   createFakeLayerOrderBackend,
 } from '../engine/layerOrderEngine.fixtures';
+import { LAYER_ORDER_WORKER_NAMES } from '../engine/layerOrderEngine';
 
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
@@ -59,7 +60,8 @@ describe('the host engine’s gateway', () => {
     expect(spawned).toHaveLength(1);
     // The dialog's own worker file, as Vite names a worker it bundles.
     expect(new URL(spawned[0]!.url).pathname).toMatch(/\/src\/workers\/layerOrderWorker\.ts$/);
-    expect(spawned[0]!.options).toEqual({ type: 'module' });
+    // Named for its role: the worker reads from it whether its steps count on (E9).
+    expect(spawned[0]!.options).toEqual({ type: 'module', name: LAYER_ORDER_WORKER_NAMES.host });
     // Short-lived: gone once it answered.
     expect(spawned[0]!.worker.terminated).toBe(true);
     expect(spawned[0]!.worker.backend.calls).toEqual(['restore', 'relations', 'save']);

@@ -27,6 +27,7 @@ import type {
   LayerOrderLimits,
   LayerPosition,
   LayerPreviewFacts,
+  LayerProvedEnds,
   LayerRefusal,
   LayerSide,
   LayerSidesStacks,
@@ -272,13 +273,18 @@ export type LayerStepState =
       readonly request: number;
       readonly direction: LayerStepDirection;
       readonly by: LayerStepBy;
+      readonly limits: LayerOrderLimits;
       /** How the history moves once it moves the order: an entry holding the order before (an undo or redo of it is an exact `show`). */
       readonly move: LayerHistoryMove<LayerUndoEntry>;
       readonly at: number;
     }
-  /** No solution lies that way among those counted. */
+  /** No solution lies that way: proved (E9), whatever the count says, and kept in {@link LayerSolutionsState.ended}. */
   | { readonly kind: 'end'; readonly direction: LayerStepDirection }
-  | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection };
+  /**
+   * The search for the next solution that way ran out (E9): nothing moved.
+   * Keep trying steps that way again, with later limits than `limits`.
+   */
+  | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection; readonly limits: LayerOrderLimits };
 
 export interface LayerSolutionsState {
   /** Whether the background count runs (D7), by the open pairs at the open and after each commit; the stepper steps either way. */
@@ -290,6 +296,14 @@ export interface LayerSolutionsState {
   readonly position: LayerPosition | null;
   readonly positionBy: string | null;
   readonly step: LayerStepState;
+  /**
+   * The ways a step proved nothing lies from the order on screen (E9), both
+   * kept: a › that runs out or ends after a ‹ that ended leaves ‹ waiting.
+   * Let go when the order moves or the generation or what it steps by
+   * changes; never by a read of its position, whose index moves with the
+   * count until the total is exact.
+   */
+  readonly ended: LayerProvedEnds;
 }
 
 // ---------------------------------------------------------------------------
