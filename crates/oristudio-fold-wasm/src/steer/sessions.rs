@@ -428,8 +428,11 @@ impl LayerSessions {
     /// side, the closest layer order within the next picture; with
     /// `layer_order` (X-ray), the next layer order. Only the order on
     /// screen changes: the cursor stays good, and a preview kept from
-    /// before is dropped (Add then commits from the stepped order). Unless
-    /// the count is done, the step counts on within half its limits first.
+    /// before is dropped (Add then commits from the stepped order). Before
+    /// the count has every solution it steps through, the step searches for
+    /// the one the count would list next (E9) and then counts on for a
+    /// tenth of its limits; once it has, it counts on within half its
+    /// limits first.
     pub fn step(
         &mut self,
         session: u32,

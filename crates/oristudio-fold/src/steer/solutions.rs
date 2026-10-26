@@ -558,6 +558,20 @@ impl ForcedTable {
     }
 }
 
+/// What a step that searched gives the count after: a tenth of `limits`'
+/// nodes, and a tenth of its window (`window_ms`, measured when the step
+/// began) from now, never past its own deadline.
+fn tenth_after(limits: &Limits, window_ms: f64) -> Limits {
+    Limits {
+        max_nodes: limits.max_nodes.map(|n| n.div_ceil(10)),
+        deadline: limits.deadline.map(|d| complete::Deadline {
+            at_ms: d.at_ms.min((d.now_ms)() + window_ms / 10.0),
+            ..d
+        }),
+        ..*limits
+    }
+}
+
 /// Half of `limits`' nodes, and a deadline halfway to its own.
 fn halved(limits: &Limits) -> Limits {
     Limits {
@@ -1528,11 +1542,11 @@ impl ConstraintSession {
     /// half of `limits` (the other half is the check's). Before that it
     /// does not wait for the count: it searches, within `limits`, for the
     /// solution the count would list next (see `seek` in this module's
-    /// source), and then counts on within what is left of the first half
-    /// of `limits`, so a host that never advances the count still sees it
-    /// finish on a figure it can. A search that runs out of `limits` is
-    /// [`Stepped::End`], not final, and keeps what it proved for the same
-    /// step asked again with longer ones.
+    /// source), and then counts on for a tenth of `limits` (its nodes, and
+    /// a tenth of its window from then, within its deadline), so a host
+    /// that never advances the count still sees a small one finish. A
+    /// search that runs out of `limits` is [`Stepped::End`], not final, and
+    /// keeps what it proved for the same step asked again with longer ones.
     pub fn step(
         &mut self,
         solutions: &mut Solutions,
@@ -1595,9 +1609,9 @@ impl ConstraintSession {
         direction: StepDirection,
         limits: &Limits,
     ) -> Result<Stepped, SessionRefusal> {
-        // The count's share, the first half of the step's window, as a
-        // counted step gives it; it counts once the search is done.
-        let counting = halved(limits);
+        let window_ms = limits
+            .deadline
+            .map_or(0.0, |d| (d.at_ms - (d.now_ms)()).max(0.0));
         let sought = solutions.seek(
             self.letter_search(),
             &*self,
@@ -1610,6 +1624,9 @@ impl ConstraintSession {
             Sought::Found(values) => Some(self.show_values(values)),
             Sought::End | Sought::Undecided => None,
         };
+        // The count's share, once the search is done: a tenth of the step's
+        // window, so a step that found its solution quickly stays quick.
+        let counting = tenth_after(limits, window_ms);
         if !solutions.is_done() && !counting.deadline.is_some_and(|d| d.passed()) {
             solutions.advance_on(self.letter_search(), &counting)?;
         }

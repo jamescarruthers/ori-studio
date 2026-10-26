@@ -325,8 +325,10 @@ export type LayerStepBy = { picture: LayerSide } | 'layer_order';
 
 /**
  * Where the order on screen lies in the stepper's fixed order ("3 of 12"):
- * `index` from 1, final once `total.exact`. Past 2⁵³ − 1 (layer orders with
- * X-ray on can be) it is sent as that bound, as a tally is.
+ * `index` from 1, final once `total.exact`. Before the count has every
+ * solution the stepper steps through, `index` counts the solutions found so
+ * far ("Solution 3") and `total` is at least those. Past 2⁵³ − 1 (layer
+ * orders with X-ray on can be) it is sent as that bound, as a tally is.
  */
 export interface LayerPosition {
   index: number;
@@ -342,7 +344,11 @@ export type LayerStepped =
       /** The order on screen's stacks now. */
       stacks: { front: LayerStacks; back: LayerStacks };
     }
-  /** No solution lies that way among those counted: final once the count is done. */
+  /**
+   * Nothing moved: no solution lies that way, or the search for the next
+   * one ran out of its limits first, which a step asked again with longer
+   * ones goes on from. Final once `total.exact`.
+   */
   | { verdict: 'end' }
   /** The check within the next solution ran out with nothing counted to fall back on: nothing changed. */
   | LayerTimedOut;
@@ -412,8 +418,10 @@ export interface LayerOrderBridge {
   /**
    * Show the next or previous solution: only the order on screen changes,
    * the cursor stays good, and a preview kept from before is dropped (Add
-   * then commits from the stepped order). Unless the count is done it first
-   * counts on within half its limits.
+   * then commits from the stepped order). Before the count has every
+   * solution it steps through, it searches for the one the count would list
+   * next (E9), then counts on for a tenth of its limits; once it has, it
+   * first counts on within half its limits, as before.
    */
   layer_step(
     session: number,
