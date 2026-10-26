@@ -541,12 +541,11 @@ disagrees, the artboard wins):
   strengthens the tints (Round3:473, 883).
 - The faint subject tint is on the crease pattern only (spec §6.4).
 - Each pane has its own zoom toolbar, and Fit frames both (Round3:385-389,
-  421-425), each filling about 91% of its pane with its own content: the
-  crease pattern the one pattern its fold came from (the host's `region`,
-  its sheet, never the rest of a document of many), the folded pane the
-  figure itself. Your call after trying the branch (2026-10-26), over
-  Round3's one sheet-sized scale on both: "when i press fit to view for the
-  folded figure its too small".
+  421-425). Each pane fits its own content (the crease pattern it came from,
+  the host's `region`, never the rest of a document of many; the folded
+  figure itself), filling about 70% of the pane: in your words
+  (2026-10-26), "it should not fill totally edge to edge, but like 70% or
+  something larger than what it currently does".
 - The flash is one 1.6 s fade (Round3:172-176).
 - The status dot turns to success when the order is decided (Round3:200).
 - The footer note ("Apply keeps the order on screen…", Round3:1536) is
@@ -1067,6 +1066,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
 - [ ] H10: Fold's Import CP chooses its order in the dialog
+- [ ] Deeper stacks: measure the too-deep designs through the dialog's engine and raise the dialog's own cap as far as they stay usable (your ask, 2026-10-26)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
