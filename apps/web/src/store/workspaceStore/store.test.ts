@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { patchBoxPleatDesign, singleBoxPleatDesignTab } from './designTabs';
 import { selectDesignMethod, selectDesignViewportFitRequestId, selectHistoryFuture, selectHistoryPast, selectLastOptimization, selectOristudioBpDocument, selectOristudioBpHistoryPast, selectOristudioBpSymmetry, selectOristudioBpViewportFitRequestId, selectProject, selectSelection, selectSymmetryAuthoringPairs, selectToolMode, singleDesignTab, singleTreemakerDesignTab } from './designTabs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

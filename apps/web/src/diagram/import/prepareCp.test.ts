@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from '../capture/capture.fixtures';
 import type { CpCaptureRuntime } from '../capture/captureFolded';

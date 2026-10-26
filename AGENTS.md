@@ -402,6 +402,9 @@ in `implementation-plans/angle-restricted-endpoint-snap.md`.)
 - Web UI changes need lint, typecheck, and unit tests. Run `npm run build:web`
   when generated wasm bindings, bundling, routing, or production-only behavior
   may be affected.
+- Web unit tests run in jsdom only when they are `.test.tsx`; every other test
+  file runs in plain Node (`apps/web/vite.config.ts`). A `.ts` test that needs
+  the DOM starts with `// @vitest-environment jsdom`.
 - Desktop shell changes need `npm run check:desktop`; run the Tauri dev app when
   menu, dialog, filesystem, or window behavior changes.
 - Docs-only and workflow-only changes can usually be validated with

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { createDiagram, insertPictureSteps, type DiagramDocument } from '../diagram/document/diagramDocument';
 import { singleBoxPleatDesignTab } from '../store/workspaceStore/designTabs';
 import { useDiagramExportUiStore } from '../store/diagramExportUiStore';

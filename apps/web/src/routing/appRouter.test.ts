@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 // Where paths resolve is the question here, not what the workspace renders — and the real

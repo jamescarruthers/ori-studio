@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResolvedShortcuts } from '../keyboard/shortcuts';
 import { registerCpActionShortcutExecutor } from '../keyboard/shortcutRuntime';
