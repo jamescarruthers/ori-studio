@@ -4,6 +4,7 @@ import { CircleAlert, Info } from 'lucide-react';
 import type { ModalHistory } from '../../keyboard/dialogShortcuts';
 import type { FaceLetters } from '../../layer-order/engine/faceIndex';
 import type { LayerRefusal } from '../../layer-order/engine/layerOrderEngine';
+import { useLayerOrderLongOpen } from '../../layer-order/dialog/useLayerOrderLongOpen';
 import type { LayerOrderSessionStatus } from '../../layer-order/dialog/useLayerOrderSession';
 import type { LayerPanesEvents } from '../../layer-order/panes/layerPaneInput';
 import type { LayerFaceMarks, LayerPanesStacks, LayerPanesView } from '../../layer-order/panes/layerPaneMarks';
@@ -134,6 +135,7 @@ export function LayerOrderDialogFrame({
 }: LayerOrderDialogFrameProps) {
   const { t } = useTranslation();
   const notice = sessionNotice(t, status, { letters, name });
+  const longOpen = useLayerOrderLongOpen(status);
   const applyBlocked = applyBlockedReason();
 
   function applyBlockedReason(): string | null {
@@ -243,7 +245,12 @@ export function LayerOrderDialogFrame({
               inspector
             ) : (
               <p className={styles.working} role="status">
-                {t('dialogs:layerOrder.opening', 'Working out the layer orders…')}
+                <span>{t('dialogs:layerOrder.opening', 'Working out the layer orders…')}</span>
+                {longOpen && (
+                  <span className={styles.workingLong}>
+                    {t('dialogs:layerOrder.openingLong', 'Large figures can take up to a minute.')}
+                  </span>
+                )}
               </p>
             )}
           </aside>

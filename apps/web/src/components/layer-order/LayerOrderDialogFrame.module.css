@@ -63,17 +63,27 @@
   margin: 0;
 }
 
-/* The opening state: one sentence, centred in the inspector's place. */
+/*
+ * The opening state: one sentence, centred in the inspector's place, and
+ * after a few seconds a quieter line under it, that large figures take longer.
+ */
 .working {
   display: grid;
   flex: 1 1 auto;
   align-content: center;
   justify-items: center;
+  gap: var(--space-2);
   margin: 0;
   padding: var(--space-5);
   color: var(--text-secondary);
   font-size: 0.8rem;
   text-align: center;
+}
+
+.workingLong {
+  max-width: 32ch;
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
 }
 
 .body[data-layout='narrow'] {

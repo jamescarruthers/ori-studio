@@ -36,10 +36,15 @@
 //! - [`LayerOrderRecord`], [`read_record`] and [`encode_record`]: the saved
 //!   form, byte for byte the TypeScript codec's
 //!   (`apps/web/src/lib/layerOrder/layerOrderRecord.ts`).
+//! - [`ImportedFaces`] (H10): an imported crease pattern's faces matched one
+//!   for one with the faces Edit folds of it, so Fold's Import CP can open the
+//!   dialog on them and import the order its Apply chose, exactly.
 //!
-//! Nothing here is bound to wasm yet (E7).
+//! The wasm bindings are `oristudio-fold-wasm`'s `steer` (E7) and, for the
+//! import, its `io`.
 
 mod explain;
+mod imported;
 mod record;
 mod restore;
 mod session;
@@ -49,6 +54,7 @@ mod source;
 mod stacks;
 
 pub use explain::{Clash, Explanation};
+pub use imported::{FacesDiffer, ImportedFaces, ImportedLook};
 pub use record::{
     Attention, AttentionReason, EncodeRefusal, FoldSign, LayerOrderRecord, RECORD_MAX_BYTES,
     RECORD_VERSION, RecordDamage, RecordFace, RecordPair, RecordPart, RecordRead, encode_record,
@@ -60,7 +66,7 @@ pub use restore::{
 };
 pub use session::{
     CantFit, CantFitProof, Commit, Committed, Constraint, ConstraintFault, ConstraintSession,
-    Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
+    Limits, Preview, PreviewFit, SessionRefusal, Show, TimedOut, Verb,
 };
 pub use showing::{FoldInside, OpenedOn, scene_relations};
 pub use solutions::{

@@ -11,13 +11,15 @@ import {
   type LayerOpened,
   type LayerRestored,
 } from '../engine/layerOrderWire';
-import { commitFacts, explainFacts, openFacts, previewFacts, stepFacts } from './layerOrderEngineFacts';
+import { commitFacts, explainFacts, openFacts, previewFacts, shownFacts, stepFacts } from './layerOrderEngineFacts';
 
 const STACKS = {
   front: { offsets: Uint32Array.of(0, 2, 3), faces: Uint32Array.of(0, 1, 2) },
   back: { offsets: Uint32Array.of(0, 2, 3), faces: Uint32Array.of(1, 0, 2) },
 };
 const changedSpots = (front: number[]) => ({ front: Uint32Array.from(front), back: new Uint32Array() });
+/** The order on screen as `layer_order` packs it, read by the hook after an open, a commit or a step. */
+const ORDER = Uint8Array.of(0b101);
 
 const OPENED: LayerOpened = {
   status: 'ok',
@@ -32,12 +34,13 @@ const OPENED: LayerOpened = {
 describe('the engine’s answers as the model reads them', () => {
   it('an open: the figure, its open pairs, where its order came from, no constraints, and the letters the hook read', () => {
     const letterOrder = [3, 0, 1, 2, 6, 5, 4];
-    expect(openFacts(OPENED, STACKS, null, letterOrder)).toEqual({
+    expect(openFacts(OPENED, STACKS, null, letterOrder, ORDER)).toEqual({
       faces: 7,
       frontUp: OPENED.front_up,
       openPairs: OPENED.open_pairs,
       openedOn: { kind: 'held', ignored: 0 },
       stacks: STACKS,
+      order: ORDER,
       constraints: [],
       restore: null,
       letterOrder,
@@ -88,7 +91,7 @@ describe('the engine’s answers as the model reads them', () => {
         },
       ],
     };
-    const facts = openFacts(restored, STACKS, record, [0, 1, 2, 3, 4, 5, 6]);
+    const facts = openFacts(restored, STACKS, record, [0, 1, 2, 3, 4, 5, 6], ORDER);
     expect(facts.constraints).toEqual([[4, 5, -1]]);
     expect(facts.restore).toEqual({
       outcome: { kind: 'applied' },
@@ -120,7 +123,7 @@ describe('the engine’s answers as the model reads them', () => {
   it('the engine contract’s shapes too: no handle, and a restore’s constraints as tuples', () => {
     const { session: _session, ...opened } = OPENED;
     const letterOrder = [0, 1, 2, 3, 4, 5, 6];
-    expect(openFacts(opened, STACKS, null, letterOrder)).toEqual(openFacts(OPENED, STACKS, null, letterOrder));
+    expect(openFacts(opened, STACKS, null, letterOrder, ORDER)).toEqual(openFacts(OPENED, STACKS, null, letterOrder, ORDER));
     const restored = {
       ...opened,
       constraints: [[4, 5, -1]] as const,
@@ -130,7 +133,7 @@ describe('the engine’s answers as the model reads them', () => {
       saved_order: new Uint8Array(),
       carried: [],
     };
-    expect(openFacts(restored, STACKS, null, letterOrder).constraints).toEqual([[4, 5, -1]]);
+    expect(openFacts(restored, STACKS, null, letterOrder, ORDER).constraints).toEqual([[4, 5, -1]]);
   });
 
   it('a check’s verdicts, with the clash’s indices and faces as plain arrays', () => {
@@ -148,17 +151,18 @@ describe('the engine’s answers as the model reads them', () => {
     ).toEqual({ verdict: 'cant_fit', constraints: [0, 1] });
     expect(previewFacts({ verdict: 'timed_out', limit: 'deadline', nodes: 3 })).toEqual({ verdict: 'timed_out' });
 
-    expect(
-      commitFacts({
-        verdict: 'committed',
-        changed,
-        stacks: STACKS,
-        open_pairs: Uint32Array.of(4, 5),
-        stage: 'unchanged',
-        nodes: 0,
-        adopted: true,
-      })
-    ).toEqual({ verdict: 'committed', changed, stacks: STACKS, openPairs: Uint32Array.of(4, 5) });
+    const committed = { changed, stacks: STACKS, open_pairs: Uint32Array.of(4, 5), stage: 'unchanged', nodes: 0, adopted: true } as const;
+    expect(commitFacts({ verdict: 'committed', ...committed }, ORDER)).toEqual({
+      verdict: 'committed',
+      changed,
+      stacks: STACKS,
+      openPairs: Uint32Array.of(4, 5),
+      order: ORDER,
+    });
+    // An exact restore (`layer_show`) is the commit it is, with the order it put back.
+    expect(shownFacts({ verdict: 'shown', ...committed, adopted: false }, ORDER)).toEqual(
+      commitFacts({ verdict: 'committed', ...committed }, ORDER)
+    );
 
     expect(
       explainFacts({
@@ -172,9 +176,14 @@ describe('the engine’s answers as the model reads them', () => {
     ).toEqual({ verdict: 'clash', constraints: [0, 2], faces: [1, 3, 4], minimal: true });
     expect(explainFacts({ verdict: 'fits' })).toEqual({ verdict: 'fits' });
 
-    expect(
-      stepFacts({ verdict: 'moved', changed, position: { index: 2, total: { n: 4, exact: true } }, stacks: STACKS })
-    ).toEqual({ verdict: 'moved', changed, position: { index: 2, total: { n: 4, exact: true } }, stacks: STACKS });
-    expect(stepFacts({ verdict: 'end' })).toEqual({ verdict: 'end' });
+    const at = { index: 2, total: { n: 4, exact: true } };
+    expect(stepFacts({ verdict: 'moved', changed, position: at, stacks: STACKS }, ORDER)).toEqual({
+      verdict: 'moved',
+      changed,
+      position: at,
+      stacks: STACKS,
+      order: ORDER,
+    });
+    expect(stepFacts({ verdict: 'end' }, ORDER)).toEqual({ verdict: 'end' });
   });
 });

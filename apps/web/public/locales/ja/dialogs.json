@@ -357,6 +357,10 @@
         "text": "この FOLD ファイルは折り終えた紙を表しています。代わりに平らな展開図をインポートしてください。",
         "title": "展開図ではなく折り上がった形です"
       },
+      "layerOrder": {
+        "text": "この重なり順を反映できませんでした。何もインポートされていません。",
+        "title": "この重なり順を反映できませんでした"
+      },
       "noFigure": {
         "text": "まず編集で展開図を平らに折り、その折り図から始めてください。",
         "title": "編集に折り図がありません"
@@ -583,13 +587,15 @@
       "nothingToUndo": "元に戻す操作はありません",
       "redo": "やり直す",
       "redoShortcut": "やり直す ({{shortcut}})",
+      "redoWaits": "やり直すは進行中の変更を待っています",
       "remove": "{{sentence}} を削除",
       "reveal": "{{face}} を文に入れる",
       "separator": "、",
       "title": "制約",
       "titleCount_other": "制約 · {{count}}",
       "undo": "元に戻す",
-      "undoShortcut": "元に戻す ({{shortcut}})"
+      "undoShortcut": "元に戻す ({{shortcut}})",
+      "undoWaits": "元に戻すは進行中の変更を待っています"
     },
     "lost": "重なり順が予期せず停止しました。何も変更されていません。",
     "lostLoad": "重なり順を読み込めませんでした。接続を確認してから、もう一度お試しください。",
@@ -603,6 +609,7 @@
     },
     "objectSeparator": "、",
     "opening": "重なり順を求めています…",
+    "openingLong": "大きな図では最大 1 分ほどかかることがあります。",
     "pane": {
       "creasePattern": "展開図",
       "folded": "折り上がり",

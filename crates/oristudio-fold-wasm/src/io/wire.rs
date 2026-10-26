@@ -7,7 +7,10 @@
 //! The one document shape here is the `cp-jump` op ([`CpJump`]), which a
 //! pick returns ready to store and every replay hands back unchanged.
 
+use oristudio_cp::folding::FoldedPaperScene;
+use oristudio_cp::session::FoldSource;
 use oristudio_fold::complete::{BudgetLimit, CheckLimits, CompletionLimits, ConstraintFamily};
+use oristudio_fold::steer::ImportedLook;
 use oristudio_fold::{
     Broken, CheckStage, ChoiceCount, FaceId, ImportRefusal, ImportSummary, SheetShape, StartSide,
 };
@@ -310,6 +313,22 @@ pub struct Exported {
     pub text: String,
 }
 
+/// What the Layer order dialog opens on for a held import
+/// (`implementation-plans/layer-order-dialog.md`, row H10).
+#[derive(Debug, Clone, Serialize)]
+pub struct LayerOpening {
+    /// The fold the dialog analyses: the import's stored crease pattern as
+    /// Edit folds it whole, the CP bridge's `FoldSource` shape. Its digest is
+    /// what `import_pick_layer_order` takes back.
+    pub source: FoldSource,
+    /// The order the choice picks, drawn over the source's faces by the CP
+    /// kernel (its front pass): the dialog opens on it, so an Apply that
+    /// changed nothing is that choice.
+    pub shown: FoldedPaperScene,
+    /// The side Fold shows the state from, and how far it turns it.
+    pub look: ImportedLook,
+}
+
 // ---------------------------------------------------------------------------
 // Refusals
 
@@ -360,6 +379,12 @@ pub enum IoRefusal {
     FigureIncomplete { gap: FigureGap },
     #[error("the FOLD file would hold {elements} elements, over the {cap} cap")]
     ExportTooLarge { elements: usize, cap: usize },
+    /// The Layer order dialog cannot open on this import (row H10): Edit's
+    /// fold of its creases is refused (`reason` is the kernel's or the
+    /// dialog source's code), or traces other faces than the import
+    /// (`faces_differ`). The import keeps its own chooser.
+    #[error("the Layer order dialog cannot open on this import: {reason}")]
+    LayerUnavailable { reason: &'static str },
 }
 
 impl IoRefusal {
@@ -373,6 +398,7 @@ impl IoRefusal {
             IoRefusal::OrderBroken { .. } => "import_order_broken",
             IoRefusal::FigureIncomplete { .. } => "import_figure_incomplete",
             IoRefusal::ExportTooLarge { .. } => "fold_export_too_large",
+            IoRefusal::LayerUnavailable { .. } => "import_layer_unavailable",
         }
     }
 
@@ -394,6 +420,7 @@ impl IoRefusal {
             IoRefusal::ExportTooLarge { elements, cap } => {
                 json!({ "code": code, "elements": elements, "cap": cap })
             }
+            IoRefusal::LayerUnavailable { reason } => json!({ "code": code, "reason": reason }),
         })
     }
 }

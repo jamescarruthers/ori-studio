@@ -530,7 +530,11 @@ disagrees, the artboard wins):
   subject, picking or removing an object, changing the verb, Clear, Add (one
   step, however many objects), a row's removal, Clear all, a solution step
   (your words, 2026-10-26: "cmd + z should undo adding a single constraint or
-  setting the subject (so basically any action)").
+  setting the subject (so basically any action)"). The view toggles (Front/Back,
+  X-ray, Undecided) and the panes' zoom are no step (my call): undo in the app
+  covers what is saved, never the view. Edit's Flip is undoable because it
+  changes the figure the file saves; here Front/Back is a lens Apply never
+  writes (spec §5, §6.2).
 - Remove and Clear all re-solve for the fitting order closest to the one on
   screen, and flash the spots that changed (Round3:1150-1190). Undo and redo
   restore the exact order the action started from or landed on (my call,
@@ -911,6 +915,53 @@ Settled while building H4, for the PRs that meet it:
   refold on them could not draw, is a stale figure on flat creases:
   flagged, opened on them, refolded flat by its Apply.
 
+Settled while building H10 (Fold's Import CP):
+- **The engine route: the import is seeded with the dialog's relations,
+  over faces matched one for one.** Fold's import traces its own faces
+  (`ImportedPattern`), the dialog Oriedita's, so the Fold engine matches the
+  two (`oristudio_fold::steer::ImportedFaces`) by the rule a saved record's
+  faces are found again by: each Oriedita face's interior point lies in one
+  import face, no two in the same one, areas within `AREA_TOLERANCE`, as
+  many faces on each side. `import_layer_opening` builds the dialog's
+  source from the import's own stored `cpJson` the way Edit folds it whole
+  (`CpSession::fold_source_of_selection`, every line, face 1), matches the
+  faces, and draws the import's default pick over Oriedita's faces as the
+  `shown` scene; `import_pick_layer_order` turns Apply's relations into the
+  import's seeds through the match (`ImportedPattern::oriedita_face_seeds`,
+  the body Start from Edit's figure already used) and lands the unique
+  completion as a pick lands a card. Exact: every pair the dialog relates is
+  fixed as it chose it, the letters decide the rest, and an order left open
+  is refused rather than guessed. Tested natively (every order the dialog
+  steps through lands as that order, and they are the chooser's orders, on
+  kabuto and `solution_sample_1`), in wasm (stack for stack) and in the
+  browser.
+- **The dialog opens on the import's default pick,** held whole, so an
+  untouched Apply (`unchanged`) lands that pick: today's import, step for
+  step. Its look is Fold's: the sequence's paper through Fold's policy, from
+  the side Fold shows and turned as Fold turns it (`ImportedFaces::look`).
+- **One order goes straight through,** as it did: the import's own count
+  says so for free. A truncated count opens the dialog.
+- **When the dialog can't take it** (`busy`, `unavailable`, or the engine
+  can't match the faces — an unassigned crease Fold folds and Edit doesn't),
+  the canvas chooser asks, as before H10; `busy` says so in a toast, and the
+  gateway already says why for `unavailable`.
+- **From the review (#541):**
+  - *A host can withdraw its ask:* `openLayerOrderDialog(request, { signal })`
+    closes the dialog when the signal aborts, answering `cancelled`. Import
+    CP's flow aborts it when it lets the import go: a reset, a dispose (Back
+    or a workspace switch unmounts Import CP), a newer request, or the step it
+    goes after moving under the dialog (an undo).
+  - *The mount closes the dialog when the route or the workspace changes
+    under it,* for every host: an Apply never lands in a place the user left.
+  - *A refusal of the dialog's order* (`import_order_open`,
+    `import_budget_exceeded`, any) says "Fold couldn't land this layer order.
+    Nothing was imported.", with no Search longer; the pick spends the limits
+    the import was opened with.
+  - *The dialog's code is fetched only once an import reports several
+    orders,* never on Import CP's open.
+  - *The face match is checked both ways:* each import face's witness lies in
+    the Oriedita face it was matched to (`face_at_paper`), as a restore checks.
+
 ### Risks
 
 - **Display fidelity on real files.**
@@ -1069,11 +1120,14 @@ Settled while building H4, for the PRs that meet it:
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
 - [x] U10: inspector (#525)
+- [x] Your feedback from trying the branch (2026-10-26): a grouped row has no
+      per-object ×, and ⌘Z undoes every inspector action, not only commits
+      (`claude/lo-inspector-undo-all`)
 - [x] H2: host engine (#512)
 - [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
-- [ ] Your test feedback: no per-object × and exact undo of every action (#539)
-- [ ] H10: Fold's Import CP chooses its order in the dialog
-- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s
+- [x] Your test feedback: no per-object × and exact undo of every action (#539)
+- [x] H10: Fold's Import CP chooses its order in the dialog (#541)
+- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s (#545)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
@@ -1082,4 +1136,12 @@ Settled while building H4, for the PRs that meet it:
 - [x] H6: Edit "Another solution" within constraints (#528)
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
-- [ ] H9: the Diagram's ‹ › within constraints
+- [x] H9: the Diagram's ‹ › within constraints (#532)
+- [ ] E9 in the hosts and the dialog: ‹ usable and "Solution k" until the
+      count is exact, Keep trying after a step times out, and steps that
+      don't also count in the dialog or above 20,000 open pairs (#548)
+- [ ] CI: cache the Tauri apt packages, after the mirror timed out the native
+      job five times on 2026-10-26 (#546; the same change for main)
+- [ ] Merge main into `claude/layer-order` (the Fold workspace launch #475,
+      0.7.0 and 0.7.1)
+- [ ] The umbrella draft PR into main, for a preview and a desktop build

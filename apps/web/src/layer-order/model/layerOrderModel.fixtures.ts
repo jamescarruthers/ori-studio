@@ -57,6 +57,11 @@ export const SPOTS: readonly (readonly number[])[] = [[0, 1], [0, 1, 2], [2, 3],
 /** The order on screen after the fixture's preview of 2 in front of 0, from the front. */
 export const SPOTS_TWO_OVER_ZERO: readonly (readonly number[])[] = [[0, 1], [2, 0, 1], [2, 3], [4], [4, 5], [3], [6]];
 
+/** The order the engine would say for `spots`, packed: a stand-in, the same for the same stacks (`layer_order`). */
+export function orderOf(spots: readonly (readonly number[])[]): Uint8Array {
+  return Uint8Array.from(spots.flatMap((spot) => [...spot, 255]));
+}
+
 export const FRONT_UP = Uint8Array.of(1, 0, 1, 0, 1, 0, 1);
 export const OPEN_PAIRS = Uint32Array.of(0, 2, 2, 3, 4, 5);
 
@@ -75,6 +80,7 @@ export function openFactsOf(overrides: Partial<LayerOpenFacts> = {}): LayerOpenF
     openPairs: OPEN_PAIRS,
     openedOn: { kind: 'held', ignored: 0 },
     stacks: sidesOf(SPOTS),
+    order: orderOf(SPOTS),
     constraints: [],
     restore: null,
     letterOrder: Array.from({ length: faces }, (_, face) => face),
@@ -192,7 +198,21 @@ export function commits(
   return play(played.state, {
     type: 'committed',
     request: commit.request,
-    facts: { verdict: 'committed', changed, stacks: sidesOf(spots), openPairs },
+    facts: { verdict: 'committed', changed, stacks: sidesOf(spots), openPairs, order: orderOf(spots) },
+  });
+}
+
+/** Answer the last step asked for as moving the order on screen to `spots`. */
+export function steps(
+  played: Played,
+  spots = SPOTS_TWO_OVER_ZERO,
+  at: LayerPosition = position(2, 9),
+  changed = changedSpots([1])
+): Played {
+  return play(played.state, {
+    type: 'stepped',
+    request: lastOf(played.effects, 'step').request,
+    facts: { verdict: 'moved', changed, position: at, stacks: sidesOf(spots), order: orderOf(spots) },
   });
 }
 
@@ -201,6 +221,11 @@ export function rowKey(state: LayerOrderDialogState, id: number): LayerRowKey {
   const row = [...state.rows.committed, ...state.rows.carried].find((r) => r.id === id);
   if (!row) throw new Error(`no row ${id}`);
   return rowKeyOf(row, state.figure);
+}
+
+/** The trash of the list row that shows stored constraint `id`: the whole row goes. */
+export function trashOf(state: LayerOrderDialogState, id: number): LayerOrderAction {
+  return { type: 'row_removed', key: rowKey(state, id) };
 }
 
 /** Open, pick 2 in front of 0, preview it fitting, Add it, and land the commit: one committed row, `[2, 0, 1]`. */

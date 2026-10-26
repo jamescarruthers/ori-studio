@@ -282,28 +282,92 @@ jobs:
     # Pinned with web-client: the Tauri apt packages were resolved against 24.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      # Tauri's Linux build dependencies, resolved, cached and installed by the
+      # first steps below.
+      TAURI_APT_PACKAGES: >-
+        libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev
+        libssl-dev libayatana-appindicator3-dev librsvg2-dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Tauri Linux dependencies
-        # Bounded separately from the job because this is the step that stalls:
-        # apt on a hosted runner can hang on an unreachable mirror indefinitely,
-        # and `-y` does not help — there is no prompt, just no data. It normally
-        # finishes in about two minutes.
-        timeout-minutes: 10
+      # Those packages come to about 200 .debs, 65-80 MB, and downloading them is
+      # the part of this job at the mercy of the runner's Ubuntu mirror: normally
+      # a few seconds, but on 2026-10-26 the mirror served a few KB/s and the
+      # install timed out on every run, before any code ran. So the .debs are
+      # cached, keyed on exactly the files this install needs: the name, size
+      # and checksum of every .deb apt would fetch at the current package lists.
+      # When the archive updates one of them the key changes, and that run
+      # restores the previous set, downloads only what changed and saves the
+      # new set.
+      #
+      # The cache holds .debs, not a tarball of installed files, so apt still
+      # installs every package: postinst scripts, triggers, alternatives and the
+      # dpkg database end up exactly as after a plain install. Actions that
+      # restore installed files (awalsh128/cache-apt-pkgs-action) skip those.
+      #
+      # `apt-get update` still runs every time. It fetches index files only, and
+      # those came quickly on 2026-10-26 too. No `-o Acquire::Retries`: the x64
+      # image sets it to 1 on purpose, so a stalled mirror fails over to the
+      # next one in /etc/apt/apt-mirrors.txt instead of being retried.
+      #
+      # The apt steps are bounded separately from the job because apt on a
+      # hosted runner can hang on an unreachable mirror indefinitely, and `-y`
+      # does not help — there is no prompt, just no data.
+      - name: Resolve Tauri Linux dependencies
+        id: tauri-apt
+        timeout-minutes: 5
         run: |
+          set -euo pipefail
+          read -ra packages <<< "$TAURI_APT_PACKAGES"
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          # `--print-uris` lists what apt would download, and downloads nothing.
+          sudo apt-get install --print-uris -qq -y "${packages[@]}" \
+            | { grep "^'" || true; } | cut -d' ' -f2- | LC_ALL=C sort \
+            > "$RUNNER_TEMP/tauri-apt-debs.txt"
+          echo "$(wc -l < "$RUNNER_TEMP/tauri-apt-debs.txt") .debs to install"
+          release="$(. /etc/os-release && echo "$ID-$VERSION_ID")"
+          echo "prefix=tauri-apt-$release-$(dpkg --print-architecture)-" >> "$GITHUB_OUTPUT"
+          echo "hash=$(sha256sum "$RUNNER_TEMP/tauri-apt-debs.txt" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Tauri apt packages
+        id: tauri-apt-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/tauri-apt-debs
+          key: ${{ steps.tauri-apt.outputs.prefix }}${{ steps.tauri-apt.outputs.hash }}
+          restore-keys: ${{ steps.tauri-apt.outputs.prefix }}
+
+      - name: Install Tauri Linux dependencies
+        timeout-minutes: 10
+        env:
+          CACHE_HIT: ${{ steps.tauri-apt-cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          read -ra packages <<< "$TAURI_APT_PACKAGES"
+          mkdir -p ~/tauri-apt-debs
+          # apt uses a .deb already in its archive directory when it matches the
+          # package lists, and downloads the rest.
+          find ~/tauri-apt-debs -name '*.deb' -exec sudo cp -t /var/cache/apt/archives/ {} +
+          sudo apt-get install -y "${packages[@]}"
+          if [ "$CACHE_HIT" != true ]; then
+            # Exactly this install's .debs, so a set restored from an older key
+            # does not carry superseded versions forward.
+            find ~/tauri-apt-debs -name '*.deb' -delete
+            cut -d' ' -f1 "$RUNNER_TEMP/tauri-apt-debs.txt" \
+              | sed 's|^|/var/cache/apt/archives/|' \
+              | xargs -r cp -t ~/tauri-apt-debs/
+          fi
+
+      # Saved straight after the install rather than at the end of the job, so a
+      # failing test later on does not throw the download away.
+      - name: Save Tauri apt packages
+        if: steps.tauri-apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/tauri-apt-debs
+          key: ${{ steps.tauri-apt-cache.outputs.cache-primary-key }}
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable

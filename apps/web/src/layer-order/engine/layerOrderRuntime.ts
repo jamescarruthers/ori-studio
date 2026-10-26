@@ -455,6 +455,7 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
   const always = () => true;
   const restored = (answer: { status: string }) => answer.status === 'ok';
   const committed = (answer: { verdict: string }) => answer.verdict === 'committed';
+  const shown = (answer: { verdict: string }) => answer.verdict === 'shown';
 
   const engine: LayerOrderEngine = {
     open: (source, limits) => restarting((client) => client.open(source, limits), always),
@@ -470,6 +471,10 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     commit: (constraints, limits) => restarting((client) => client.commit(constraints, limits), committed),
     commitPreview: (token, constraints, limits) =>
       restarting((client) => client.commitPreview(token, constraints, limits), committed),
+    order: () => ask((client) => client.order()),
+    // A show to other constraints counts them afresh; to the same ones the worker keeps its cursor, and the
+    // next slice goes on from it.
+    show: (constraints, order, limits) => restarting((client) => client.show(constraints, order, limits), shown),
     carried: () => ask((client) => client.carried()),
     removeCarried: (index) => ask((client) => client.removeCarried(index)),
     clearCarried: () => ask((client) => client.clearCarried()),

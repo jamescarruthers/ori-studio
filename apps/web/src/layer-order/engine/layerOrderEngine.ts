@@ -56,10 +56,12 @@ import type {
   LayerExplained,
   LayerOpened,
   LayerOpenedOn,
+  LayerOrderBits,
   LayerPosition,
   LayerPreviewed,
   LayerRefused,
   LayerRestored,
+  LayerShown,
   LayerSide,
   LayerSolutionCount,
   LayerStacks,
@@ -81,10 +83,12 @@ export type {
   LayerCommitted,
   LayerExplained,
   LayerOpenedOn,
+  LayerOrderBits,
   LayerPosition,
   LayerPreviewed,
   LayerRefusal,
   LayerRefused,
+  LayerShown,
   LayerRestoreOutcomeKind,
   LayerSavedConstraintStatus,
   LayerSide,
@@ -247,12 +251,19 @@ const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
  * a wasm call can't be stopped, so a longer one would hold the worker from the
  * user's next preview or Apply; one that runs out offers Keep trying. The
  * count's slice is `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
+ *
+ * An open and a restore get a minute: the dialog opens behind "Working out
+ * the layer orders…" with Cancel, which ends its worker at once, and a host's
+ * restore (H2's resolve, which a refold or a reopen makes) behind its Stop.
+ * The figures stacked deepest take that long: the source admits stacks up to
+ * `LAYER_ORDER_MAX_STACKED_TRIPLES` (`crates/oristudio-fold/src/steer/source.rs`),
+ * whose deepest real design opened in 33–39 s and restored in 30–37 s.
  */
 export const LAYER_ORDER_LIMITS = {
-  open: { ...NODES, deadlineMs: 30_000 },
+  open: { ...NODES, deadlineMs: 60_000 },
   preview: { ...NODES, deadlineMs: 3_000 },
   commit: { ...NODES, deadlineMs: 10_000 },
-  restore: { ...NODES, deadlineMs: 30_000 },
+  restore: { ...NODES, deadlineMs: 60_000 },
   step: { ...NODES, deadlineMs: 3_000 },
   explain: { ...NODES, deadlineMs: 3_000 },
 } as const satisfies Record<string, LayerOrderLimits>;
@@ -342,11 +353,20 @@ export interface LayerOrderSessionCalls {
   /** The same for any list (the dialog's rows after a clash, plus one); `cant_fit.constraints` index it. */
   previewList(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerPreviewed>;
   /**
-   * Make `constraints` the committed list (remove, undo, redo and Clear all
-   * each send the whole list). A list the order on screen still fits, as any
-   * list that only lost constraints does, keeps it exactly.
+   * Make `constraints` the committed list (remove and Clear all each send
+   * the whole list). A list the order on screen still fits, as any list that
+   * only lost constraints does, keeps it exactly.
    */
   commit(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
+  /** The order on screen, packed one bit per pair: what {@link show} puts back. */
+  order(): Promise<LayerOrderBits>;
+  /**
+   * Undo and redo: commit `constraints` and put `order` ({@link order}'s,
+   * from earlier) back on screen exactly, with no search. `refused` when it
+   * does not fit the creases and the constraints; nothing changes then. A
+   * solutions cursor counting the same constraints stays good.
+   */
+  show(constraints: readonly LayerConstraint[], order: LayerOrderBits, limits: LayerOrderLimits): Promise<LayerShown>;
   /**
    * Add: commit `constraints`, the list a preview checked, by that preview's
    * `token`. Adopted with no search (`adopted`, so it cannot time out) while

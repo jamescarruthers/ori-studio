@@ -15,6 +15,16 @@
 //!     Outcome<{ sheet: SheetShape }>;
 //!   /** Land one listed order per component as a step: its state and op. */
 //!   import_pick(import: number, choice: Uint32Array): Outcome<ImportLanded>;
+//!   /** Open an import onto the Layer order dialog (row H10): the fold it
+//!    *  analyses (the CP bridge's FoldSource), the order `choice` picks drawn
+//!    *  over its faces (FoldedPaperScene, front pass), how Fold shows it. */
+//!   import_layer_opening(import: number, choice: Uint32Array):
+//!     Outcome<{ source: FoldSource; shown: FoldedPaperScene;
+//!       look: { side: 'front' | 'back'; turn_deg: number } }>;
+//!   /** Land the order the dialog's Apply chose: [upper, lower, …] over the
+//!    *  faces of the opening whose source digest is `digest`. */
+//!   import_pick_layer_order(import: number, digest: string, relations: Uint32Array):
+//!     Outcome<ImportLanded>;
 //!   /** Open a checking session on an import (the Layer order dialog; no
 //!    *  caller in apps/web yet): what its letters force, a first order. */
 //!   import_session(import: number, limits?: ImportLimits):
@@ -84,6 +94,39 @@ impl FoldEngine {
         let landed = self
             .imports
             .pick(&mut self.inner, import, &choice)
+            .map_err(thrown)?;
+        to_js_value(&landed)
+    }
+
+    /// Open a held import onto the Layer order dialog (row H10): the fold the
+    /// dialog analyses, the order `choice` picks drawn over its faces (the
+    /// dialog opens on it) and how Fold shows the state.
+    pub fn import_layer_opening(
+        &mut self,
+        import: u32,
+        choice: &[u32],
+    ) -> Result<JsValue, JsValue> {
+        let choice: Vec<usize> = choice.iter().map(|&k| k as usize).collect();
+        to_js_value(
+            &self
+                .imports
+                .layer_opening(import, &choice)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Land the order the Layer order dialog's Apply chose: `relations`,
+    /// `[upper, lower, …]` over the faces of the opening whose source digest
+    /// is `digest`.
+    pub fn import_pick_layer_order(
+        &mut self,
+        import: u32,
+        digest: &str,
+        relations: &[u32],
+    ) -> Result<JsValue, JsValue> {
+        let landed = self
+            .imports
+            .pick_layer_order(&mut self.inner, import, digest, relations)
             .map_err(thrown)?;
         to_js_value(&landed)
     }

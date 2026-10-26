@@ -377,6 +377,10 @@
         "text": "Este arquivo FOLD descreve papel já dobrado. Importe o padrão de vincos plano em vez dele.",
         "title": "Uma forma dobrada, não um padrão de vincos"
       },
+      "layerOrder": {
+        "text": "Não foi possível aplicar esta ordem de camadas. Nada foi importado.",
+        "title": "Não foi possível aplicar esta ordem de camadas"
+      },
       "noFigure": {
         "text": "Dobre primeiro o padrão na Edição até ficar plano e depois comece a partir do modelo dobrado.",
         "title": "Nenhum modelo dobrado na Edição"
@@ -617,6 +621,7 @@
       "nothingToUndo": "Nada para desfazer",
       "redo": "Refazer",
       "redoShortcut": "Refazer ({{shortcut}})",
+      "redoWaits": "Refazer aguarda a alteração em andamento",
       "remove": "Remover {{sentence}}",
       "reveal": "Colocar {{face}} na frase",
       "separator": ",",
@@ -625,7 +630,8 @@
       "titleCount_many": "Restrições · {{count}}",
       "titleCount_other": "Restrições · {{count}}",
       "undo": "Desfazer",
-      "undoShortcut": "Desfazer ({{shortcut}})"
+      "undoShortcut": "Desfazer ({{shortcut}})",
+      "undoWaits": "Desfazer aguarda a alteração em andamento"
     },
     "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
     "lostLoad": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo.",
@@ -639,6 +645,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calculando as ordens das camadas…",
+    "openingLong": "Figuras grandes podem levar até um minuto.",
     "pane": {
       "creasePattern": "Padrão de vincos",
       "folded": "Dobrada",

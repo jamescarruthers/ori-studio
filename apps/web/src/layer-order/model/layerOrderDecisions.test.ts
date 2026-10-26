@@ -21,11 +21,13 @@ import {
   lastOf,
   openFactsOf,
   opened,
+  orderOf,
   picked,
   play,
   position,
   sidesOf,
   stacksOf,
+  trashOf,
 } from './layerOrderModel.fixtures';
 import { addState, applyState, hintLine, openNotice, rowGroupsView, statusView } from './layerOrderSelectors';
 
@@ -121,7 +123,7 @@ describe('decisions', () => {
     expect(added.state.solutions.runs).toBe(true);
     expect(lastOf(added.effects, 'solutions_restart').count).toBe(true);
     const removed = commits(
-      play(added.state, { type: 'rows_removed', ids: [added.state.rows.committed[0]!.id] }),
+      play(added.state, trashOf(added.state, added.state.rows.committed[0]!.id)),
       withOpenPairs(limit + 1)
     );
     expect(removed.state.solutions.runs).toBe(false);
@@ -159,7 +161,7 @@ describe('decisions', () => {
     expect(dispatch(state, { type: 'apply', at: 2_000 }).effects).toEqual([]);
 
     const first = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'rows_removed', ids: [first] });
+    const removed = play(state, trashOf(state, first));
     // Never one by one: every row left that can apply, in one commit.
     expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[0, 2, 1], [4, 5, -1]]]);
     expect(applyState(removed.state)).toEqual({ enabled: false, why: 'unsettled' });
@@ -212,7 +214,13 @@ describe('decisions', () => {
     const stepped = play(stepping.state, {
       type: 'stepped',
       request: lastOf(stepping.effects, 'step').request,
-      facts: { verdict: 'moved', changed: changedSpots([1]), position: position(2, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([1]),
+        position: position(2, 9),
+        stacks: sidesOf(SPOTS_TWO_OVER_ZERO),
+        order: orderOf(SPOTS_TWO_OVER_ZERO),
+      },
     });
     expect(lastOf(dispatch(stepped.state, { type: 'apply', at: 2_000 }).effects, 'apply').result).toEqual({
       kind: 'changed',

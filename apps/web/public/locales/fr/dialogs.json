@@ -377,6 +377,10 @@
         "text": "Ce fichier FOLD décrit du papier déjà plié. Importez plutôt le patron de plis à plat.",
         "title": "Une forme pliée, pas un patron de plis"
       },
+      "layerOrder": {
+        "text": "Impossible d’appliquer cet ordre des couches. Rien n’a été importé.",
+        "title": "Impossible d’appliquer cet ordre des couches"
+      },
       "noFigure": {
         "text": "Pliez d’abord le patron à plat dans Édition, puis partez de son modèle plié.",
         "title": "Aucun modèle plié dans Édition"
@@ -617,6 +621,7 @@
       "nothingToUndo": "Rien à annuler",
       "redo": "Rétablir",
       "redoShortcut": "Rétablir ({{shortcut}})",
+      "redoWaits": "Rétablir attend la modification en cours",
       "remove": "Retirer {{sentence}}",
       "reveal": "Mettre {{face}} dans la phrase",
       "separator": ",",
@@ -625,7 +630,8 @@
       "titleCount_many": "Contraintes · {{count}}",
       "titleCount_other": "Contraintes · {{count}}",
       "undo": "Annuler",
-      "undoShortcut": "Annuler ({{shortcut}})"
+      "undoShortcut": "Annuler ({{shortcut}})",
+      "undoWaits": "Annuler attend la modification en cours"
     },
     "lost": "Ordre des couches s’est arrêté de façon inattendue. Rien n’a été modifié.",
     "lostLoad": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion, puis réessayez.",
@@ -639,6 +645,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calcul des ordres des couches…",
+    "openingLong": "Pour les grandes figures, cela peut prendre jusqu’à une minute.",
     "pane": {
       "creasePattern": "Patron de plis",
       "folded": "Pliée",

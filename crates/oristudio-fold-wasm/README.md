@@ -129,6 +129,14 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
     import handle. `import_pick(import, choice)` lands one order as a step
     and returns the `cp-jump` op that stores it, landed by `apply` exactly
     as every replay will land it; `release_imports`, `live_imports`.
+  - With several orders, the Layer order dialog chooses
+    (`implementation-plans/layer-order-dialog.md`, row H10):
+    `import_layer_opening(import, choice)` gives the dialog's source (the
+    stored pattern as Edit folds it whole), the order `choice` picks drawn
+    over its faces, and how Fold shows the state, the import's faces matched
+    with Edit's one for one; `import_pick_layer_order(import, digest,
+    relations)` lands the order its Apply chose, seeded through that match,
+    as `import_pick` lands one.
   - `import_edit_folded_figure(scene, target, limits)` starts from Edit's
     folded figure: the kernel's folded paper scene, whose stacks decide the
     order (Oriedita's relations, `ImportedPattern::from_oriedita`).
@@ -200,7 +208,7 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   the worker's own clock, so keep trying is the same call with a larger
   `deadlineMs`. Refusals are values (`source_*`, `session_no_order`,
   `session_timed_out`, `record_*`). The source has its own stacking cap,
-  `oristudio_fold::steer::LAYER_ORDER_MAX_STACKED_TRIPLES` (20,000,000),
+  `oristudio_fold::steer::LAYER_ORDER_MAX_STACKED_TRIPLES` (52,000,000),
   above Fold's: a figure over it is refused `source_stacked_too_deep`
   (`deepest`, `triples`, `limit`), and one between the two opens in the
   dialog though Fold's Import CP refuses it (the constant's docs have the
@@ -253,8 +261,16 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With every `layer_*` call, E6's bound (E7, 2026-10-24) | 3,861,859 B (3,771 KiB) | 1,505,540 B (1,470 KiB) |
 | At `76d0c1720`, the dialog's branch with H8 merged, before E9 (2026-10-25) | 3,861,928 B (3,771 KiB) | 1,505,521 B (1,470 KiB) |
 | With E9, the stepper without the count: its search and Flat-Folder's lexical walk, after its review (2026-10-25) | 3,943,651 B (3,851 KiB) | 1,533,388 B (1,497 KiB) |
+| At `d46f0f7b5`, the dialog's branch with H4 and E9 merged, before H10 (2026-10-26) | 3,928,084 B (3,836 KiB) | 1,532,229 B (1,496 KiB) |
+| With H10, Import CP's Layer order opening and pick (`import_layer_opening`, `import_pick_layer_order`, 2026-10-26) | 3,974,461 B (3,881 KiB) | 1,547,008 B (1,511 KiB) |
 
-The last two rows, built in one worktree the same day: E9 adds **81,723 B
+H10's two rows, built the same day from one target directory: the opening
+and the pick add **46,377 B raw (+45 KiB), 14,779 B gzipped (+14 KiB)**,
+mostly the CP kernel's session (`CpSession::fold_source_of_selection`, which
+builds the dialog's source from the import's `cpJson` as Edit folds it) and
+the faces' match (`oristudio_fold::steer::ImportedFaces`).
+
+The E9 rows, built in one worktree the same day: E9 adds **81,723 B
 raw (+80 KiB), 27,867 B gzipped (+27 KiB)**, all of it engine code behind
 `layer_step` and one optional field of `layer_solutions_start`'s caps
 (`countInSteps`); no call was added. Before its review it added 24,377 B

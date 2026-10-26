@@ -377,6 +377,10 @@
         "text": "Este archivo FOLD describe papel ya plegado. Importa en su lugar el patrón de pliegues plano.",
         "title": "Una forma plegada, no un patrón de pliegues"
       },
+      "layerOrder": {
+        "text": "No se pudo aplicar este orden de capas. No se importó nada.",
+        "title": "No se pudo aplicar este orden de capas"
+      },
       "noFigure": {
         "text": "Pliega primero en plano el patrón en Editar y luego empieza desde su figura plegada.",
         "title": "No hay figura plegada en Editar"
@@ -617,6 +621,7 @@
       "nothingToUndo": "Nada que deshacer",
       "redo": "Rehacer",
       "redoShortcut": "Rehacer ({{shortcut}})",
+      "redoWaits": "Rehacer espera al cambio en curso",
       "remove": "Quitar {{sentence}}",
       "reveal": "Poner {{face}} en la frase",
       "separator": ",",
@@ -625,7 +630,8 @@
       "titleCount_many": "Restricciones · {{count}}",
       "titleCount_other": "Restricciones · {{count}}",
       "undo": "Deshacer",
-      "undoShortcut": "Deshacer ({{shortcut}})"
+      "undoShortcut": "Deshacer ({{shortcut}})",
+      "undoWaits": "Deshacer espera al cambio en curso"
     },
     "lost": "Orden de capas se detuvo de forma inesperada. No se cambió nada.",
     "lostLoad": "Orden de capas no se pudo cargar. Comprueba tu conexión y vuelve a intentarlo.",
@@ -639,6 +645,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calculando los órdenes de capas…",
+    "openingLong": "Con figuras grandes puede tardar hasta un minuto.",
     "pane": {
       "creasePattern": "Patrón de pliegues",
       "folded": "Plegada",

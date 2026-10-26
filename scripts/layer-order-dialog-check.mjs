@@ -2688,14 +2688,115 @@ async function addSentence(page, dialog) {
   throw new Error('Add never landed');
 }
 
+/** What the builder and the list show: the subject slot's name, the object field's, and the rows. */
+async function inspectorShown(dialog) {
+  return {
+    subject: await subjectSlot(dialog).getAttribute('aria-label'),
+    objects: await objectField(dialog).getAttribute('aria-label'),
+    rows: await rowSentences(dialog),
+  };
+}
+
+async function untilShown(page, dialog, expected, what) {
+  const deadline = Date.now() + 30000;
+  let shown = null;
+  while (Date.now() < deadline) {
+    shown = await inspectorShown(dialog);
+    if (JSON.stringify(shown) === JSON.stringify(expected)) return shown;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${what}: the inspector shows ${JSON.stringify(shown)}, not ${JSON.stringify(expected)}`);
+}
+
+/** The page's accel key, as its shortcuts read it: Cmd on Apple platforms, Ctrl elsewhere. */
+async function accelOf(page) {
+  return page.evaluate(async () => ((await import('/src/platform/runtime.ts')).isApplePlatform() ? 'Meta' : 'Control'));
+}
+
+/**
+ * Every action is one undo step (your words, 2026-10-26: "cmd + z should undo
+ * adding a single constraint or setting the subject (so basically any
+ * action)"). From an empty sentence and list, build "subject in front of
+ * objects" one pick at a time from the menus, then Add (`press` clicks or
+ * taps it); ⌘Z takes back the Add's commit, then each pick, to the empty
+ * sentence, and ⇧⌘Z takes them all again, to the row. Each state must come
+ * back exactly as it was: the slots' names and the rows, and the folded pane
+ * (the exact order, #539's review), pixel for pixel: answers how many of its
+ * pixels differ after ⌘Z from before the walk.
+ */
+async function undoEveryStep(page, dialog, { subject, objects, press, onEmpty = null }) {
+  const accel = await accelOf(page);
+  const names = ['empty', 'subject', ...objects.map((object) => `object ${object}`), 'Add'];
+  const folded = dialog.locator('[data-layer-order-pane="folded"]');
+  // The pane once any flash has faded: the order on screen alone.
+  const paneShot = async () => {
+    await page.mouse.move(1, 1);
+    await dialog.locator('[data-layer-order-flash]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+    return steadyShot(page, folded, { masked: false });
+  };
+  const before = await paneShot();
+  const trail = [await inspectorShown(dialog)];
+  // Focus goes back to a menu's button a moment after it closes: each pick settles before the next opens one.
+  const settled = () => page.waitForTimeout(250);
+  await pickSubjectFromMenu(page, dialog, subject);
+  await settled();
+  trail.push(await inspectorShown(dialog));
+  for (const object of objects) {
+    await pickObjectsFromMenu(page, dialog, [object]);
+    await previewKeptTrying(page, dialog);
+    await settled();
+    trail.push(await inspectorShown(dialog));
+  }
+  await press(addButton(dialog));
+  const deadline = Date.now() + 30000;
+  let rows = [];
+  while (Date.now() < deadline && (rows = await rowSentences(dialog)).length !== 1) await page.waitForTimeout(100);
+  if (rows.length !== 1) throw new Error(`Add: the list reads ${JSON.stringify(rows)}`);
+  const [sentence] = rows;
+  trail.push(await inspectorShown(dialog));
+  for (let i = trail.length - 2; i >= 0; i -= 1) {
+    await page.keyboard.press(`${accel}+z`);
+    await untilShown(page, dialog, trail[i], `⌘Z back to the ${names[i]}`);
+  }
+  const moved = (await pixelDiff(page, before, await paneShot())).differing;
+  if (onEmpty) await onEmpty();
+  for (let i = 1; i < trail.length; i += 1) {
+    await page.keyboard.press(`${accel}+Shift+z`);
+    await untilShown(page, dialog, trail[i], `⇧⌘Z forward to the ${names[i]}`);
+  }
+  return { steps: trail.length - 1, sentence, moved };
+}
+
+/** The buttons a list row holds, by name: its own (the whole sentence) and its trash, and nothing per object (D21). */
+async function rowButtonNames(row) {
+  return row.getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')));
+}
+
+/** A grouped row's first comma, against the chip before it: the gap, px, how far above its foot it sits, and its opacity. */
+async function commaAfterFirstObject(row) {
+  return row.evaluate((item) => {
+    const mark = [...item.querySelectorAll('span')].find((span) => span.children.length === 0 && span.textContent === ',');
+    const chip = mark?.previousElementSibling;
+    if (!mark || !chip) return null;
+    const box = mark.getBoundingClientRect();
+    const before = chip.getBoundingClientRect();
+    return {
+      gap: Math.round(box.left - before.right),
+      fromFoot: Math.round(before.bottom - box.bottom),
+      opacity: getComputedStyle(mark).opacity,
+    };
+  });
+}
+
 /**
  * The inspector on each figure, in one theme, through real picks: a subject
  * picked on the crease pattern, objects on the folded figure, the verb menu's
- * preview, compound Add, a per-object ×, a grouped row's trash, undo and redo
- * (the buttons and ⌘Z / ⇧⌘Z through the modal history), the back side, X-ray
- * stepping, Clear all, a can't-fit and its reason pointed at, and Apply, which
- * hands the host `applied`. Each step's state is photographed; the fidelity
- * list's checks are logged and fail the case.
+ * preview, compound Add, a grouped row with no per-object ×, every action
+ * undone back to an empty sentence with ⌘Z and redone with ⇧⌘Z, the grouped
+ * row's trash and its undo (the buttons too), the back side, X-ray stepping,
+ * Clear all, a can't-fit and its reason pointed at, and Apply, which hands the
+ * host `applied`. Each step's state is photographed; the fidelity list's
+ * checks are logged and fail the case.
  */
 function inspectorCases(theme) {
   const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
@@ -2803,28 +2904,48 @@ function inspectorCases(theme) {
       await record(shot('added'), await dialogShot(page));
 
       if (objects.length === 2) {
-        // A per-object ×: hover the first object, and its × removes it alone.
+        // A grouped row has no per-object × (your words, 2026-10-26): its trash is its one remove, hovered or not.
         const row = dialog.getByRole('listitem').first();
         await row.hover();
         await record(shot('row-hovered'), await dialogShot(page));
-        await dialog.getByRole('button', { name: `Remove ${subject} in front of ${objects[0]}`, exact: true }).click({ force: true });
-        await untilRows(page, dialog, [`${subject} in front of ${objects[1]}`], 'the per-object ×');
-        // Undo, from its button; redo, from ⇧⌘Z; undo again, from ⌘Z: the modal history.
-        await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
-        await untilRows(page, dialog, [sentence], 'Undo');
-        await page.keyboard.press('Meta+Shift+z');
-        await untilRows(page, dialog, [`${subject} in front of ${objects[1]}`], '⇧⌘Z');
-        await page.keyboard.press('Meta+z');
-        await untilRows(page, dialog, [sentence], '⌘Z');
-        check(true, 'Undo, ⇧⌘Z and ⌘Z step the dialog’s own history');
-        // The grouped row's trash: the whole row, as one step.
+        const buttons = await rowButtonNames(row);
+        check(
+          JSON.stringify(buttons) === JSON.stringify([sentence, `Remove ${sentence}`]),
+          `the grouped row holds its own button and its trash, no per-object × (${JSON.stringify(buttons)})`
+        );
+        const comma = await commaAfterFirstObject(row);
+        check(comma !== null && comma.gap >= 0 && comma.gap < 6 && comma.opacity === '1', `a comma right after the first object (${JSON.stringify(comma)})`);
+      }
+
+      // Every action one undo step: from an empty list, the sentence one pick at a time, then Add; ⌘Z back to
+      // the empty sentence, ⇧⌘Z forward to the row.
+      await dialog.getByRole('button', { name: 'Clear all' }).click();
+      await untilRows(page, dialog, [], 'Clear all before the undo walk');
+      await page.mouse.move(1, 1);
+      const walk = await undoEveryStep(page, dialog, {
+        subject,
+        objects,
+        press: (button) => button.click(),
+        onEmpty: async () => record(shot('undone-to-empty'), await dialogShot(page)),
+      });
+      check(walk.sentence === sentence, `the walk built “${walk.sentence}”`);
+      check(true, `⌘Z took back all ${walk.steps} actions (each pick, then the Add) to the empty sentence, and ⇧⌘Z took them again`);
+      check(walk.moved === 0, `⌘Z put the order back exactly: the folded pane as before the walk (${walk.moved} pixels differ)`);
+      await record(shot('redone'), await dialogShot(page));
+
+      if (objects.length === 2) {
+        // The grouped row's trash: the whole row, as one step; Undo and Redo from their buttons, then ⌘Z.
         await dialog.getByRole('button', { name: `Remove ${sentence}`, exact: true }).click();
         await untilRows(page, dialog, [], 'the row’s trash');
-        // Off the trash first, so its tooltip covers nothing; Redo has nothing to redo, and says so.
+        // Off the trash first, so its tooltip covers nothing.
         await page.mouse.move(1, 1);
-        await dialog.getByRole('button', { name: 'Redo', exact: true }).click({ timeout: 3000 }).catch(() => {});
         await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
         await untilRows(page, dialog, [sentence], 'Undo of the trash');
+        await dialog.getByRole('button', { name: 'Redo', exact: true }).click();
+        await untilRows(page, dialog, [], 'Redo of the trash');
+        await page.keyboard.press(`${await accelOf(page)}+z`);
+        await untilRows(page, dialog, [sentence], '⌘Z of the trash');
+        check(true, 'the grouped row’s trash removes it whole, as one step: Undo, Redo and ⌘Z step it');
       }
 
       // The back side: the list reads from it, the figure turns over.
@@ -3148,8 +3269,10 @@ async function inspectorNoticeCase(page, url, record) {
 /**
  * The coarse-pointer lane (D6, A5's phone), in `browserName` (Chromium or
  * WebKit) at 390 × 844 with touch: the subject tapped on the folded figure,
- * two objects tapped, Add by tap; every object's × shows in the list with no
- * hover; a tap on a row puts its subject in the builder.
+ * two objects tapped, Add by tap; the grouped row has its trash and no
+ * per-object ×; every action undone to an empty sentence with ⌘Z and redone
+ * with ⇧⌘Z; the trash and its Undo by tap; a tap on a row puts its subject in
+ * the builder.
  */
 function inspectorCoarseCases(browserName) {
   return async (_page, url, record) => {
@@ -3243,24 +3366,44 @@ function inspectorCoarseCases(browserName) {
       await addButton(dialog).tap();
       const row = dialog.getByRole('listitem').first();
       await row.waitFor({ state: 'visible', timeout: 30000 });
-      const removes = await dialog.locator('li button[aria-label^="Remove "]').evaluateAll((buttons) =>
-        buttons.map((button) => {
-          const box = button.getBoundingClientRect();
-          // An object's × is drawn 16 px short of its slot, and the gap toward the next object is its target too.
-          const gutter = document.elementFromPoint(box.right + 8, box.top + box.height / 2);
-          return { name: button.getAttribute('aria-label'), opacity: getComputedStyle(button).opacity, height: box.height, gutterHit: button.contains(gutter) };
-        })
-      );
-      console.log(`[coarse ${browserName}] the row's removes: ${JSON.stringify(removes)}`);
-      const objectRemoves = removes.filter((remove) => !remove.name.includes(','));
-      if (objectRemoves.length < 2 || objectRemoves.some((remove) => remove.opacity !== '1')) {
-        throw new Error(`${browserName}: each object's × should show with no hover: ${JSON.stringify(removes)}`);
+      const [sentence] = await rowSentences(dialog);
+      // A grouped row has no per-object × (your words, 2026-10-26): its trash is its one remove, and the row a
+      // 44 px target, its commas right after each chip.
+      const buttons = await rowButtonNames(row);
+      const height = (await row.boundingBox())?.height ?? 0;
+      const comma = await commaAfterFirstObject(row);
+      console.log(`[coarse ${browserName}] the row “${sentence}”: ${JSON.stringify(buttons)}, ${height} px tall, comma ${JSON.stringify(comma)}`);
+      if (JSON.stringify(buttons) !== JSON.stringify([sentence, `Remove ${sentence}`])) {
+        throw new Error(`${browserName}: a grouped row should hold its own button and its trash only: ${JSON.stringify(buttons)}`);
       }
-      if (objectRemoves.some((remove) => remove.height < 44 || !remove.gutterHit)) {
-        throw new Error(`${browserName}: each object's × should be a 44 px target: ${JSON.stringify(removes)}`);
+      if (height < 44) throw new Error(`${browserName}: the row is ${height} px tall, under a 44 px target`);
+      if (sentence.includes(',') && (comma === null || comma.gap < 0 || comma.gap >= 6 || comma.opacity !== '1')) {
+        throw new Error(`${browserName}: the comma should sit right after the first object: ${JSON.stringify(comma)}`);
       }
       await record(`inspector-coarse-${browserName}-row`, { dialog: await steadyShot(page, dialog, { masked: false }) });
-      // A tap on the row, on its subject, puts that subject in the builder; its objects keep their ×.
+
+      // Every action one undo step, under a finger with a keyboard: from an empty list, the sentence one pick at a
+      // time from the menus, then Add by tap; ⌘Z back to the empty sentence, ⇧⌘Z forward to the row.
+      const objects = sentence.replace(/^.* in front of /, '').split(', ');
+      await dialog.getByRole('button', { name: 'Clear all' }).tap();
+      await untilRows(page, dialog, [], 'Clear all before the undo walk');
+      const walk = await undoEveryStep(page, dialog, {
+        subject,
+        objects,
+        press: (button) => button.tap(),
+        onEmpty: async () => record(`inspector-coarse-${browserName}-undone-to-empty`, { dialog: await steadyShot(page, dialog, { masked: false }) }),
+      });
+      console.log(
+        `[coarse ${browserName}] ⌘Z took back ${walk.steps} actions to the empty sentence (the folded pane ${walk.moved} pixels off), and ⇧⌘Z took them again`
+      );
+      if (walk.moved !== 0) throw new Error(`${browserName}: ⌘Z did not put the order back exactly (${walk.moved} pixels differ)`);
+      // The grouped row's trash by tap: the whole row, one step, which Undo's tap brings back.
+      await row.getByRole('button', { name: `Remove ${sentence}`, exact: true }).tap();
+      await untilRows(page, dialog, [], 'the row’s trash');
+      await dialog.getByRole('button', { name: 'Undo', exact: true }).tap();
+      await untilRows(page, dialog, [sentence], 'Undo of the trash');
+      console.log(`[coarse ${browserName}] the trash took the whole row; Undo brought it back`);
+      // A tap on the row, on its subject, puts that subject in the builder.
       await row.getByRole('button').first().tap({ position: { x: 14, y: 22 } });
       await page.waitForTimeout(300);
       const revealed = await subjectSlot(dialog).getAttribute('aria-label');
@@ -4948,6 +5091,289 @@ async function unorderedCreasesToast(page, url, record) {
 }
 
 // ---------------------------------------------------------------------------
+// Fold's Import CP (H10)
+
+const IMPORT_DIALOG = { role: 'dialog', name: 'Import crease pattern' };
+
+/** The shown Fold sequence as the store holds it: its steps, the cursor, the history's labels. */
+async function foldSequenceState(page) {
+  return page.evaluate(() => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    const held = state.foldSequences[0];
+    const steps = held?.document.steps ?? [];
+    return {
+      steps: steps.length,
+      kinds: steps.map((step) => step.op?.kind ?? null),
+      last: steps.at(-1) ? { expect: steps.at(-1).expect ?? null, origin: steps.at(-1).op?.origin ?? null } : null,
+      history: state.foldHistory.past.map((entry) => entry.label),
+    };
+  });
+}
+
+/**
+ * Import CP of `file` as a user drops it on Import CP's dialog: the dialog
+ * opened as the menu opens it, the file dropped on it.
+ */
+async function importIntoFold(page, file) {
+  await page.evaluate(async () => {
+    const { useFoldImportUiStore } = await import('/src/fold/io/foldImportUiStore.ts');
+    useFoldImportUiStore.getState().open();
+  });
+  const dialog = page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name });
+  await dialog.waitFor({ state: 'visible', timeout: 30000 });
+  const text = await readFile(path.join(repoRoot, file), 'utf8');
+  const dataTransfer = await page.evaluateHandle(
+    ({ text, name }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([text], name));
+      return transfer;
+    },
+    { text, name: path.basename(file) }
+  );
+  await dialog.dispatchEvent('drop', { dataTransfer });
+}
+
+/**
+ * The order the open dialog's engine lands on for one sentence added from
+ * the order it opened on, worked out by a session of the check's own on the
+ * same request (`inspectorFacts`): its relations, `[upper, lower, …]`.
+ */
+async function relationsAfter(page, { subject, verb, object }) {
+  return page.evaluate(
+    async ({ subject, verb, object }) => {
+      const { constraintSeen, LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+      const { runtime, open } = window.__layerOrderCheck.figure;
+      const committed = await runtime.engine.commit(
+        [constraintSeen(subject, verb, object, 'front', open.opened.front_up[object] === 1)],
+        LAYER_ORDER_LIMITS.commit
+      );
+      if (committed.verdict !== 'committed') throw new Error(`the check's own commit: ${JSON.stringify(committed)}`);
+      return Array.from(await runtime.engine.relations());
+    },
+    { subject, verb, object }
+  );
+}
+
+/**
+ * Which of the import's own orders the step on screen is, by Fold's own
+ * chooser: `file` imported again where the step was (an empty sequence),
+ * each listed order drawn over the dialog's faces and landed, and the one
+ * whose state is the step's (`expect`, its fingerprint) found. Answers its
+ * relations over the dialog's faces and how many orders there were.
+ */
+async function landedOrder(page, file, expect) {
+  const text = await readFile(path.join(repoRoot, file), 'utf8');
+  return page.evaluate(
+    async ({ text, expect }) => {
+      const { foldSession } = await import('/src/store/workspaceStore/foldSession.ts');
+      const { selectFoldCursorNode } = await import('/src/fold/session/foldSessionState.ts');
+      const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+      const session = foldSession();
+      const release = session.retain();
+      try {
+        const node = selectFoldCursorNode(session.store.getState());
+        const answer = await session.withState(node.state, async (worker) => {
+          const opened = await worker.importCp({ format: 'fold', text }, { kind: 'empty' });
+          if (opened.status !== 'ok') throw new Error(`reimport: ${JSON.stringify(opened.refusal)}`);
+          let choices = [[]];
+          for (const component of opened.components) {
+            choices = choices.flatMap((choice) => Array.from({ length: component.orders }, (_, k) => [...choice, k]));
+          }
+          const found = [];
+          for (const choice of choices) {
+            const picked = await worker.importPick(opened.import, choice);
+            if (picked.status !== 'ok') continue;
+            await worker.release([picked.state]);
+            if (picked.fingerprint !== expect) continue;
+            const opening = await worker.importLayerOpening(opened.import, choice);
+            if (opening.status !== 'ok') throw new Error(`opening: ${JSON.stringify(opening.refusal)}`);
+            found.push({ choice, relations: Array.from(layerOrderSceneRelations(opening.shown)) });
+          }
+          await worker.releaseImports([opened.import]);
+          return { found, orders: choices.length };
+        });
+        if (answer.status !== 'answered') throw new Error(`the engine: ${answer.status}`);
+        return answer.value;
+      } finally {
+        release();
+      }
+    },
+    { text, expect }
+  );
+}
+
+/**
+ * Fold's Import CP choosing its order in the Layer order dialog (H10), in one
+ * theme: Import CP's open loads none of the dialog's code; kabuto dropped on
+ * it opens the dialog on its default order, with no region (the import is
+ * its one sheet, so the crease-pattern pane frames the source's creases),
+ * the import's own dialog stepped aside; Cancel leaves the sequence as it
+ * was; the browser's Back with the dialog open closes it with Import CP, and
+ * Forward finds no dialog and no step; a constraint added and Applied lands
+ * one step, one undo entry, whose order (found among the import's own by
+ * Fold's chooser) is the order the dialog's engine lands on for that
+ * constraint, relation for relation; and a pattern with one order imports
+ * straight through, no dialog.
+ */
+function foldImportCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  const kabuto = 'tests/fixtures/flat-folder/kabuto.fold';
+  return async (page, url, record) => {
+    await openFold(page, url);
+    if (theme) {
+      await page.evaluate(async (theme) => {
+        const { useThemeStore } = await import('/src/store/themeStore.ts');
+        useThemeStore.getState().setThemeByName(theme);
+      }, theme);
+    }
+    const before = await foldSequenceState(page);
+
+    // Import CP opened with no file yet loads none of the dialog's code: that waits for an
+    // import with several orders.
+    const dialogCode = /components\/layer-order\/LayerOrderDialog\.tsx|layerOrderWorker/;
+    const loaded = [];
+    const onRequest = (request) => {
+      if (dialogCode.test(request.url())) loaded.push(request.url());
+    };
+    page.context().on('request', onRequest);
+    await page.evaluate(async () => {
+      const { useFoldImportUiStore } = await import('/src/fold/io/foldImportUiStore.ts');
+      useFoldImportUiStore.getState().open();
+    });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(2000);
+    page.context().off('request', onRequest);
+    if (loaded.length > 0) throw new Error(`Import CP's open loaded the dialog's code: ${loaded.join(', ')}`);
+    await page.keyboard.press('Escape');
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    console.log(`[${tag}] Import CP opened with no file: none of the dialog's code loaded`);
+
+    // Kabuto, dropped on Import CP: the Layer order dialog opens on it, alone.
+    await importIntoFold(page, kabuto);
+    let dialog = await readyDialog(page);
+    const asked = await openedRequest(page);
+    if (asked?.surface !== 'fold_import' || asked.record !== null || !asked.shown || asked.name !== 'kabuto.fold' || asked.xray) {
+      throw new Error(`the request: ${JSON.stringify(asked)}`);
+    }
+    const framed = await openedRegion(page);
+    if (framed?.paper !== null) throw new Error(`an import's request names a region: ${JSON.stringify(framed)}`);
+    if (await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).isVisible()) {
+      throw new Error('Import CP’s own dialog stayed up under the Layer order dialog');
+    }
+    console.log(`[${tag}] kabuto opened the Layer order dialog (${asked.segments} creases, ${asked.side}, turned ${asked.turnDeg}°, no region: the import is its one sheet); Import CP stepped aside`);
+    await record(`fold-import-${tag}-dialog`, await dialogShot(page));
+
+    // Cancel: the import is cancelled, the sequence as it was.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    const cancelled = await foldSequenceState(page);
+    if (JSON.stringify(cancelled) !== JSON.stringify(before)) throw new Error(`Cancel changed the sequence: ${JSON.stringify(cancelled)}`);
+    console.log(`[${tag}] Cancel: no step, no undo entry, Import CP closed`);
+
+    // The browser's Back while the dialog is open: the dialog goes with Import CP, and nothing
+    // lands, there or after Forward. An in-app visit to Edit first gives Back somewhere to go.
+    const go = (to) =>
+      page.evaluate(async (to) => {
+        const { navigateTo } = await import('/src/routing/appRouter.tsx');
+        navigateTo(to);
+      }, to);
+    await go('/edit');
+    await page.waitForFunction(() => location.pathname === '/edit', null, { timeout: 30000 });
+    await go('/fold');
+    await page.locator(FOLDED).waitFor({ state: 'visible', timeout: 120000 });
+    await importIntoFold(page, kabuto);
+    dialog = await readyDialog(page);
+    await page.goBack();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    const backed = await page.evaluate(() => location.pathname);
+    if (backed !== '/edit') throw new Error(`Back went to ${backed}`);
+    if (await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).isVisible()) throw new Error('Import CP outlived Back');
+    if (JSON.stringify(await foldSequenceState(page)) !== JSON.stringify(before)) throw new Error('Back left a step');
+    await page.goForward();
+    await page.locator(FOLDED).waitFor({ state: 'visible', timeout: 120000 });
+    await settle(page);
+    for (const name of [DIALOG.name, IMPORT_DIALOG.name]) {
+      if (await page.getByRole('dialog', { name }).isVisible()) throw new Error(`${name} came back with Forward`);
+    }
+    const forward = await foldSequenceState(page);
+    if (JSON.stringify(forward) !== JSON.stringify(before)) throw new Error(`Forward found a step: ${JSON.stringify(forward)}`);
+    console.log(`[${tag}] Back with the dialog open: it closed with Import CP on Edit; Forward: no dialog, no step`);
+
+    // A constraint added through the inspector, then Apply.
+    await importIntoFold(page, kabuto);
+    dialog = await readyDialog(page);
+    await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { kernelFoldSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      window.__layerOrderCheck = { source: kernelFoldSourceOf(request.source), scene: request.shown };
+    });
+    const facts = await inspectorFacts(page);
+    // The first subject's first object, the way round the order it opened on doesn't have it: from
+    // the front (whose viewer the relations' upper face is nearer), then as the side shown reads it.
+    const subject = facts.subjects[0];
+    const object = facts.partners[subject][0];
+    const verb = await page.evaluate(
+      async ({ subject, object }) => {
+        const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+        const relations = layerOrderSceneRelations(window.__layerOrderCheck.scene);
+        for (let i = 0; i < relations.length; i += 2) {
+          if (relations[i] === subject && relations[i + 1] === object) return 'behind';
+          if (relations[i] === object && relations[i + 1] === subject) return 'in_front_of';
+        }
+        throw new Error('the pair is not ordered in the scene the dialog opened on');
+      },
+      { subject: facts.faceOf[subject], object: facts.faceOf[object] }
+    );
+    const seenVerb = asked.side === 'back' ? (verb === 'behind' ? 'in_front_of' : 'behind') : verb;
+    await buildSentence(page, dialog, { subject, verb: seenVerb, objects: [object] });
+    await addSentence(page, dialog);
+    await record(`fold-import-${tag}-constrained`, await dialogShot(page));
+    const chosen = await relationsAfter(page, { subject: facts.faceOf[subject], verb, object: facts.faceOf[object] });
+    await dropInspectorFacts(page);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    await page.waitForFunction((steps) => window.__treemakerWorkspaceStore.getState().foldSequences[0]?.document.steps.length === steps + 1, before.steps, { timeout: 60000 });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    const applied = await foldSequenceState(page);
+    if (applied.kinds.at(-1) !== 'cp-jump' || applied.last?.origin !== 'fold' || applied.history.length !== before.history.length + 1) {
+      throw new Error(`Apply: ${JSON.stringify(applied)}`);
+    }
+    await page.mouse.move(1, 1);
+    await record(`fold-import-${tag}-applied`, await foldPanes(page));
+    const landed = await landedOrder(page, kabuto, applied.last.expect);
+    if (landed.found.length !== 1) throw new Error(`the step is ${landed.found.length} of the import's ${landed.orders} orders`);
+    const [order] = landed.found;
+    // As sets of [upper, lower]: the scene's reading and the engine's list them in other orders.
+    const pairsOf = (flat) => [...Array(flat.length / 2).keys()].map((i) => `${flat[2 * i]}>${flat[2 * i + 1]}`).sort().join(' ');
+    if (pairsOf(order.relations) !== pairsOf(chosen)) {
+      throw new Error(`the step's order is not the dialog's: ${JSON.stringify({ step: order.relations, dialog: chosen })}`);
+    }
+    if (order.choice.every((k) => k === 0)) throw new Error('the constraint left the default order');
+    console.log(`[${tag}] "${subject} ${verb} ${object}", Applied: one step, one undo entry ("${applied.history.at(-1)}"); its order is the import's order [${order.choice}] of ${landed.orders}, relation for relation the dialog's (${chosen.length / 2} pairs)`);
+
+    // Undo takes the one step away; redo brings it back.
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    const undone = await foldSequenceState(page);
+    if (undone.steps !== before.steps) throw new Error(`undo left ${undone.steps} steps`);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    const redone = await foldSequenceState(page);
+    if (redone.steps !== before.steps + 1 || redone.last?.expect !== applied.last.expect) throw new Error(`redo: ${JSON.stringify(redone)}`);
+    console.log(`[${tag}] undo: the import gone in one entry; redo: back`);
+
+    // One order: straight through, no Layer order dialog.
+    await importIntoFold(page, 'tests/fixtures/fold-samples/preliminary-base.fold');
+    await page.waitForFunction((steps) => window.__treemakerWorkspaceStore.getState().foldSequences[0]?.document.steps.length === steps + 2, before.steps, { timeout: 60000 });
+    if (await page.getByRole(DIALOG.role, { name: DIALOG.name }).isVisible()) throw new Error('a pattern with one order opened the dialog');
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    await page.mouse.move(1, 1);
+    await record(`fold-import-${tag}-one-order`, await foldPanes(page));
+    console.log(`[${tag}] a pattern with one order imported straight through, no dialog`);
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Edit's figure: Another solution within constraints (H6)
 
 /**
@@ -5226,6 +5652,8 @@ const CASES = [
   { name: 'many-patterns', run: manyPatternCases(null) },
   { name: 'many-patterns-horizon', run: manyPatternCases('Horizon') },
   { name: 'unordered-toast', run: unorderedCreasesToast },
+  { name: 'fold-import', run: foldImportCases(null) },
+  { name: 'fold-import-horizon', run: foldImportCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------

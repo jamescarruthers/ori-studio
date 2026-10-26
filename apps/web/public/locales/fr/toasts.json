@@ -181,6 +181,7 @@
     "solvingLong": "Résolution toujours en cours — cela peut prendre du temps"
   },
   "layerOrder": {
+    "foldImportBusy": "Ordre des couches est déjà ouvert : choisissez l’ordre des couches de ce patron de plis sur le canevas.",
     "folds3d": "Les plis de ce modèle se plient maintenant en 3D, et l’ordre des couches fonctionne sur les pliages à plat. Repliez-le pour le voir.",
     "refoldKept": "Les contraintes de couches de {{name}} demandent votre attention, il garde donc son image.",
     "refoldKeptChosenOrder": "L’ordre des couches choisi pour {{name}} demande votre attention, il garde donc son image.",

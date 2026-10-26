@@ -98,8 +98,9 @@ function workingLabel(t: TFunction, state: FoldImportFlowState): string {
 
 /**
  * The dialog: what to import — a file, by the picker or a drop anywhere on
- * the dialog, a linked Edit pattern, or Edit's folded figure — and, when the pattern's
- * creases leave several layer orders, which. A shortcut barrier
+ * the dialog, a linked Edit pattern, or Edit's folded figure. When the
+ * pattern's creases leave several layer orders, it steps aside while the
+ * Layer order dialog (or, without one, the canvas's chooser) picks. A shortcut barrier
  * (`ModalFrame`): Escape, the close button and a press on the backdrop
  * close it, and closing lets go of whatever the engine holds for it. It
  * closes itself once the step is committed.
@@ -135,7 +136,8 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
   const shownNotice = notice && state.phase === 'refused' && state.searchLimited
     ? { ...notice, actions: notice.actions.filter((action) => action.id !== 'search-longer') }
     : notice;
-  if (state.phase === 'choosing') return null;
+  // The order is chosen elsewhere: on the canvas, or in the Layer order dialog.
+  if (state.phase === 'choosing' || state.phase === 'ordering') return null;
 
   return (
     <ImportDialogFrame
