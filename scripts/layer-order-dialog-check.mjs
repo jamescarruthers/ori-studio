@@ -1290,7 +1290,16 @@ const addButton = (dialog) => dialog.getByRole('button', { name: /^Add constrain
 /** The builder's hint line: the text under the sentence. */
 async function hintText(dialog) {
   const sentence = dialog.getByRole('group', { name: 'Add a constraint' });
-  return (await sentence.evaluate((el) => document.getElementById(el.getAttribute('aria-describedby'))?.textContent ?? '')).trim();
+  // Its two live regions (polite, then the alert for a danger reason), only one of them holding text.
+  return (
+    await sentence.evaluate((el) =>
+      el
+        .getAttribute('aria-describedby')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join('')
+    )
+  ).trim();
 }
 
 /** Wait for the sentence's check to end: the hint no longer says it is checking. */
@@ -1889,7 +1898,8 @@ async function untilRows(page, dialog, expected, what) {
 
 /** The status row's text, once the count has a number (or says there is none to give). */
 async function statusText(page, dialog) {
-  const status = dialog.getByRole('region', { name: 'Solutions' }).getByRole('status').first();
+  // The status as drawn; its live region speaks only a settled count.
+  const status = dialog.getByRole('region', { name: 'Solutions' }).locator('[data-status-shown]');
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     const text = (await status.textContent())?.trim() ?? '';
@@ -2265,6 +2275,59 @@ async function inspectorTimeoutCase(page, url, record) {
 }
 
 /**
+ * What a pane hover costs the dialog on iguana-c0 (850 faces): 40 pointer
+ * moves across the crease pattern while a subject is chosen, most landing on
+ * another face, with each component's calls counted by V8's precise coverage
+ * (dev build, so the functions keep their names). `facesNamed` is the
+ * builder's per-face menu label: called for every face a menu lists, open or
+ * not, while the menus build their items closed. Prints the counts; fails on
+ * nothing.
+ */
+async function inspectorHoverCost(page, url) {
+  await openFigureInEdit(page, url, { theme: null, file: 'precrease/iguana-c0.fold' });
+  const dialog = await openPanesDialog(page, 'Iguana');
+  const pane = await dialog.locator('[data-layer-order-pane="pattern"]').boundingBox();
+  const client = await page.context().newCDPSession(page);
+  await client.send('Profiler.enable');
+  const points = [];
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 10; col += 1) {
+      points.push({ x: pane.x + pane.width * (0.2 + 0.06 * col), y: pane.y + pane.height * (0.25 + 0.12 * row) });
+    }
+  }
+  await page.mouse.move(points[0].x, points[0].y);
+  await page.waitForTimeout(800);
+  await client.send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  for (const point of points) {
+    await page.mouse.move(point.x, point.y);
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(400);
+  const { result } = await client.send('Profiler.takePreciseCoverage');
+  await client.send('Profiler.stopPreciseCoverage');
+  const names = [
+    'LayerOrderDialog',
+    'LayerOrderDialogFrame',
+    'LayerOrderInspector',
+    'LayerOrderBuilder',
+    'LayerOrderConstraintList',
+    'LayerOrderStatus',
+    'LayerOrderViewTools',
+    'LayerOrderPanes',
+    'facesNamed',
+  ];
+  const counts = Object.fromEntries(names.map((name) => [name, 0]));
+  for (const script of result) {
+    for (const fn of script.functions) {
+      if (fn.functionName in counts && fn.ranges[0]) counts[fn.functionName] += fn.ranges[0].count;
+    }
+  }
+  console.log(`[hover cost] iguana-c0, ${points.length} pointer moves on the crease pattern: ${JSON.stringify(counts)}`);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialogOutcome(page);
+}
+
+/**
  * A host order that puts a face inside a fold at a crease through it (D19),
  * forged from Edit's scene in the page: one face moved to just under another
  * on every spot the two share, tried pair by pair until the engine says the
@@ -2363,6 +2426,22 @@ async function inspectorNoticeCase(page, url, record) {
   const back = await lit('pattern');
   if (back.crease < 1) throw new Error('pointing at the note does not light the crease again');
   await record('inspector-notice-hovered', { dialog: await steadyShot(page, dialog, { masked: false }) });
+  // On a phone the note wraps, whole, over Cancel and Apply: no title to hover there (U10's review).
+  await page.setViewportSize(PHONE);
+  await page.waitForTimeout(600);
+  const phone = await note.evaluate((text) => {
+    const line = text.closest('p');
+    const actions = line.parentElement.lastElementChild.getBoundingClientRect();
+    return {
+      whole: text.scrollHeight <= text.clientHeight + 1 && text.scrollWidth <= text.clientWidth + 1,
+      height: Math.round(text.clientHeight),
+      above: line.getBoundingClientRect().bottom <= actions.top + 1,
+    };
+  });
+  console.log(`[notice] on a phone: ${JSON.stringify(phone)}`);
+  await record('inspector-notice-phone', await dialogShot(page));
+  if (!phone.whole || !phone.above) throw new Error(`the note is cut on a phone: ${JSON.stringify(phone)}`);
+  await page.setViewportSize(VIEWPORT);
   await dropInspectorFacts(page);
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await dialogOutcome(page);
@@ -2380,6 +2459,7 @@ function inspectorCoarseCases(browserName) {
     const browser = await playwright[browserName].launch();
     try {
       const context = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+      await context.addInitScript(TINY_BUDGET_PROBE);
       if (browserName === 'webkit') {
         // WebKit refuses a module worker's imports from the dev server under its COEP unless each says
         // it may be embedded; a production build serves no such imports. The dev server's, here.
@@ -2432,6 +2512,36 @@ function inspectorCoarseCases(browserName) {
       const hint = await previewKeptTrying(page, dialog);
       console.log(`[coarse ${browserName}] tapped objects ${tapped.join(', ')}: “${hint}”`);
       await record(`inspector-coarse-${browserName}-sentence`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+
+      // Keep trying under a finger (U10's review): the other verb's check, out of a tiny budget, and its
+      // button whole inside the hint line, a 44 px target that nothing clips.
+      await page.evaluate(() => {
+        window.__layerOrderTinyBudget = true;
+      });
+      await setVerb(page, dialog, 'behind');
+      const ranOut = await previewSettled(page, dialog);
+      await page.evaluate(() => {
+        window.__layerOrderTinyBudget = false;
+      });
+      const keep = dialog.getByRole('button', { name: 'Keep trying' });
+      if (/in time/.test(ranOut) && (await keep.count()) > 0) {
+        const fit = await keep.evaluate((button) => {
+          const line = button.parentElement.getBoundingClientRect();
+          const box = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + 2);
+          return { height: box.height, inside: box.top >= line.top - 0.5 && box.bottom <= line.bottom + 0.5, hitTop: button.contains(hit) };
+        });
+        console.log(`[coarse ${browserName}] Keep trying in “${ranOut}”: ${JSON.stringify(fit)}`);
+        await record(`inspector-coarse-${browserName}-keep-trying`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+        if (fit.height < 44 || !fit.inside || !fit.hitTop) throw new Error(`${browserName}: Keep trying is clipped: ${JSON.stringify(fit)}`);
+        await keep.tap();
+        await previewKeptTrying(page, dialog);
+      } else {
+        const line = await keep.count();
+        console.log(`[coarse ${browserName}] the other verb answered in a tiny budget (“${ranOut}”, ${line} Keep trying): no timeout to draw`);
+      }
+      await setVerb(page, dialog, 'in_front_of');
+      await previewKeptTrying(page, dialog);
       await addButton(dialog).tap();
       const row = dialog.getByRole('listitem').first();
       await row.waitFor({ state: 'visible', timeout: 30000 });
@@ -2985,6 +3095,7 @@ const CASES = [
   { name: 'inspector-horizon', run: inspectorCases('Horizon') },
   { name: 'inspector-timeout', run: inspectorTimeoutCase },
   { name: 'inspector-notice', run: inspectorNoticeCase },
+  { name: 'inspector-hover-cost', run: inspectorHoverCost },
   { name: 'inspector-coarse-chromium', run: inspectorCoarseCases('chromium') },
   { name: 'inspector-coarse-webkit', run: inspectorCoarseCases('webkit') },
   { name: 'edit-figure', run: editFigureCases(null) },
