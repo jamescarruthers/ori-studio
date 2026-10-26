@@ -2424,11 +2424,21 @@ async function accelOf(page) {
  * objects" one pick at a time from the menus, then Add (`press` clicks or
  * taps it); ⌘Z takes back the Add's commit, then each pick, to the empty
  * sentence, and ⇧⌘Z takes them all again, to the row. Each state must come
- * back exactly as it was: the slots' names and the rows.
+ * back exactly as it was: the slots' names and the rows, and the folded pane
+ * (the exact order, #539's review), pixel for pixel: answers how many of its
+ * pixels differ after ⌘Z from before the walk.
  */
 async function undoEveryStep(page, dialog, { subject, objects, press, onEmpty = null }) {
   const accel = await accelOf(page);
   const names = ['empty', 'subject', ...objects.map((object) => `object ${object}`), 'Add'];
+  const folded = dialog.locator('[data-layer-order-pane="folded"]');
+  // The pane once any flash has faded: the order on screen alone.
+  const paneShot = async () => {
+    await page.mouse.move(1, 1);
+    await dialog.locator('[data-layer-order-flash]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+    return steadyShot(page, folded, { masked: false });
+  };
+  const before = await paneShot();
   const trail = [await inspectorShown(dialog)];
   // Focus goes back to a menu's button a moment after it closes: each pick settles before the next opens one.
   const settled = () => page.waitForTimeout(250);
@@ -2452,12 +2462,13 @@ async function undoEveryStep(page, dialog, { subject, objects, press, onEmpty = 
     await page.keyboard.press(`${accel}+z`);
     await untilShown(page, dialog, trail[i], `⌘Z back to the ${names[i]}`);
   }
+  const moved = (await pixelDiff(page, before, await paneShot())).differing;
   if (onEmpty) await onEmpty();
   for (let i = 1; i < trail.length; i += 1) {
     await page.keyboard.press(`${accel}+Shift+z`);
     await untilShown(page, dialog, trail[i], `⇧⌘Z forward to the ${names[i]}`);
   }
-  return { steps: trail.length - 1, sentence };
+  return { steps: trail.length - 1, sentence, moved };
 }
 
 /** The buttons a list row holds, by name: its own (the whole sentence) and its trash, and nothing per object (D21). */
@@ -2623,6 +2634,7 @@ function inspectorCases(theme) {
       });
       check(walk.sentence === sentence, `the walk built “${walk.sentence}”`);
       check(true, `⌘Z took back all ${walk.steps} actions (each pick, then the Add) to the empty sentence, and ⇧⌘Z took them again`);
+      check(walk.moved === 0, `⌘Z put the order back exactly: the folded pane as before the walk (${walk.moved} pixels differ)`);
       await record(shot('redone'), await dialogShot(page));
 
       if (objects.length === 2) {
@@ -2635,7 +2647,7 @@ function inspectorCases(theme) {
         await untilRows(page, dialog, [sentence], 'Undo of the trash');
         await dialog.getByRole('button', { name: 'Redo', exact: true }).click();
         await untilRows(page, dialog, [], 'Redo of the trash');
-        await page.keyboard.press('Meta+z');
+        await page.keyboard.press(`${await accelOf(page)}+z`);
         await untilRows(page, dialog, [sentence], '⌘Z of the trash');
         check(true, 'the grouped row’s trash removes it whole, as one step: Undo, Redo and ⌘Z step it');
       }
@@ -3085,7 +3097,10 @@ function inspectorCoarseCases(browserName) {
         press: (button) => button.tap(),
         onEmpty: async () => record(`inspector-coarse-${browserName}-undone-to-empty`, { dialog: await steadyShot(page, dialog, { masked: false }) }),
       });
-      console.log(`[coarse ${browserName}] ⌘Z took back ${walk.steps} actions to the empty sentence, and ⇧⌘Z took them again`);
+      console.log(
+        `[coarse ${browserName}] ⌘Z took back ${walk.steps} actions to the empty sentence (the folded pane ${walk.moved} pixels off), and ⇧⌘Z took them again`
+      );
+      if (walk.moved !== 0) throw new Error(`${browserName}: ⌘Z did not put the order back exactly (${walk.moved} pixels differ)`);
       // The grouped row's trash by tap: the whole row, one step, which Undo's tap brings back.
       await row.getByRole('button', { name: `Remove ${sentence}`, exact: true }).tap();
       await untilRows(page, dialog, [], 'the row’s trash');
