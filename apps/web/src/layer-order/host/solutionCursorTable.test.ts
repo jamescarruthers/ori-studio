@@ -94,6 +94,29 @@ describe('the hosts’ solutions-cursor table', () => {
     expect(kept.closed).toBe(false);
   });
 
+  it('lets the cursor go when the press was given up on before its step moved (the host’s engine lost under it)', async () => {
+    const [table] = tables;
+    let answer: (step: { outcome: 'moved' } & Record<string, unknown>) => void = () => {};
+    const cursor = scriptedSolutionCursor([() => new Promise((resolve) => (answer = resolve as never))]);
+    gateway.open.mockReturnValueOnce(cursor);
+    const thing = { id: 'step', holds: 'a' };
+    const turn = table.begin(thing, 0);
+    const stepped = turn.step(ask);
+    await vi.waitFor(() => expect(cursor.asked).toHaveLength(1));
+    // The host's capture ended first: nothing will land.
+    turn.end(() => thing, 0);
+    expect(cursor.closed).toBe(false);
+    answer({
+      outcome: 'moved',
+      applied: { record: RECORD, relations: new Uint32Array(), source: FAKE_LAYER_ORDER_SOURCE },
+      position: solutionPosition(2, 3),
+      counted: true,
+    });
+    await stepped;
+    expect(cursor.closed).toBe(true);
+    expect(table.heldId()).toBeNull();
+  });
+
   it('keeps what the host marked of the thing, and what each landing changed', async () => {
     const [table] = tables;
     gateway.open.mockReturnValueOnce(

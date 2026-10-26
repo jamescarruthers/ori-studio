@@ -232,6 +232,12 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
           const cursor = mine;
           const by = host.stepBy(target);
           const answer = await cursor.cursor.step(direction, by, signal ? { signal } : {});
+          // The press was given up on while the engine answered (its host's engine lost under it):
+          // a session that moved shows an order its thing will never take.
+          if (over && answer.outcome === 'moved') {
+            if (held === cursor) drop();
+            return answer;
+          }
           switch (answer.outcome) {
             case 'moved':
               moved = true;
