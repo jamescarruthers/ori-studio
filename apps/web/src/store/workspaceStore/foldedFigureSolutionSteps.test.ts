@@ -484,6 +484,21 @@ describe('the cursor’s life', () => {
     }
   });
 
+  it('is let go as a press that moved nothing ends, when the selection moved off its figure meanwhile', async () => {
+    const figure = seed();
+    let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+    const cursor = script(() => new Promise((resolve) => (answer = resolve)));
+    const press = showAnotherFoldedSolution(figure.id, t);
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    state().setOristudioCpActiveFoldedFigure(null);
+    // Kept while the press runs: the press settles it when it ends.
+    expect(cursor.closed).toBe(false);
+    answer!({ outcome: 'end', position: solutionPosition(1, 3), counted: true });
+    await press;
+    expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
   it('is let go after a minute with no press, and kept through presses', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {

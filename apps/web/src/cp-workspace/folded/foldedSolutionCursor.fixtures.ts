@@ -80,5 +80,5 @@ export async function seatFoldedSolutionCursor(
   dropFoldedSolutionCursor();
   const turn = beginFoldedSolutionStep(figure, null);
   await turn.step({ direction: 'next', source: async () => FAKE_LAYER_ORDER_SOURCE, record });
-  turn.end([figure], null);
+  turn.end([figure], null, figure.id);
 }

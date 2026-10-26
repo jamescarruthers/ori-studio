@@ -4183,7 +4183,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         return notDrawn(engineError(error).message);
       } finally {
         atRest();
-        turn.end(get().oristudioCpFoldedFigures, get().oristudioCpDocument?.document ?? null);
+        turn.end(
+          get().oristudioCpFoldedFigures,
+          get().oristudioCpDocument?.document ?? null,
+          get().oristudioCpActiveFoldedFigureId
+        );
       }
     },
 

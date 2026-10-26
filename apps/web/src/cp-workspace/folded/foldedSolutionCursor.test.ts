@@ -77,7 +77,7 @@ describe('a press', () => {
 
     const landed = { ...FIGURE_HELD, handle: 9, layerOrder: { ...held, json: '{"landed":1}' } } as OristudioCpFoldedFigureEntry;
     turn.landed(9, '{"landed":1}');
-    turn.end([landed], null);
+    turn.end([landed], null, FIGURE_HELD.id);
     expect(foldedSolutionPlace(landed)).toEqual({ position: solutionPosition(2, 3), counted: true });
     expect(cursor.closed).toBe(false);
   });
@@ -87,9 +87,18 @@ describe('a press', () => {
     gateway.open.mockReturnValue(cursor);
     const turn = beginFoldedSolutionStep(FIGURE_HELD, null);
     await turn.step(ask);
-    turn.end([FIGURE_HELD], null);
+    turn.end([FIGURE_HELD], null, FIGURE_HELD.id);
     expect(cursor.closed).toBe(true);
     expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('that moved nothing, while the selection moved off its figure, lets the cursor go as it ends', async () => {
+    const cursor = scriptedSolutionCursor([{ outcome: 'end', position: solutionPosition(1, 3), counted: true }]);
+    gateway.open.mockReturnValue(cursor);
+    const turn = beginFoldedSolutionStep(FIGURE_HELD, null);
+    await turn.step(ask);
+    turn.end([FIGURE_HELD], null, null);
+    expect(cursor.closed).toBe(true);
   });
 
   it('settles nothing while it runs: the figure waits on it', async () => {
@@ -101,7 +110,7 @@ describe('a press', () => {
     settleFoldedSolutionCursor([{ ...FIGURE_HELD, status: 'loading' }], null);
     expect(cursor.closed).toBe(false);
     turn.landed(9, held.json);
-    turn.end([{ ...FIGURE_HELD, handle: 9 }], null);
+    turn.end([{ ...FIGURE_HELD, handle: 9 }], null, FIGURE_HELD.id);
     expect(cursor.closed).toBe(false);
   });
 
@@ -110,7 +119,7 @@ describe('a press', () => {
     gateway.open.mockReturnValueOnce(first);
     const one = beginFoldedSolutionStep(FIGURE_HELD, null);
     await one.step(ask);
-    one.end([FIGURE_HELD], null);
+    one.end([FIGURE_HELD], null, FIGURE_HELD.id);
     expect(foldedSolutionPlace(FIGURE_HELD)).not.toBeNull();
 
     beginFoldedSolutionStep({ ...FIGURE_HELD, id: 'other' }, null);
@@ -124,7 +133,7 @@ describe('the store’s subscription', () => {
     gateway.open.mockReturnValueOnce(cursor);
     const turn = beginFoldedSolutionStep(figure, document);
     await turn.step(ask);
-    turn.end([figure], document);
+    turn.end([figure], document, figure.id);
     return cursor;
   }
 
@@ -176,7 +185,7 @@ describe('the store’s subscription', () => {
     gateway.open.mockReturnValue(cursor);
     const turn = beginFoldedSolutionStep(FIGURE_HELD, null);
     await turn.step(ask);
-    turn.end([FIGURE_HELD], null);
+    turn.end([FIGURE_HELD], null, FIGURE_HELD.id);
     const withSide = (state: 'Front0' | 'Back1') =>
       ({ ...FIGURE_HELD, snapshot: { model: { state }, shown_order: 'given' } }) as unknown as OristudioCpFoldedFigureEntry;
     expect(foldedSolutionPlace(FIGURE_HELD)).toEqual({ position: solutionPosition(2, 3), counted: true });

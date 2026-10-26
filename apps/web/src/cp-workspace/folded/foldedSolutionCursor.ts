@@ -281,11 +281,16 @@ export interface FoldedSolutionTurn {
   /** The step's fold and record are the figure's now: called just before the store shows them. */
   landed(handle: number, json: string): void;
   /**
-   * The press is over, and `figures` and `document` are as it left them: a
-   * step that moved and never landed takes the cursor with it, and anything
-   * that changed meanwhile is settled now ({@link settleFoldedSolutionCursor}).
+   * The press is over, and `figures`, `document` and the selected figure are
+   * as it left them: a step that moved and never landed takes the cursor with
+   * it, and anything that changed meanwhile — a deselect included — is
+   * settled now ({@link settleFoldedSolutionCursor}).
    */
-  end(figures: readonly OristudioCpFoldedFigureEntry[], document: OristudioCpDocumentSnapshot | null): void;
+  end(
+    figures: readonly OristudioCpFoldedFigureEntry[],
+    document: OristudioCpDocumentSnapshot | null,
+    selected: string | null
+  ): void;
 }
 
 /**
@@ -360,7 +365,7 @@ export function beginFoldedSolutionStep(
       mine.place = landing;
       moved = false;
     },
-    end(figures, now) {
+    end(figures, now, selected) {
       if (over) return;
       over = true;
       if (!mine || held !== mine) return;
@@ -372,7 +377,7 @@ export function beginFoldedSolutionStep(
       }
       startIdleClock();
       notify();
-      settleFoldedSolutionCursor(figures, now);
+      settleFoldedSolutionCursor(figures, now, selected);
     },
   };
 }
