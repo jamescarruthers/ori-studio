@@ -257,6 +257,24 @@ export function topFaces(scene: OristudioCpFoldedPaperScene): (LayerFace | null)
   return scene.subfaces.map((subface) => subface.faces_top_to_bottom[0] ?? null);
 }
 
+/**
+ * The lines the folded pane draws, in its frame: each edge of every face it
+ * draws, and that face's aux lines. Without X-ray a face on top of no spot is
+ * not drawn, nor are its lines (`foldedFlatPaperScene`'s `markHidden`); under
+ * X-ray every face is. A face's whole outline counts, though a face drawn after
+ * it may cover some of it.
+ */
+export function foldedPaneLines(scene: OristudioCpFoldedPaperScene, xray: boolean): LayerPaneSegment[] {
+  const drawn = xray ? null : new Set(topFaces(scene));
+  const segments: LayerPaneSegment[] = [];
+  scene.faces.forEach(({ outline }, face) => {
+    if (drawn && !drawn.has(face)) return;
+    outline.forEach((from, i) => segments.push([from, outline[(i + 1) % outline.length]!]));
+  });
+  for (const { from, to, face } of scene.aux_lines) if (!drawn || drawn.has(face)) segments.push([from, to]);
+  return segments;
+}
+
 // ---------------------------------------------------------------------------
 // Frames
 

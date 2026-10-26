@@ -57,6 +57,7 @@ import {
   creaseSegments,
   foldedOutlinesOf,
   foldedPaneFrame,
+  foldedPaneLines,
   foldedPaneToUser,
   foldedPivot,
   PANE_USER_PER_UNIT,
@@ -73,9 +74,11 @@ import {
 import type { LayerPaneHit, LayerPaneId } from './layerPaneInput';
 import {
   foldedLabelIndex,
+  labelLineIndex,
   paneLetters,
   patternLabelIndex,
   withPointerLetters,
+  type LayerLabelLines,
   type LayerLabelSpots,
   type LayerPaneLabel,
 } from './layerPaneLabels';
@@ -139,6 +142,8 @@ export interface LayerPaneChannels {
   readonly flash: { readonly n: number; readonly spots: readonly (readonly Point[])[] } | null;
   readonly labels: readonly LayerPaneLabel[];
   readonly labelSpots: (face: LayerFace) => LayerLabelSpots | null;
+  /** Every line the pane draws, in its frame: a letter set beside its face keeps clear of them all (D20). */
+  readonly labelLines: LayerLabelLines | null;
   readonly letterOf: (face: LayerFace) => string;
 }
 
@@ -340,6 +345,7 @@ export function useLayerPatternPane({
     [baseLetters, marks, faces]
   );
   const labelSpots = useMemo(() => (faces ? patternLabelIndex(faces.pattern) : NO_SPOTS), [faces]);
+  const labelLines = useMemo(() => labelLineIndex(lines.map(({ a, b }) => [a, b] as const)), [lines]);
   const lineWidthCss = useMemo(
     () => (widthBoost: number) => cpCreaseStrokeWidthPx(look.lineWidth, { ratio: 1, widthBoost }),
     [look.lineWidth]
@@ -382,6 +388,7 @@ export function useLayerPatternPane({
     flash: null,
     labels: letters,
     labelSpots,
+    labelLines,
     letterOf,
   };
 }
@@ -473,6 +480,8 @@ export function useLayerFoldedPane({
     [baseLetters, marks, faces]
   );
   const labelSpots = useMemo(() => (shown ? foldedLabelIndex(shown) : NO_SPOTS), [shown]);
+  // What the paper draws changes with the order shown, and with X-ray, which draws the buried faces too.
+  const labelLines = useMemo(() => (shown ? labelLineIndex(foldedPaneLines(shown, xray)) : null), [shown, xray]);
   const flashSpots = base.flash?.changed[side];
   const flash = useMemo(() => {
     if (!base.flash || !kernel || !flashSpots || flashSpots.length === 0) return null;
@@ -517,6 +526,7 @@ export function useLayerFoldedPane({
     flash,
     labels: letters,
     labelSpots,
+    labelLines,
     letterOf,
   };
 }

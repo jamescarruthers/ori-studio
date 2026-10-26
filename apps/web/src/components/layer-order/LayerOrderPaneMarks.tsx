@@ -60,7 +60,8 @@ const PAN_SETTLE_MS = 120;
  * holds a size on screen at every zoom: a ring sits a pixel clear of the line
  * drawn along its face's edge, as wide as that line is drawn at this zoom
  * (`faceRing.ts`), so it never covers a crease's colour, and a letter's chip
- * keeps its size, clears that line and the ring, and clears the other chips
+ * keeps its size, clears that line and the ring, and clears the other chips;
+ * set beside its face, it clears every line the pane draws
  * (`layerPaneLabels.ts`). The tints are the canvas's (`PaperPane`'s fills).
  *
  * While the camera only pans, the letters move with it as placed, and are
@@ -130,8 +131,13 @@ export function LayerOrderPaneMarks({
   );
   const anchorLinePx = pane.lineWidthCss(anchor.widthBoost);
   const labels: LayerPlacedLabel[] = useMemo(
-    () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, anchorProject, { frame, linePx: anchorLinePx }),
-    [pane.labels, pane.labelSpots, pane.letterOf, anchorProject, frame, anchorLinePx]
+    () =>
+      placeLabels(pane.labels, pane.labelSpots, pane.letterOf, anchorProject, {
+        frame,
+        linePx: anchorLinePx,
+        lines: pane.labelLines,
+      }),
+    [pane.labels, pane.labelSpots, pane.labelLines, pane.letterOf, anchorProject, frame, anchorLinePx]
   );
   // The faces on offer whose chips found no room at this zoom: tinted, unlettered, until zoomed in.
   const unlettered = useMemo(() => {

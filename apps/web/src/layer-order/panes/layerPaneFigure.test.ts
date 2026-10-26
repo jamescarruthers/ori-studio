@@ -7,6 +7,7 @@ import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes'
 import {
   creaseSegments,
   foldedPaneFrame,
+  foldedPaneLines,
   foldedPaneToUser,
   foldedPivot,
   PANE_USER_PER_UNIT,
@@ -114,6 +115,25 @@ describe('the order on screen', () => {
     expect(restackedScene(scene, stacks)).toBe(restacked);
     expect(restackedScene(scene, null)).toBe(scene);
     expect(restackedScene(scene, { offsets: new Uint32Array([0, 1]), faces: new Uint32Array([0]) })).toBe(scene);
+  });
+
+  it('draws the lines of the faces that show, and every face’s under X-ray, their aux lines with them', () => {
+    // Face 1 is on top of no spot: the paper draws neither its outline nor its aux line until X-ray.
+    const scene: OristudioCpFoldedPaperScene = {
+      ...zScene(),
+      aux_lines: [
+        { from: { x: 1, y: 1 }, to: { x: 9, y: 9 }, face: 0 },
+        { from: { x: 11, y: 1 }, to: { x: 19, y: 9 }, face: 1 },
+      ],
+    };
+    const ends = (segments: ReturnType<typeof foldedPaneLines>) => segments.map(([a, b]) => `${a.x},${a.y}-${b.x},${b.y}`);
+    const sides = (face: number) =>
+      scene.faces[face]!.outline.map((from, i, ring) => `${from.x},${from.y}-${ring[(i + 1) % ring.length]!.x},${ring[(i + 1) % ring.length]!.y}`);
+    expect(ends(foldedPaneLines(scene, false))).toEqual([...sides(0), ...sides(2), '1,1-9,9']);
+    expect(ends(foldedPaneLines(scene, true))).toEqual([...sides(0), ...sides(1), ...sides(2), '1,1-9,9', '11,1-19,9']);
+    // The order on screen decides what shows.
+    const turned = restackedScene(scene, { offsets: new Uint32Array([0, 1, 4]), faces: new Uint32Array([0, 1, 2, 0]) });
+    expect(ends(foldedPaneLines(turned, false))).toEqual([...sides(0), ...sides(1), '1,1-9,9', '11,1-19,9']);
   });
 });
 
