@@ -112,8 +112,10 @@ import { solutionFrontierOf } from '../../cp-workspace/folded/foldedSolutionFron
 import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY,
   detachedFoldedFigureLayerOrders,
+  foldedFigureRefoldKey,
   withFoldedFigureLayerOrders,
 } from '../../cp-workspace/folded/foldedFigureLayerOrders';
+import { resetFoldedFigureIds } from '../../cp-workspace/folded/foldedFigureIds';
 import { foldedFigureNotice } from '../../cp-workspace/folded/foldedFigureNotice';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
@@ -12498,6 +12500,91 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
             expect(notice()).toMatchObject({ label: 'Not applied' });
           }
         }
+      });
+
+      /** Save as the app does, through the file service: the file's text, the session's bag following it. */
+      async function save(): Promise<string> {
+        const files = createFileService();
+        await expect(state().saveProjectAs(files)).resolves.toBeTruthy();
+        return (files.saveTextFile.mock.calls.at(-1)![0] as SaveTextFileOptions).contents;
+      }
+      const detachedSaved = (text: string) =>
+        detachedFoldedFigureLayerOrders(JSON.parse(text).workspace.creasePattern.extensions as Record<string, unknown>);
+
+      it('never hands a figure folded this session an id the file or its layer order bag names', async () => {
+        resetFoldedFigureIds();
+        // The bag names a record for `generated-4` and a detached one for `generated-7`; the file has `generated-1`.
+        const { layerOrder: _own, ...figure } = savedFigure();
+        const other = held(twoConstraintRecord());
+        if (other.kind !== 'record') throw new Error('fixture');
+        await openFile(
+          projectFile(cpDocument(EDITED_LINES), [figure], {
+            [FOLDED_FIGURE_LAYER_ORDERS_KEY]: {
+              figures: { 'generated-4': { figureKey: 'fk1:gone', record: other.json } },
+              detached: [{ figureId: 'generated-7', reason: 'figure-missing', record: other.json }],
+            },
+          })
+        );
+        useWorkspaceStore.setState({ oristudioCpSelection: { ...emptyOristudioCpSelection(), lines: [1, 2, 3] } });
+        await expect(state().foldOristudioCpDocument()).resolves.toBe(true);
+        expect(state().oristudioCpFoldedFigures.map((entry) => entry.id)).toEqual(['generated-1', 'generated-8']);
+      });
+
+      it('once deleted, its id is not taken by a fold in the same session: saved and reopened, nothing is shown', async () => {
+        // A fresh session: before the file noted its ids, the first fold was handed `generated-1`.
+        resetFoldedFigureIds();
+        await openedAfterAnOlderBuild();
+        expect(notice()).toMatchObject({ label: 'Not applied' });
+        await deleteFoldedFigure(figureNow().id, t);
+        // Folded again, the same creases, with no save between.
+        useWorkspaceStore.setState({ oristudioCpSelection: { ...emptyOristudioCpSelection(), lines: [1, 2, 3] } });
+        await expect(state().foldOristudioCpDocument()).resolves.toBe(true);
+        const fresh = state().oristudioCpFoldedFigures[0]!;
+        expect(fresh.id).not.toBe('generated-1');
+        expect(foldedFigureNotice(t, fresh)).toBeNull();
+        const text = await save();
+        expect(detachedSaved(text)).toMatchObject([{ figureId: 'generated-1', reason: 'figure-missing' }]);
+        await openFile(JSON.parse(text));
+        expect(state().oristudioCpFoldedFigures.map((entry) => foldedFigureNotice(t, entry))).toEqual([null]);
+      });
+
+      it('keeps an entry a save dropped dropped: settled, saved, then deleted and saved, and an undo writes it again', async () => {
+        for (const settle of ['dismiss', 'apply'] as const) {
+          await openedAfterAnOlderBuild();
+          if (settle === 'dismiss') {
+            await dismissFoldedFigureDetachedLayerOrder(figureNow().id, t);
+          } else {
+            dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind: 'applied', applied: applied() });
+            await openFoldedFigureLayerOrder(figureNow().id, t, { via: 'review' });
+          }
+          expect(detachedSaved(await save()), settle).toEqual([]);
+          await deleteFoldedFigure(figureNow().id, t);
+          // Not back as `figure-missing`: the session's bag no longer holds it.
+          expect(detachedSaved(await save()), settle).toEqual([]);
+
+          // The Delete and the settling undone: shown again, and the save writes its entry again.
+          await state().undo();
+          await flushMicrotasks();
+          await state().undo();
+          await flushMicrotasks();
+          expect(notice(), settle).toMatchObject({ label: 'Not applied' });
+          expect(detachedSaved(await save()), settle).toMatchObject([
+            { figureId: 'generated-1', reason: 'order-not-given', refoldKey: foldedFigureRefoldKey(figureNow()) },
+          ]);
+        }
+      });
+
+      it('a Delete saved as missing, then undone: the figure claims its entry again', async () => {
+        await openedAfterAnOlderBuild();
+        await deleteFoldedFigure(figureNow().id, t);
+        expect(detachedSaved(await save())).toMatchObject([{ reason: 'figure-missing' }]);
+        await state().undo();
+        await flushMicrotasks();
+        expect(notice()).toMatchObject({ label: 'Not applied' });
+        const text = await save();
+        expect(detachedSaved(text)).toMatchObject([{ figureId: 'generated-1', reason: 'order-not-given' }]);
+        await openFile(JSON.parse(text));
+        expect(notice()).toMatchObject({ label: 'Not applied' });
       });
     });
 

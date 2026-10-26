@@ -186,6 +186,7 @@ import {
   sameFoldedOrder,
 } from '../../../cp-workspace/folded/foldedFigureState';
 import { holdFoldedFigureAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
+import { nextFoldedFigureId } from '../../../cp-workspace/folded/foldedFigureIds';
 import {
   foldedFigureAwaitsFlatRefold,
   foldedFigureDetachedLayerOrder,
@@ -407,7 +408,6 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
   // match the id of the request for the new one — and publish its crease pattern
   // as the current document's.
   let foldArtifactRequestId = 0;
-  let foldedFigureRequestSequence = 0;
   // Newest in-flight model request per figure, so a stale response is dropped.
   const modelRequestSequence = new Map<string, number>();
   /**
@@ -930,12 +930,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     takeCanvasSelection('creases', { oristudioCpSelection });
   }
 
+  /** Never one this session has seen: a file's, its layer order bag's, or one deleted (`foldedFigureIds.ts`). */
   function nextGeneratedFoldedFigureId(): string {
-    let figureId = '';
-    do {
-      figureId = `generated-${++foldedFigureRequestSequence}`;
-    } while (get().oristudioCpFoldedFigures.some((figure) => figure.id === figureId));
-    return figureId;
+    return nextFoldedFigureId(get().oristudioCpFoldedFigures);
   }
 
   /**

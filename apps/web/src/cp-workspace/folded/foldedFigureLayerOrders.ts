@@ -48,11 +48,15 @@
  *
  * The figure holds it through this build's refolds, moves and renames, and
  * the save keys its entry to the figure as it is then, so a reload shows it
- * again. An Apply takes it up (`settled: 'reattached'`) and Dismiss lets it
- * go (`dismissed`): either way the next save drops its entry, and an undo
- * puts the figure back as it was, the entry kept. A figure deleted takes its
- * entry's claim with it: the save marks the entry `figure-missing`, so a new
- * figure on the reused id is never shown it.
+ * again: the figure, not the list, says which records are shown. An Apply
+ * takes it up (`settled: 'reattached'`) and Dismiss lets it go
+ * (`dismissed`): either way the next save drops its entry, and an undo puts
+ * the figure back as it was, and its entry with it. A figure deleted takes
+ * its entry's claim with it: the save marks the entry `figure-missing`, so a
+ * new figure on the reused id is never shown it — and this build never
+ * reuses an id within a session (`foldedFigureIds.ts`). The session's bag
+ * follows each save (`foldedFigureLayerOrdersAfterSave`), so an entry a save
+ * dropped stays dropped.
  *
  * **Zero bytes by default.** With no record and none detached the key is left
  * out, and a bag the writer was handed is written as it came, so a project
@@ -72,8 +76,12 @@ export const FOLDED_FIGURE_LAYER_ORDERS_KEY = 'oristudio.foldedFigureLayerOrders
 const FIGURE_KEY_PREFIX = 'fk1:';
 const REFOLD_KEY_PREFIX = 'fr1:';
 
-/** The fields of a saved record's entry; another makes it a newer build's. */
-const SAVED_KEYS: ReadonlySet<string> = new Set(['figureKey', 'refoldKey', 'record']);
+/**
+ * The fields of a saved record's entry; another makes it a newer build's.
+ * `sourceKey` is a development build's, before `refoldKey` replaced it: known,
+ * so its records never lock a figure, and ignored.
+ */
+const SAVED_KEYS: ReadonlySet<string> = new Set(['figureKey', 'refoldKey', 'sourceKey', 'record']);
 
 /**
  * Why a record is detached:
@@ -213,28 +221,78 @@ function detachedForReview(
 }
 
 /**
- * A detached entry as the save writes it, given the figures:
+ * The detached entries as the save writes them, given the figures:
  * - one a figure holds and the user settled (taken up or dismissed) is
  *   dropped;
- * - one a figure holds unsettled is keyed to that figure as it is now, so a
- *   reload shows it again after this build refolded, moved or renamed it;
+ * - one a figure holds unsettled is that figure's, keyed to it as it is now,
+ *   so a reload shows it again after this build refolded, moved or renamed
+ *   it — and after a Delete an earlier save marked missing, undone;
  * - an `order-not-given` one whose figure is gone is `figure-missing` now,
  *   so a new figure on the reused id is never shown it;
- * - any other is written as it came.
+ * - any other is written as it came;
+ * - and a figure holding one unsettled that the list no longer has — an
+ *   earlier save dropped it, and an undo took the Apply or the Dismiss back —
+ *   has it written again.
  */
 function savedDetachedEntries(
   entries: readonly unknown[],
   figures: readonly OristudioCpFoldedFigureEntry[]
 ): unknown[] {
   const byId = new Map(figures.map((figure) => [figure.id, figure]));
-  return entries.flatMap((entry) => {
+  const found = new Set<string>();
+  const written = entries.flatMap((entry) => {
     if (!isRecord(entry) || typeof entry.figureId !== 'string') return [entry];
     const figure = byId.get(entry.figureId);
     if (!figure) return entry.reason === 'order-not-given' ? [{ ...entry, reason: 'figure-missing' }] : [entry];
     const held = figure.detachedLayerOrder;
-    if (!held || held.json !== entry.record) return [entry];
-    return held.settled ? [] : [{ ...entry, refoldKey: foldedFigureRefoldKey(figure) }];
+    if (!held || held.json !== entry.record || found.has(figure.id)) return [entry];
+    found.add(figure.id);
+    return held.settled ? [] : [shownEntry(figure, entry)];
   });
+  const restored = figures.flatMap((figure) =>
+    figure.detachedLayerOrder && !figure.detachedLayerOrder.settled && !found.has(figure.id)
+      ? [shownEntry(figure, { figureId: figure.id, reason: '', refoldKey: '', record: figure.detachedLayerOrder.json })]
+      : []
+  );
+  return [...written, ...restored];
+}
+
+/** The entry of a record `figure` shows for review, keyed to it as it is now. */
+function shownEntry(figure: OristudioCpFoldedFigureEntry, entry: Record<string, unknown>): Record<string, unknown> {
+  return { ...entry, reason: 'order-not-given', refoldKey: foldedFigureRefoldKey(figure) };
+}
+
+/**
+ * The bag a session holds once a save has written `extensions` with
+ * `figures`: what the save wrote, less the figures' own records, which each
+ * figure holds itself (as after {@link linkFoldedFigureLayerOrders}). So an
+ * entry the save dropped stays dropped, and one it marked missing stays
+ * marked, whatever happens to the figures after.
+ */
+export function foldedFigureLayerOrdersAfterSave(
+  extensions: Record<string, unknown>,
+  figures: readonly OristudioCpFoldedFigureEntry[]
+): Record<string, unknown> {
+  const written = withFoldedFigureLayerOrders(extensions, figures);
+  const value = written[FOLDED_FIGURE_LAYER_ORDERS_KEY];
+  if (!isRecord(value)) return written;
+  const { figures: _eachFiguresOwn, ...rest } = value;
+  return { ...written, [FOLDED_FIGURE_LAYER_ORDERS_KEY]: rest };
+}
+
+/**
+ * Every figure id the bag names, its records' and its detached entries':
+ * for the id allocator to pass, so no figure this session folds takes one
+ * (`foldedFigureIds.ts`).
+ */
+export function figureIdsInFoldedFigureLayerOrders(extensions: Record<string, unknown>): string[] {
+  const value = extensions[FOLDED_FIGURE_LAYER_ORDERS_KEY];
+  if (!isRecord(value)) return [];
+  const records = isRecord(value.figures) ? Object.keys(value.figures) : [];
+  const detached = Array.isArray(value.detached)
+    ? value.detached.flatMap((entry) => (isRecord(entry) && typeof entry.figureId === 'string' ? [entry.figureId] : []))
+    : [];
+  return [...records, ...detached];
 }
 
 /**
@@ -242,7 +300,8 @@ function savedDetachedEntries(
  * figure's own record replaces one of its id the bag still holds; what the bag
  * holds that no figure claims — detached records, other builds' keys, records
  * a reader never linked — is written as it came, but for the detached
- * entries {@link savedDetachedEntries} settles, keys again or marks missing.
+ * entries {@link savedDetachedEntries} settles, keys again, writes again or
+ * marks missing.
  * With none of either, the key is left out; and a bag with no key and no
  * figure with a record is returned as it came, the very object.
  */
@@ -255,15 +314,23 @@ export function withFoldedFigureLayerOrders(
   );
   const value = extensions[FOLDED_FIGURE_LAYER_ORDERS_KEY];
   if (!isRecord(value)) {
-    if (live.length === 0) return extensions;
+    // A record a figure shows for review that a save dropped, and an undo brought back.
+    const shown = savedDetachedEntries([], figures);
+    if (live.length === 0 && shown.length === 0) return extensions;
     // A value this build cannot read gives way to the records it holds.
-    return { ...extensions, [FOLDED_FIGURE_LAYER_ORDERS_KEY]: { figures: Object.fromEntries(live) } };
+    return {
+      ...extensions,
+      [FOLDED_FIGURE_LAYER_ORDERS_KEY]: {
+        ...(live.length > 0 ? { figures: Object.fromEntries(live) } : {}),
+        ...(shown.length > 0 ? { detached: shown } : {}),
+      },
+    };
   }
   const { figures: saved, detached, ...rest } = value;
   const claimed = new Set(live.map(([figureId]) => figureId));
   const unclaimed = Object.entries(isRecord(saved) ? saved : {}).filter(([figureId]) => !claimed.has(figureId));
   const written = [...live, ...unclaimed];
-  const stillDetached = Array.isArray(detached) ? savedDetachedEntries(detached, figures) : [];
+  const stillDetached = savedDetachedEntries(Array.isArray(detached) ? detached : [], figures);
   const ours = {
     ...(written.length > 0 ? { figures: Object.fromEntries(written) } : {}),
     ...(stillDetached.length > 0 ? { detached: stillDetached } : {}),

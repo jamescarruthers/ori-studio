@@ -6,7 +6,9 @@ import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY as KEY,
   detachedFoldedFigureLayerOrders,
+  figureIdsInFoldedFigureLayerOrders,
   foldedFigureLayerOrderKey,
+  foldedFigureLayerOrdersAfterSave,
   foldedFigureRefoldKey,
   linkFoldedFigureLayerOrders,
   withFoldedFigureLayerOrders,
@@ -330,6 +332,70 @@ describe('attaching saved layer orders at install', () => {
       expect(detachedFoldedFigureLayerOrders(saved(linked.extensions, [shown])).map((entry) => entry.reason)).toEqual([
         'order-not-given',
       ]);
+    });
+
+    describe('the session’s bag after a save', () => {
+      it('drops what the save dropped, so a settled entry is not back as missing once its figure is deleted', () => {
+        const { bag, figures } = refoldedByAnOlderBuild();
+        const linked = linkFoldedFigureLayerOrders(bag, figures);
+        const shown = linked.figures[0]!;
+        for (const settled of ['reattached', 'dismissed'] as const) {
+          const after = {
+            ...shown,
+            ...(settled === 'reattached' ? { layerOrder: held() } : {}),
+            detachedLayerOrder: { ...shown.detachedLayerOrder!, settled },
+          };
+          const session = foldedFigureLayerOrdersAfterSave(linked.extensions, [after]);
+          // Holds no figure's own record: each figure holds its own, as after a link.
+          expect(session[KEY] ?? {}).not.toHaveProperty('figures');
+          expect(detachedFoldedFigureLayerOrders(session)).toEqual([]);
+          // Deleted, saved: nothing.
+          expect(detachedFoldedFigureLayerOrders(saved(session, [])), settled).toEqual([]);
+          // The settling undone, saved: its entry again, keyed to the figure.
+          expect(detachedFoldedFigureLayerOrders(saved(session, [shown])), settled).toEqual([
+            { figureId: 'generated-1', reason: 'order-not-given', refoldKey: foldedFigureRefoldKey(shown), record: RECORD_JSON },
+          ]);
+        }
+      });
+
+      it('keeps a figure-missing mark, which the figure claims back when its Delete is undone', () => {
+        const { bag, figures } = refoldedByAnOlderBuild();
+        const linked = linkFoldedFigureLayerOrders(bag, figures);
+        const session = foldedFigureLayerOrdersAfterSave(linked.extensions, []);
+        expect(detachedFoldedFigureLayerOrders(session).map((entry) => entry.reason)).toEqual(['figure-missing']);
+        expect(detachedFoldedFigureLayerOrders(saved(session, [linked.figures[0]!]))).toMatchObject([
+          { figureId: 'generated-1', reason: 'order-not-given' },
+        ]);
+      });
+
+      it('is the bag as it came when nothing changed', () => {
+        const bag = { futureDocFeature: { a: 1 } };
+        expect(foldedFigureLayerOrdersAfterSave(bag, [figure('generated-1')])).toBe(bag);
+      });
+    });
+  });
+
+  it('names every figure id the bag holds, its records’ and its detached entries’', () => {
+    const bag = {
+      [KEY]: {
+        figures: { 'generated-4': { figureKey: 'fk1:a', record: RECORD_JSON } },
+        detached: [{ figureId: 'generated-7', reason: 'figure-missing', record: RECORD_JSON }, 'damage'],
+      },
+    };
+    expect(figureIdsInFoldedFigureLayerOrders(bag)).toEqual(['generated-4', 'generated-7']);
+    expect(figureIdsInFoldedFigureLayerOrders({ [KEY]: 'garbled' })).toEqual([]);
+  });
+
+  it('attaches a development build’s entry, keyed with `sourceKey`, as a record of its own: never a newer build’s lock', () => {
+    const fig = figure('generated-1');
+    const bag = { [KEY]: { figures: { 'generated-1': { figureKey: foldedFigureLayerOrderKey(fig), sourceKey: 'fs1:abc', record: RECORD_JSON } } } };
+    const linked = linkFoldedFigureLayerOrders(bag, [fig]);
+    expect(linked.figures[0]!.layerOrder).toEqual(held());
+    // Saved again, keyed as this build keys it.
+    expect((saved(linked.extensions, linked.figures)[KEY] as { figures: Record<string, unknown> }).figures['generated-1']).toEqual({
+      figureKey: foldedFigureLayerOrderKey(fig),
+      refoldKey: foldedFigureRefoldKey(fig),
+      record: RECORD_JSON,
     });
   });
 
