@@ -591,6 +591,7 @@
       "exportSvg": "Image SVG",
       "fold": "Plier",
       "foldWithLayerOrder": "Plier avec un ordre des couches…",
+      "foldWithLayerOrder3d": "L’ordre des couches fonctionne sur les pliages à plat",
       "label": "Actions du patron de plis",
       "references": "Références de pliage",
       "saveImage": "Enregistrer en image",

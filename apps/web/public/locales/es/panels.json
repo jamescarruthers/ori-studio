@@ -591,6 +591,7 @@
       "exportSvg": "Imagen SVG",
       "fold": "Plegar",
       "foldWithLayerOrder": "Plegar con orden de capas…",
+      "foldWithLayerOrder3d": "El orden de capas funciona en pliegues planos",
       "label": "Acciones del patrón de pliegues",
       "references": "Referencias de plegado",
       "saveImage": "Guardar como imagen",

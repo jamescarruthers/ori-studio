@@ -533,6 +533,7 @@
       "exportSvg": "SVG 이미지",
       "fold": "접기",
       "foldWithLayerOrder": "겹침 순서로 접기…",
+      "foldWithLayerOrder3d": "겹침 순서는 평평한 접기에서 쓸 수 있습니다",
       "label": "접힘 패턴 작업",
       "references": "접기 참조",
       "saveImage": "이미지로 저장",

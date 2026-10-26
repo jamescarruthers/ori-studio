@@ -533,6 +533,7 @@
       "exportSvg": "SVG 画像",
       "fold": "折る",
       "foldWithLayerOrder": "重なり順を指定して折る…",
+      "foldWithLayerOrder3d": "重なり順は平らな折りで使えます",
       "label": "展開図の操作",
       "references": "折りのリファレンス",
       "saveImage": "画像として保存",

@@ -591,6 +591,7 @@
       "exportSvg": "Imagem SVG",
       "fold": "Dobrar",
       "foldWithLayerOrder": "Dobrar com ordem das camadas…",
+      "foldWithLayerOrder3d": "A ordem das camadas funciona em dobras planas",
       "label": "Ações do padrão de vincos",
       "references": "Referências de dobra",
       "saveImage": "Salvar como imagem",

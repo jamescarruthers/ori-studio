@@ -6496,7 +6496,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12995,7 +12997,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19496,7 +19500,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25639,7 +25645,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31782,7 +31790,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38281,7 +38291,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44780,7 +44792,9 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50923,6 +50937,8 @@
     "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
     "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
     "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
-    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderPatternChanged": "250008745c11"
   }
 }

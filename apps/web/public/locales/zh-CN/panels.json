@@ -533,6 +533,7 @@
       "exportSvg": "SVG 图像",
       "fold": "折叠",
       "foldWithLayerOrder": "按层叠顺序折叠…",
+      "foldWithLayerOrder3d": "层叠顺序适用于平面折叠",
       "label": "折痕图操作",
       "references": "折叠参考",
       "saveImage": "保存为图像",

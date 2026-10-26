@@ -562,6 +562,7 @@
       "exportSvg": "SVG image",
       "fold": "Fold",
       "foldWithLayerOrder": "Fold with layer order…",
+      "foldWithLayerOrder3d": "Layer order works on flat folds",
       "label": "Crease pattern actions",
       "references": "Folding references",
       "saveImage": "Save to image",
