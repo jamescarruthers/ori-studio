@@ -49,9 +49,13 @@ export type FoldImportLocalCode =
 
 export type FoldImportNoticeCode = FoldImportRefusalCode | FoldImportLocalCode;
 
-/** Why an import did not land: the engine's refusal, or the dialog's own reason. */
+/**
+ * Why an import did not land: the engine's refusal, or the dialog's own
+ * reason. `via: 'layer_order'` marks the engine refusing the order the Layer
+ * order dialog chose (H10), which has words of its own and no fix.
+ */
 export type FoldImportRefusal =
-  | { readonly kind: 'engine'; readonly refused: Pick<FoldEngineRefused, 'refusal'> }
+  | { readonly kind: 'engine'; readonly refused: Pick<FoldEngineRefused, 'refusal'>; readonly via?: 'layer_order' }
   | { readonly kind: 'local'; readonly code: FoldImportLocalCode; readonly name?: string; readonly sides?: number };
 
 export interface FoldImportNoticeModel {
@@ -322,6 +326,15 @@ export function foldImportNotice(
   }
   const { refusal: body } = refusal.refused;
   const code = body.code as FoldImportRefusalCode;
+  if (refusal.via === 'layer_order') {
+    // Whatever the engine's code, the order was the dialog's: nothing here to search again or fold first.
+    return {
+      code,
+      title: t('dialogs:foldImport.refusal.layerOrder.title', 'Couldn’t land this layer order'),
+      text: t('dialogs:foldImport.refusal.layerOrder.text', 'Fold couldn’t land this layer order. Nothing was imported.'),
+      actions: [],
+    };
+  }
   return {
     code,
     ...engineWords(t, body),

@@ -23,10 +23,9 @@ const IDLE = createStore<FoldImportFlowState>(() => ({ phase: 'idle' }));
 /**
  * The import flow as the app runs it: the app's session, Edit's figures, the
  * analytics events, and the Layer order dialog to choose among several orders
- * (row H10), whose code starts loading now, as the import is asked for.
+ * (row H10), whose code starts loading only once an import reports several.
  */
 export function createAppFoldImportFlow(): FoldImportFlow {
-  prefetchLayerOrderDialog();
   return createFoldImportFlow({
     session: foldSession(),
     editFoldedFigure: () =>
@@ -36,17 +35,19 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
     onOrderResolved: (result, count) => trackFoldOrderResolved(result, 'cp', count),
     onRefused: trackFoldImportRefused,
-    chooseLayerOrder: (ask) =>
-      chooseFoldImportLayerOrder(ask, foldImportView(useWorkspaceStore.getState()), i18n.t.bind(i18n)),
+    chooseLayerOrder: (ask, signal) =>
+      chooseFoldImportLayerOrder(ask, foldImportView(useWorkspaceStore.getState()), i18n.t.bind(i18n), signal),
+    prefetchLayerOrder: prefetchLayerOrderDialog,
   });
 }
 
 /**
  * Import CP's flow for a dialog's lifetime (`foldImportFlow.ts`): made when
  * the dialog mounts — holding the engine from then on — opened on `initial`
- * when it brings one, and let go with everything it holds when it unmounts.
- * Made in an effect, so React's double mount in development makes a second
- * flow rather than reusing one already disposed.
+ * when it brings one, and let go with everything it holds when it unmounts —
+ * the Layer order dialog it opened included, which closes. Made in an effect,
+ * so React's double mount in development makes a second flow rather than
+ * reusing one already disposed.
  */
 export function useFoldImportFlow(initial: FoldImportRequest | null): {
   flow: FoldImportFlow | null;
@@ -66,6 +67,10 @@ export function useFoldImportFlow(initial: FoldImportRequest | null): {
     if (initial) void made.open(initial);
     return () => {
       unsubscribe();
+      // Let go with a choice in hand (the browser's Back, a workspace switch): the import is
+      // cancelled, so Import CP closes too, and Forward finds it closed rather than importing again.
+      const phase = made.store.getState().phase;
+      if (phase === 'choosing' || phase === 'ordering') useFoldImportUiStore.getState().close();
       made.dispose();
       setFlow((current) => (current === made ? null : current));
     };

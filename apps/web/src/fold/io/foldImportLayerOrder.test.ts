@@ -15,6 +15,7 @@ import type { FoldImportLayerOrderAsk } from './foldImportFlow';
  */
 const dialog = vi.hoisted(() => ({
   requests: [] as LayerOrderRequest[],
+  signals: [] as (AbortSignal | undefined)[],
   answer: { kind: 'cancelled' } as LayerOrderDialogOutcome,
 }));
 const toasts = vi.hoisted(() => ({ shown: [] as string[] }));
@@ -24,8 +25,9 @@ vi.mock('../../layer-order/dialog/layerOrderDialogGateway', async (importOrigina
   return {
     ...actual,
     prefetchLayerOrderDialog: () => {},
-    openLayerOrderDialog: async (request: LayerOrderRequest) => {
+    openLayerOrderDialog: async (request: LayerOrderRequest, options?: { signal?: AbortSignal }) => {
       dialog.requests.push(request);
+      dialog.signals.push(options?.signal);
       return dialog.answer;
     },
   };
@@ -50,6 +52,7 @@ const VIEW: FoldImportView = { style: DEFAULT_PAPER_STYLE, lineStyle: 'color', l
 
 beforeEach(() => {
   dialog.requests = [];
+  dialog.signals = [];
   dialog.answer = { kind: 'cancelled' };
   toasts.shown = [];
 });
@@ -108,6 +111,12 @@ describe('Import CP’s answer from the Layer order dialog', () => {
     await expect(chooseFoldImportLayerOrder(ASK, VIEW, t)).resolves.toEqual(answer);
     expect(dialog.requests).toHaveLength(1);
     expect(dialog.requests[0]).toMatchObject({ surface: 'fold_import' });
+  });
+
+  it('hands the flow’s signal to the gateway, so letting the import go withdraws the dialog', async () => {
+    const asked = new AbortController();
+    await chooseFoldImportLayerOrder(ASK, VIEW, t, asked.signal);
+    expect(dialog.signals).toEqual([asked.signal]);
   });
 
   it('says why when another Layer order dialog is open; the gateway says so for one that didn’t load', async () => {

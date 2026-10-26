@@ -6664,7 +6664,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -13331,7 +13334,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -20000,7 +20006,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -26294,7 +26303,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -32588,7 +32600,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -39255,7 +39270,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -45922,7 +45940,10 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -52216,6 +52237,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:foldImport.refusal.layerOrder.text": "2bdea1b2635f",
+    "dialogs:foldImport.refusal.layerOrder.title": "701207b1dfda",
+    "toasts:layerOrder.foldImportBusy": "bb61c063a052"
   }
 }

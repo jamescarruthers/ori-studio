@@ -17,7 +17,8 @@
  *   hands the flow the chosen relations and the digest of the faces they
  *   name; `unchanged` and `cancelled` pass through; `busy` and `unavailable`
  *   leave the import to its own chooser on the canvas, with a toast for
- *   `busy` (the gateway has already said why for `unavailable`).
+ *   `busy` (the gateway has already said why for `unavailable`). The flow's
+ *   signal withdraws the ask when it lets the import go.
  *
  * No React: the app's flow (`useFoldImport.ts`) hands it the workspace's
  * view.
@@ -103,13 +104,17 @@ export function foldImportLayerOrderAnswer(outcome: LayerOrderDialogOutcome): Fo
   }
 }
 
-/** Ask the Layer order dialog for an import's order, and answer as the flow acts on it. */
+/**
+ * Ask the Layer order dialog for an import's order, and answer as the flow
+ * acts on it. `signal` withdraws the ask: the dialog closes (`cancelled`).
+ */
 export async function chooseFoldImportLayerOrder(
   ask: FoldImportLayerOrderAsk,
   view: FoldImportView,
-  t: TFunction
+  t: TFunction,
+  signal?: AbortSignal
 ): Promise<FoldImportLayerOrderAnswer> {
-  const outcome = await openLayerOrderDialog(foldImportLayerOrderRequest(ask, view));
+  const outcome = await openLayerOrderDialog(foldImportLayerOrderRequest(ask, view), signal ? { signal } : {});
   if (outcome.kind === 'busy') {
     toast(
       t(

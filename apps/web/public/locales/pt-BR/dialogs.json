@@ -377,6 +377,10 @@
         "text": "Este arquivo FOLD descreve papel já dobrado. Importe o padrão de vincos plano em vez dele.",
         "title": "Uma forma dobrada, não um padrão de vincos"
       },
+      "layerOrder": {
+        "text": "Não foi possível aplicar esta ordem de camadas. Nada foi importado.",
+        "title": "Não foi possível aplicar esta ordem de camadas"
+      },
       "noFigure": {
         "text": "Dobre primeiro o padrão na Edição até ficar plano e depois comece a partir do modelo dobrado.",
         "title": "Nenhum modelo dobrado na Edição"

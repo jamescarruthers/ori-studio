@@ -367,6 +367,10 @@
         "text": "Diese FOLD-Datei beschreibt bereits gefaltetes Papier. Importiere stattdessen das flache Faltmuster.",
         "title": "Eine gefaltete Form, kein Faltmuster"
       },
+      "layerOrder": {
+        "text": "Diese Lagenfolge ließ sich nicht übernehmen. Es wurde nichts importiert.",
+        "title": "Diese Lagenfolge ließ sich nicht übernehmen"
+      },
       "noFigure": {
         "text": "Falte das Faltmuster zuerst in Bearbeiten flach und gehe dann von seinem gefalteten Modell aus.",
         "title": "Kein gefaltetes Modell in Bearbeiten"
