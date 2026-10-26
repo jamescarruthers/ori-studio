@@ -615,6 +615,7 @@
       "nothingToUndo": "Nada que deshacer",
       "redo": "Rehacer",
       "redoShortcut": "Rehacer ({{shortcut}})",
+      "redoWaits": "Rehacer espera al cambio en curso",
       "remove": "Quitar {{sentence}}",
       "reveal": "Poner {{face}} en la frase",
       "separator": ",",
@@ -623,7 +624,8 @@
       "titleCount_many": "Restricciones · {{count}}",
       "titleCount_other": "Restricciones · {{count}}",
       "undo": "Deshacer",
-      "undoShortcut": "Deshacer ({{shortcut}})"
+      "undoShortcut": "Deshacer ({{shortcut}})",
+      "undoWaits": "Deshacer espera al cambio en curso"
     },
     "lost": "Orden de capas se detuvo de forma inesperada. No se cambió nada.",
     "lostLoad": "Orden de capas no se pudo cargar. Comprueba tu conexión y vuelve a intentarlo.",

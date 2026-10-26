@@ -29,6 +29,7 @@ import {
   type Played,
 } from '../../layer-order/model/layerOrderModel.fixtures';
 import { layerOrderReducer } from '../../layer-order/model/layerOrderReducer';
+import { rowGroupsView } from '../../layer-order/model/layerOrderSelectors';
 import type { LayerOrderAction, LayerOrderDialogState } from '../../layer-order/model/layerOrderState';
 import { allByRole, byRole, queryByRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -448,6 +449,17 @@ describe('the constraints list', () => {
     const item = row.closest('li')!;
     act(() => item.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })));
     expect(sent.at(-1)).toMatchObject({ type: 'row_hovered', key: expect.any(String) });
+  });
+
+  it('says Undo waits while a change is in flight, not that there is nothing to undo', async () => {
+    const { state } = compound();
+    // The row's trash: its commit is in flight.
+    const removing = play(state, { type: 'row_removed', key: rowGroupsView(state)[0]!.key });
+    draw(removing.state);
+    expect(button('Undo').getAttribute('aria-disabled')).toBe('true');
+    act(() => button('Undo').focus());
+    await act(async () => new Promise<void>((resolve) => setTimeout(resolve, 50)));
+    expect(byRole(document.body, 'tooltip', /^Undo waits/).textContent).toBe('Undo waits for the change in progress');
   });
 
   it('undoes, redoes and clears all from its head', () => {

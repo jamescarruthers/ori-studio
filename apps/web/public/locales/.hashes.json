@@ -6664,7 +6664,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -13331,7 +13333,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -20000,7 +20004,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -26294,7 +26300,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -32588,7 +32596,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -39255,7 +39265,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -45922,7 +45934,9 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -52216,6 +52230,8 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411",
     "toasts:layerOrder.unavailableOffline": "686ab61f9a3d",
-    "toasts:layerOrder.unavailableReload": "aaf518398b89"
+    "toasts:layerOrder.unavailableReload": "aaf518398b89",
+    "dialogs:layerOrder.list.redoWaits": "57eabad7d458",
+    "dialogs:layerOrder.list.undoWaits": "127cbdd0fd8d"
   }
 }

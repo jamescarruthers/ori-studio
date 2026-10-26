@@ -76,12 +76,21 @@ export const LayerOrderConstraintList = memo(function LayerOrderConstraintList({
   const keys = useHistoryShortcuts();
   const count = state.rows.committed.length + state.rows.carried.length;
   const leave = () => dispatch({ type: 'row_hovered', key: null });
-  const undoTitle = keys.undo
-    ? t('dialogs:layerOrder.list.undoShortcut', 'Undo ({{shortcut}})', { shortcut: keys.undo })
-    : t('dialogs:layerOrder.list.undo', 'Undo');
-  const redoTitle = keys.redo
-    ? t('dialogs:layerOrder.list.redoShortcut', 'Redo ({{shortcut}})', { shortcut: keys.redo })
-    : t('dialogs:layerOrder.list.redo', 'Redo');
+  // While a change is in flight there is something to undo, once it lands: say so, not "Nothing to undo".
+  const undoTitle = controls.undo
+    ? keys.undo
+      ? t('dialogs:layerOrder.list.undoShortcut', 'Undo ({{shortcut}})', { shortcut: keys.undo })
+      : t('dialogs:layerOrder.list.undo', 'Undo')
+    : controls.undoWaits
+      ? t('dialogs:layerOrder.list.undoWaits', 'Undo waits for the change in progress')
+      : t('dialogs:layerOrder.list.nothingToUndo', 'Nothing to undo');
+  const redoTitle = controls.redo
+    ? keys.redo
+      ? t('dialogs:layerOrder.list.redoShortcut', 'Redo ({{shortcut}})', { shortcut: keys.redo })
+      : t('dialogs:layerOrder.list.redo', 'Redo')
+    : controls.redoWaits
+      ? t('dialogs:layerOrder.list.redoWaits', 'Redo waits for the change in progress')
+      : t('dialogs:layerOrder.list.nothingToRedo', 'Nothing to redo');
 
   return (
     <section className={styles.list} aria-labelledby={titleId}>
@@ -95,7 +104,7 @@ export const LayerOrderConstraintList = memo(function LayerOrderConstraintList({
           ref={undoRef}
           size="sm"
           aria-label={t('dialogs:layerOrder.list.undo', 'Undo')}
-          title={controls.undo ? undoTitle : t('dialogs:layerOrder.list.nothingToUndo', 'Nothing to undo')}
+          title={undoTitle}
           aria-disabled={!controls.undo || undefined}
           onClick={() => {
             if (controls.undo) dispatch({ type: 'undo' });
@@ -106,7 +115,7 @@ export const LayerOrderConstraintList = memo(function LayerOrderConstraintList({
         <IconButton
           size="sm"
           aria-label={t('dialogs:layerOrder.list.redo', 'Redo')}
-          title={controls.redo ? redoTitle : t('dialogs:layerOrder.list.nothingToRedo', 'Nothing to redo')}
+          title={redoTitle}
           aria-disabled={!controls.redo || undefined}
           onClick={() => {
             if (controls.redo) dispatch({ type: 'redo' });

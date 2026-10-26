@@ -598,6 +598,7 @@
       "nothingToUndo": "Nothing to undo",
       "redo": "Redo",
       "redoShortcut": "Redo ({{shortcut}})",
+      "redoWaits": "Redo waits for the change in progress",
       "remove": "Remove {{sentence}}",
       "reveal": "Put {{face}} in the builder",
       "separator": ",",
@@ -605,7 +606,8 @@
       "titleCount_one": "Constraints · {{count}}",
       "titleCount_other": "Constraints · {{count}}",
       "undo": "Undo",
-      "undoShortcut": "Undo ({{shortcut}})"
+      "undoShortcut": "Undo ({{shortcut}})",
+      "undoWaits": "Undo waits for the change in progress"
     },
     "lost": "Layer order stopped unexpectedly. Nothing was changed.",
     "lostLoad": "Layer order couldn’t load. Check your connection, then try again.",

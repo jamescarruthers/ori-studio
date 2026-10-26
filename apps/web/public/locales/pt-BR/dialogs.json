@@ -615,6 +615,7 @@
       "nothingToUndo": "Nada para desfazer",
       "redo": "Refazer",
       "redoShortcut": "Refazer ({{shortcut}})",
+      "redoWaits": "Refazer aguarda a alteração em andamento",
       "remove": "Remover {{sentence}}",
       "reveal": "Colocar {{face}} na frase",
       "separator": ",",
@@ -623,7 +624,8 @@
       "titleCount_many": "Restrições · {{count}}",
       "titleCount_other": "Restrições · {{count}}",
       "undo": "Desfazer",
-      "undoShortcut": "Desfazer ({{shortcut}})"
+      "undoShortcut": "Desfazer ({{shortcut}})",
+      "undoWaits": "Desfazer aguarda a alteração em andamento"
     },
     "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
     "lostLoad": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo.",
