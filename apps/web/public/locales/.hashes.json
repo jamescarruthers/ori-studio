@@ -6453,7 +6453,6 @@
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_one": "110739f83dac",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -6499,7 +6498,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12955,7 +12959,6 @@
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_one": "110739f83dac",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -13001,7 +13004,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19459,7 +19467,6 @@
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_one": "110739f83dac",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -19505,7 +19512,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25613,7 +25625,6 @@
     "panels:diagram.layerOrder.stepName": "74af848b3052",
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -25651,7 +25662,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31759,7 +31775,6 @@
     "panels:diagram.layerOrder.stepName": "74af848b3052",
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -31797,7 +31812,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38253,7 +38273,6 @@
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_one": "110739f83dac",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -38299,7 +38318,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44755,7 +44779,6 @@
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_one": "110739f83dac",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -44801,7 +44824,12 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50909,7 +50937,6 @@
     "panels:diagram.layerOrder.stepName": "74af848b3052",
     "panels:diagram.layerOrder.timedOut_other": "5a5d458760ee",
     "panels:diagram.layerOrder.waiting3d_other": "48a25b193aab",
-    "panels:diagram.pose.layerOrderConstrained": "86bf6cf0181b",
     "toasts:diagram.capture.chosenOrderKept": "5c077f00f63b",
     "toasts:diagram.capture.layerOrderKept": "3c559f939152",
     "toasts:diagram.layerOrder.chosenOrderRemoved": "6e77faba5a0e",
@@ -50947,6 +50974,11 @@
     "toasts:layerOrder.stepNotFoundInTime": "1a1d9b843c61",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "toasts:diagram.layerOrder.stepCheckTimedOut": "d9c487eb4dca",
+    "toasts:diagram.layerOrder.stepClash": "ff48a1ad0c16",
+    "toasts:diagram.layerOrder.stepNotFoundInTime": "75cdfa4aec7e",
+    "toasts:diagram.layerOrder.stepRefused": "089f0f875a2d",
+    "toasts:diagram.layerOrder.stepTooLarge": "bef32a067076"
   }
 }

@@ -63,8 +63,11 @@
       "refused": "This layer order couldn’t be drawn, so nothing was changed.",
       "removed_one": "The step’s layer constraint was for its old pattern, so it was removed. Undo brings it back.",
       "removed_other": "The step’s {{count}} layer constraints were for its old pattern, so they were removed. Undo brings them back.",
-      "stepTimedOut": "Another solution couldn’t be found in time, so this step wasn’t changed.",
-      "stepUnrestored": "This step’s layer constraints need attention, so it can’t step through its solutions. Edit its layer order to review them."
+      "stepCheckTimedOut": "Couldn’t check this step’s layer constraints in time, so it wasn’t changed.",
+      "stepClash": "This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.",
+      "stepNotFoundInTime": "Couldn’t find another solution in time, so this step wasn’t changed.",
+      "stepRefused": "Layer order can’t step through this step’s solutions, so it wasn’t changed.",
+      "stepTooLarge": "The next layer order is too large to save with this step, so it wasn’t changed."
     },
     "placementsReflowed_one": "Moved steps returned to automatic placement: {{count}}",
     "placementsReflowed_other": "Moved steps returned to automatic placement: {{count}}",

@@ -67,8 +67,11 @@
       "removed_one": "La restricción de capas del paso era de su patrón anterior, así que se quitó. Deshacer la recupera.",
       "removed_many": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera.",
       "removed_other": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera.",
-      "stepTimedOut": "No se pudo encontrar otra solución a tiempo, así que este paso no cambió.",
-      "stepUnrestored": "Las restricciones de capas de este paso necesitan atención, así que no puede recorrer sus soluciones. Edita su orden de capas para revisarlas."
+      "stepCheckTimedOut": "No se pudieron comprobar a tiempo las restricciones de capas de este paso, así que no cambió.",
+      "stepClash": "Las restricciones de capas de este paso chocan con su patrón tal como está ahora, así que no puede recorrer sus soluciones. Edita su orden de capas para revisarlas.",
+      "stepNotFoundInTime": "No se pudo encontrar otra solución a tiempo, así que este paso no cambió.",
+      "stepRefused": "El orden de capas no puede recorrer las soluciones de este paso, así que no cambió.",
+      "stepTooLarge": "El siguiente orden de capas es demasiado grande para guardarlo con este paso, así que no cambió."
     },
     "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",

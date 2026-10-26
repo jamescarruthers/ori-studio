@@ -63,8 +63,11 @@
       "refused": "Diese Lagenreihenfolge konnte nicht gezeichnet werden, daher wurde nichts geändert.",
       "removed_one": "Die Lagenvorgabe des Schritts gehörte zu seinem alten Muster und wurde entfernt. Mit Rückgängig kommt sie zurück.",
       "removed_other": "Die {{count}} Lagenvorgaben des Schritts gehörten zu seinem alten Muster und wurden entfernt. Mit Rückgängig kommen sie zurück.",
-      "stepTimedOut": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde dieser Schritt nicht geändert.",
-      "stepUnrestored": "Die Lagenvorgaben dieses Schritts brauchen Aufmerksamkeit, daher kann er seine Lösungen nicht durchgehen. Bearbeite seine Lagenreihenfolge, um sie zu prüfen."
+      "stepCheckTimedOut": "Die Lagenvorgaben dieses Schritts konnten nicht rechtzeitig geprüft werden, daher wurde er nicht geändert.",
+      "stepClash": "Die Lagenvorgaben dieses Schritts widersprechen sich bei seinem jetzigen Muster, daher kann er seine Lösungen nicht durchgehen. Bearbeite seine Lagenreihenfolge, um sie zu prüfen.",
+      "stepNotFoundInTime": "Es konnte nicht rechtzeitig eine weitere Lösung gefunden werden, daher wurde dieser Schritt nicht geändert.",
+      "stepRefused": "Die Lagenreihenfolge kann die Lösungen dieses Schritts nicht durchgehen, daher wurde er nicht geändert.",
+      "stepTooLarge": "Die nächste Lagenreihenfolge ist zu groß, um sie mit diesem Schritt zu speichern, daher wurde er nicht geändert."
     },
     "placementsReflowed_one": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "placementsReflowed_other": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",

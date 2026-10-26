@@ -67,8 +67,11 @@
       "removed_one": "La contrainte de couches de l’étape concernait son ancien patron, elle a donc été retirée. Annuler la rétablit.",
       "removed_many": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit.",
       "removed_other": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit.",
-      "stepTimedOut": "Aucune autre solution n’a pu être trouvée à temps, cette étape n’a donc pas été modifiée.",
-      "stepUnrestored": "Les contraintes de couches de cette étape demandent votre attention, elle ne peut donc pas parcourir ses solutions. Modifiez son ordre des couches pour les vérifier."
+      "stepCheckTimedOut": "Les contraintes de couches de cette étape n’ont pas pu être vérifiées à temps, elle n’a donc pas été modifiée.",
+      "stepClash": "Les contraintes de couches de cette étape se contredisent avec son motif actuel, elle ne peut donc pas parcourir ses solutions. Modifiez son ordre des couches pour les vérifier.",
+      "stepNotFoundInTime": "Aucune autre solution n’a pu être trouvée à temps, cette étape n’a donc pas été modifiée.",
+      "stepRefused": "L’ordre des couches ne peut pas parcourir les solutions de cette étape, elle n’a donc pas été modifiée.",
+      "stepTooLarge": "L’ordre des couches suivant est trop volumineux pour être enregistré avec cette étape, elle n’a donc pas été modifiée."
     },
     "placementsReflowed_one": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_many": "{{count}} étapes déplacées ont retrouvé leur cellule",
