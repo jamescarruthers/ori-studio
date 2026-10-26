@@ -1,4 +1,4 @@
-import { useCallback, useState, type RefObject } from 'react';
+import { useCallback, useState } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
 import type { DiagramAsset, DiagramStep, DiagramStyle } from '../document/diagramDocument';
 import { snapRadiusUnits, type SnapContext } from './annotateSnap';
@@ -30,32 +30,30 @@ export function useAnnotateSnap({
   step,
   assets,
   style,
-  overlay,
-  unit,
+  screenPerUnit,
 }: {
   step: DiagramStep;
   assets: Readonly<Record<string, DiagramAsset>>;
   style: DiagramStyle;
-  overlay: RefObject<SVGSVGElement | null>;
-  /** World px per picture unit; null before the picture is laid out. */
-  unit: number | null;
+  /** Screen px per picture unit at the zoom the canvas is at now; 0 before the picture is laid out. */
+  screenPerUnit: () => number;
 }) {
   const enabled = useSettingsStore((state) => state.diagramAnnotateSnap);
   const setting = useSettingsStore((state) => state.cpSnapRadius);
   const [targets, setTargets] = useState<readonly SnapTarget[]>(NO_TARGETS);
 
   /** What a press snaps against now, its radius at the zoom the canvas is at. */
-  const context = useCallback((): SnapContext => {
-    const screenPerWorld = overlay.current?.getScreenCTM()?.a ?? 0;
-    return {
+  const context = useCallback(
+    (): SnapContext => ({
       step,
       assets,
       annotations: step.annotations,
       enabled,
-      radius: unit === null ? 0 : snapRadiusUnits(setting, screenPerWorld * unit),
+      radius: snapRadiusUnits(setting, screenPerUnit()),
       style,
-    };
-  }, [step, assets, style, enabled, setting, overlay, unit]);
+    }),
+    [step, assets, style, enabled, setting, screenPerUnit]
+  );
 
   /** Show these targets — none to clear them — re-rendering only for a change. */
   const show = useCallback((next: readonly (SnapTarget | null)[]) => {
