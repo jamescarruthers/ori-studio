@@ -18,12 +18,24 @@
 use std::collections::BTreeMap;
 
 use oristudio_cp::folding::{FoldedPaperScene, HierarchyRelation};
+use oristudio_layer_order::Constraint as Condition;
 use serde::Serialize;
 use treemaker_flatfold::PairOrder;
 
 use super::session::{ConstraintSession, Limits, Seed, SessionRefusal, Solved, Steer, TimedOut};
 use super::source::LayerSource;
 use crate::pattern::FaceId;
+
+/// Why an order given can't fold, when one face says it (plan D19): the
+/// order puts `face` between the two faces of a folded crease, `crease`,
+/// which runs through it, so `face` sits inside a fold it can't be in. A
+/// flat-foldability condition on three faces (Flat-Folder's taco-tortilla),
+/// the kind Edit can miss and show an order that breaks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct FoldInside {
+    pub face: FaceId,
+    pub crease: [FaceId; 2],
+}
 
 /// Where the order a session showed at open, or after its last restore,
 /// came from.
@@ -42,8 +54,14 @@ pub enum OpenedOn {
     Held { ignored: usize },
     /// The order given does not all fit (the creases, or the constraints,
     /// differ from what made it): the fitting order closest to it the search
-    /// found, which has `moved` of its relations the other way.
-    Closest { moved: usize, ignored: usize },
+    /// found, which has `moved` of its relations the other way. `inside` is
+    /// a face the order given put inside a fold it can't be in, when its own
+    /// relations say so ([`FoldInside`]); else the misfit is spread wider.
+    Closest {
+        moved: usize,
+        ignored: usize,
+        inside: Option<FoldInside>,
+    },
 }
 
 impl ConstraintSession {
@@ -115,8 +133,13 @@ impl ConstraintSession {
                         .iter()
                         .filter(|&&(v, value)| values[v] != value)
                         .count();
+                    let inside = session.fold_inside(&held);
                     session.show_unconstrained(values, session.letter_forced());
-                    OpenedOn::Closest { moved, ignored }
+                    OpenedOn::Closest {
+                        moved,
+                        ignored,
+                        inside,
+                    }
                 }
                 Solved::TimedOut(out) => OpenedOn::First {
                     timed_out: Some(out),
@@ -127,6 +150,36 @@ impl ConstraintSession {
         };
         session.set_opened_on(opened_on);
         Ok(session)
+    }
+
+    /// The first three-face condition of the creases that `held` breaks on
+    /// its own: both its pairs held, and the face the crease runs through
+    /// above one of the crease's faces and below the other.
+    pub(crate) fn fold_inside(&self, held: &[Seed]) -> Option<FoldInside> {
+        let mut values: Vec<Option<PairOrder>> = vec![None; self.variables().len()];
+        for &(v, value) in held {
+            if let Some(slot) = values.get_mut(v) {
+                *slot = Some(value);
+            }
+        }
+        let above = |upper: FaceId, lower: FaceId| -> Option<bool> {
+            let v = self.variable_of(upper, lower)?;
+            let value = (*values.get(v)?)?;
+            let lo_above = value == PairOrder::FirstAbove;
+            Some((self.variables()[v].lo() == upper) == lo_above)
+        };
+        self.source()
+            .problem()
+            .constraints()
+            .iter()
+            .find_map(|condition| match *condition {
+                Condition::TacoTortilla([a, b, face]) => (above(face, a)? != above(face, b)?)
+                    .then_some(FoldInside {
+                        face,
+                        crease: [a, b],
+                    }),
+                _ => None,
+            })
     }
 }
 

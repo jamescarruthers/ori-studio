@@ -786,6 +786,18 @@ impl ConstraintSession {
     /// with its smaller face first. A host encodes it with
     /// [`super::encode_record`].
     pub fn save(&self) -> Result<LayerOrderRecord, SessionRefusal> {
+        self.save_carrying(None)
+    }
+
+    /// [`Self::save`], writing back only the carried rows whose record index
+    /// ([`CarriedConstraint::index`]) `keep` names: the rows a dialog still
+    /// lists. The session is left as it was, so a save the host refuses
+    /// leaves every carried row there for an undo to show again.
+    pub fn save_keeping(&self, keep: &[usize]) -> Result<LayerOrderRecord, SessionRefusal> {
+        self.save_carrying(Some(keep))
+    }
+
+    fn save_carrying(&self, keep: Option<&[usize]>) -> Result<LayerOrderRecord, SessionRefusal> {
         let letters = self.solver.search().forced();
         let free: Vec<usize> = (0..self.variables.len())
             .filter(|&v| letters[v].is_none())
@@ -839,7 +851,11 @@ impl ConstraintSession {
                 }
             }
         };
-        for row in &self.carried {
+        let kept = self
+            .carried
+            .iter()
+            .filter(|row| keep.is_none_or(|keep| keep.contains(&row.index)));
+        for row in kept {
             let f = listed(row.subject);
             let g = listed(row.object);
             constraints.push(RecordPair {

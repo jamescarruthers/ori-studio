@@ -308,8 +308,9 @@ impl LayerSessions {
         Ok(carried_rows(self.session(session)?.carried()))
     }
 
-    /// Remove carried row `index` (into [`Self::carried`]), as a row's trash
-    /// button does, so a save no longer writes it; whether there was one.
+    /// Remove the carried row of record index `index` (its `index`, never its
+    /// place in [`Self::carried`]), so a save no longer writes it; whether
+    /// there was one.
     pub fn remove_carried(&mut self, session: u32, index: usize) -> Result<bool, LayerCallError> {
         Ok(self
             .held_mut(session)?
@@ -503,10 +504,16 @@ impl LayerSessions {
     }
 
     /// The saved record, encoded: the committed constraints, then the
-    /// carried rows as their record saved them. Refused only when it would
-    /// be over the record budget (1 MB).
-    pub fn save(&self, session: u32) -> Result<Saving, LayerCallError> {
-        let record = self.session(session)?.save().map_err(thrown)?;
+    /// carried rows as their record saved them: every one, or with `keep`
+    /// only those whose record index it names (the session keeps them all).
+    /// Refused only when it would be over the record budget (1 MB).
+    pub fn save(&self, session: u32, keep: Option<&[usize]>) -> Result<Saving, LayerCallError> {
+        let held = self.session(session)?;
+        let record = match keep {
+            Some(keep) => held.save_keeping(keep),
+            None => held.save(),
+        }
+        .map_err(thrown)?;
         match encode_record(&record) {
             Ok(json) => Ok(Saving::Saved { json }),
             Err(EncodeRefusal::OverBudget { bytes, budget }) => {

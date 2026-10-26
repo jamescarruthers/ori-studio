@@ -86,8 +86,11 @@ export type LayerPhase =
   | { readonly kind: 'open' }
   /** No session: the refusal says why, by code. `session_timed_out` offers Keep trying. */
   | { readonly kind: 'refused'; readonly refusal: LayerRefusal; readonly limits: LayerOrderLimits }
-  /** The engine went away (a rejected call): Try again reopens. */
-  | { readonly kind: 'failed'; readonly limits: LayerOrderLimits }
+  /**
+   * The engine went away (a rejected call): Try again reopens. `unavailable`
+   * when the browser failed to load it (offline, say), not a crash.
+   */
+  | { readonly kind: 'failed'; readonly limits: LayerOrderLimits; readonly unavailable: boolean }
   | { readonly kind: 'closed'; readonly outcome: LayerOrderOutcome };
 
 // ---------------------------------------------------------------------------
@@ -107,12 +110,15 @@ export interface LayerClash {
 /**
  * A can't-fit's explain: not asked yet (it is asked when the entry comes on
  * display, so a set the sentence has moved past costs nothing), running, or
- * done.
+ * done; or out of time, within the preview's short deadline so it never holds
+ * the worker from the next preview or Apply. Then the check's own set stands
+ * in, not claimed smallest, and Keep trying asks again with later `limits`.
  */
 export type LayerExplainState =
   | { readonly kind: 'none' }
-  | { readonly kind: 'pending'; readonly request: number }
-  | ({ readonly kind: 'done' } & LayerClash);
+  | { readonly kind: 'pending'; readonly request: number; readonly limits: LayerOrderLimits }
+  | ({ readonly kind: 'done' } & LayerClash)
+  | ({ readonly kind: 'timed_out'; readonly limits: LayerOrderLimits } & LayerClash);
 
 /**
  * One sentence's preview against the order on screen: the committed list plus
@@ -257,7 +263,8 @@ export interface LayerFlash {
 // The state
 
 export interface LayerOrderDialogState {
-  readonly surface: LayerOrderSurface;
+  /** Which host asked, when it says: the analytics' `surface`. */
+  readonly surface: LayerOrderSurface | null;
   readonly how: LayerOpenHow;
   /** Opened from the host's "Review…" (D14). */
   readonly review: boolean;
@@ -273,6 +280,8 @@ export interface LayerOrderDialogState {
   readonly phase: LayerPhase;
   readonly figure: LayerFigure | null;
   readonly openedOn: LayerOpenedOn | null;
+  /** The limits the session last opened or restored with: what Try again opens with after a loss. */
+  readonly openedLimits: LayerOrderLimits | null;
   readonly open: LayerOpenIndex;
   /** The order on screen's stacks, top first, per side. */
   readonly shown: LayerSidesStacks | null;
@@ -287,7 +296,11 @@ export interface LayerOrderDialogState {
   readonly sentence: LayerSentence;
   /** The verb under the pointer or focus in the open verb menu: previewed in place of the sentence's (Round3:457, 893). */
   readonly pointedVerb: LayerVerb | null;
-  /** Each sentence's preview against the order on screen, by its candidates' key (`candidatesKey`); emptied when the order changes. */
+  /**
+   * Each sentence's preview, by its candidates' key (`candidatesKey`): emptied when the list changes
+   * (a commit) or the session opens again; a step keeps the can't-fits, which no order on screen
+   * changes, and drops the fits.
+   */
   readonly previews: Readonly<Record<string, LayerPreviewEntry>>;
   /**
    * The request of the preview the session holds: the last one asked, until
@@ -296,12 +309,13 @@ export interface LayerOrderDialogState {
    */
   readonly lastPreview: number | null;
   /**
-   * The sentences `layer constraint blocked` went out for against the order
-   * on screen, each keyed as its row would be (subject and verb as read from
-   * the front): once per sentence. Emptied with the previews, and by Add and
-   * Clear.
+   * The sentence `layer constraint blocked` last went out for, by its subject
+   * and its verb as read from the front (D21): once per sentence, until the
+   * subject or that verb changes, an Add, or a Clear. A commit, a step, undo
+   * and redo leave it, so a sentence blocked again after one is not counted
+   * again.
    */
-  readonly blocked: readonly LayerRowKey[];
+  readonly blocked: string | null;
 
   readonly solutions: LayerSolutionsState;
   readonly hover: LayerHover;
@@ -322,10 +336,11 @@ export type LayerOrderApplyResult =
       /** The committed constraints, as built: what the session saves first. */
       readonly constraints: readonly LayerConstraint[];
       /**
-       * The carried rows to write back, by record index. The hook removes every
-       * other carried row from the session (`layer_remove_carried`) before it
-       * saves, then reads the order on screen (`layer_oriedita_relations`) for
-       * the host.
+       * The carried rows to write back, by record index: the save's `keep`
+       * (`layer_save`), which leaves the session's carried rows as they are,
+       * so a save the host refuses has removed nothing an undo would want
+       * back. Then the hook reads the order on screen
+       * (`layer_oriedita_relations`) for the host.
        */
       readonly keepCarried: readonly number[];
     };
@@ -420,8 +435,11 @@ export type LayerOrderAction =
     }
   | { readonly type: 'solutions_positioned'; readonly generation: number; readonly by: LayerStepBy; readonly position: LayerPosition }
   | { readonly type: 'stepped'; readonly request: number; readonly facts: LayerStepFacts }
-  /** A call rejected: the engine is gone, and so is its session. */
-  | { readonly type: 'engine_lost' }
+  /**
+   * A call rejected: the engine is gone, and so is its session; `unavailable`
+   * when the browser failed to load it (`isLayerOrderLoadFailure`).
+   */
+  | { readonly type: 'engine_lost'; readonly unavailable?: boolean }
   // The panes.
   | { readonly type: 'face_hovered'; readonly face: LayerFace | null }
   | { readonly type: 'face_picked'; readonly face: LayerFace; readonly origin: LayerPickOrigin }
@@ -465,7 +483,8 @@ export type LayerOrderAction =
 
 /** What the host's opening request decides, and the hook's clock. */
 export interface LayerOrderDialogInit {
-  readonly surface: LayerOrderSurface;
+  /** Which host asked (`LayerOrderRequest.surface`), or null when it doesn't say: sent as the opened event's `surface`. */
+  readonly surface: LayerOrderSurface | null;
   /** Whether the host hands a saved record: the session restores it, else opens on the host's order. */
   readonly hasRecord: boolean;
   /** Whether the record came with `attention` set: `recordNeedsAttentionOf(request.record)`, as the dialog shell asks it. */
@@ -474,5 +493,7 @@ export interface LayerOrderDialogInit {
   readonly review: boolean;
   /** The host's `look.xray`: X-ray on for an Edit figure in Transparent3. */
   readonly xray: boolean;
+  /** The side the host's picture shows (`look.side`): the folded pane opens on it. The front when left out. */
+  readonly side?: LayerSide;
   readonly at: number;
 }

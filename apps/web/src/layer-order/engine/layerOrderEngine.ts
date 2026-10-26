@@ -197,8 +197,10 @@ const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
  * restore 2.3 s. On iguana-c0 the open took 2.3 s, previews 0.66 s at the
  * median, a restore 2.8 s, and one preview of eleven ran past 30 s, so it
  * reads "couldn't check in time" at 3 s. A step checks one solution, as a
- * preview does; an explain runs a few checks. The count's slice is
- * `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
+ * preview does. An explain runs a few checks, but gets the preview's 3 s too:
+ * a wasm call can't be stopped, so a longer one would hold the worker from the
+ * user's next preview or Apply; one that runs out offers Keep trying. The
+ * count's slice is `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
  */
 export const LAYER_ORDER_LIMITS = {
   open: { ...NODES, deadlineMs: 30_000 },
@@ -206,7 +208,7 @@ export const LAYER_ORDER_LIMITS = {
   commit: { ...NODES, deadlineMs: 10_000 },
   restore: { ...NODES, deadlineMs: 30_000 },
   step: { ...NODES, deadlineMs: 3_000 },
-  explain: { ...NODES, deadlineMs: 10_000 },
+  explain: { ...NODES, deadlineMs: 3_000 },
 } as const satisfies Record<string, LayerOrderLimits>;
 
 /** How much further {@link keepTrying} lets a call go each time. */
@@ -308,7 +310,11 @@ export interface LayerOrderSessionCalls {
   commitPreview(token: number, constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
   /** The saved constraints the last restore did not apply, in record order. */
   carried(): Promise<LayerCarriedRow[]>;
-  /** A carried row's trash button: whether there was one at `index` (its index in the record). */
+  /**
+   * Remove the carried row whose record index is `index` (`LayerCarriedRow.index`, never its place
+   * in {@link carried}) from the session; whether there was one. The dialog never does: a removal it
+   * can still undo is left out of {@link save}'s `keepCarried` instead.
+   */
   removeCarried(index: number): Promise<boolean>;
   /** Drop every carried row (Clear all). */
   clearCarried(): Promise<void>;
@@ -320,8 +326,12 @@ export interface LayerOrderSessionCalls {
    * fold will; null when the figure has no subfaces.
    */
   scene(side: LayerSide): Promise<OristudioCpFoldedPaperScene | null>;
-  /** The record to save: the committed constraints, then the carried rows as saved, and the order's free pairs. */
-  save(): Promise<LayerOrderSaveOutcome>;
+  /**
+   * The record to save: the committed constraints, then the carried rows as saved, and the order's
+   * free pairs. `keepCarried` names the carried rows to write back by record index (every one when
+   * left out); the session keeps them all, so a save the host refuses has removed nothing.
+   */
+  save(keepCarried?: readonly number[]): Promise<LayerOrderSaveOutcome>;
   /**
    * The order on screen as Oriedita's relations, flat `[upper, lower, …]` over
    * the kernel's faces: what the host seeds its fold with

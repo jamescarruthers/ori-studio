@@ -313,7 +313,7 @@ is built.
 | E6 | **Explain and solutions.** `explain` (smallest clashing set); the solution count with a stable order and the current solution's index; X-ray stepping (D5) | M | E5 | – | Counts equal brute force (kabuto 9/1, `solution_sample_1` 1/16, `colorconstrainttest` 12/2); property test over random small multi-component problems; the index stays stable across Add and remove |
 | E7 | **Wasm bridge.** `layer_*` bindings with typed arrays and deadlines (`clock::now_ms`), a retry with a larger deadline ("keep trying"), close; a size row in the bridge README. Explain and count bindings follow E6 | M | E5 | – | Native bridge tests (the `tests/import_session.rs` shape); wasm bytes recorded |
 | E8 | **Census 2 (wasm).** A Node 22 harness over the built bridge (`scripts/layer-order-census.mjs`, local, output pasted): open, preview and count timings and memory per worker, on cpoogle and iguana-c0. Fills the named constants for the count threshold and the label cap | S | E6, E7 | – | **Phase gate 2** (below) |
-| E9 | **The stepper without the count** (D7, added 2026-10-25). Until the count has every solution a step goes through, `step` searches for the one the count would list next, in the count's own order, from the order on screen: by picture, spot by spot with the session's check; with X-ray, each component's next order from Flat-Folder's search over its variables in ascending order, placed on the order on screen (`Enumeration::lexical`, `after`), combined as the count's views are. What it finds is kept within the stored bits ("Solution 3"; exact once every one is found), and what a check proved survives a Keep trying; one node budget for the whole step; a step that runs out says `timed_out`; a cursor can start with counting off | M | E6 | – | Stepping with no count visits exactly the count's solutions in its order, both ways, by picture and by layer order, on the fixtures and a property test; with a complete count, unchanged; iguana-c0's steps timed natively and in wasm |
+| E9 | **Stepping without a finished count** (added 2026-10-25, from H6's review). D7 promises ‹ › step when the count is skipped, but a step counted first, so on iguana-c0 (65,851 open pairs) › never moved in Edit, the Diagram or the dialog. A step now enumerates onward from the order on screen in the count's own stable order, remembering what it has seen so ‹ comes back, and reads "Solution k" | M | E6, E8 | – | Stepped sequence equals the counted sequence on the fixtures and in a property test; iguana-c0's › moves (times native and wasm); complete-count behaviour unchanged |
 | **Phase 1: the dialog** |
 | U1 | **Shared picking and tints.** `cp-workspace/picking/stackHitIndex.ts` (built from the subfaces the painter reads, in its model frame; non-convex cells, convex fast path), `cp-workspace/renderer/fillTint.ts` with Fold's alpha ladder named; Fold moves onto both. Creates `scripts/layer-order-dialog-check.mjs` with a Fold scene | S–M | – | – | Fold's picking, overlay and canvas tests unchanged; hits equal brute force in vitest, with p99 reported, not asserted; Fold before/after screenshots show no change |
 | U2 | **ModalFrame.** Fold's Import CP moves onto it | S | – | – | Computed-style proof of no change; styling ratchets |
@@ -542,6 +542,10 @@ disagrees, the artboard wins):
   dropped, per spec §6.7's "no routine status notes".
 
 **Analytics** (spec §10, plus D21's bucket):
+- `layer order dialog closed`'s `outcome` is `applied`, `cancelled`,
+  `unchanged` (an Apply that changed nothing), `refused` (with the refusal
+  code as an enum), `crashed` or `unavailable` (the engine couldn't load),
+  so refusals and crashes can be measured (U10's review, 2026-10-25).
 - U10 fires `layer order dialog opened` (`solutions_bucket: 'pending'` until
   the count arrives), `layer constraint added`, `layer constraint blocked` and
   `layer order dialog closed`. `subject_origin` and `object_origin` gain `menu`
@@ -979,7 +983,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] E6: explain and solutions (#509, landed through #505)
 - [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [x] E8: census 2 (#513; phase gate 2 passed)
-- [ ] E9: the stepper without the count
+- [ ] E9: stepping without a finished count
 - [x] U1: shared picking and tints (#497)
 - [x] U2: ModalFrame (#493)
 - [ ] U3a: the native-menu guard (to main)
@@ -992,13 +996,13 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U8: panes (#518)
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
-- [ ] U10: inspector
+- [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
 - [ ] H4: Edit refold with constraints
-- [ ] H5: Fold with layer order…
+- [x] H5: Fold with layer order… (#526)
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)

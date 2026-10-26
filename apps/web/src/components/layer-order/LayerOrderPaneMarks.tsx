@@ -3,6 +3,7 @@ import type { CpOverlayView } from '../../cp-workspace/CreasePatternWebglCanvas'
 import type { CpSurfaceView } from '../../cp-workspace/surface/useCpSurface';
 import { observeResizeDeferred } from '../ui/observeResizeDeferred';
 import type { Point } from '../../lib/geometry';
+import type { LayerFace } from '../../layer-order/engine/faceIndex';
 import { insetRing, ringInsetPx } from '../../layer-order/panes/faceRing';
 import { placeLabels, type LayerPlacedLabel } from '../../layer-order/panes/layerPaneLabels';
 import type { LayerPaneChannels } from '../../layer-order/panes/useLayerOrderPanes';
@@ -17,6 +18,23 @@ function projector(view: CpOverlayView): (point: Point) => Point {
 }
 
 const pointsOf = (ring: readonly Point[]) => ring.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+
+/** A lit crease's two lines, each `offsetPx` to one side of it on screen: the crease's own colour stays clear. */
+function besideSegment(from: Point, to: Point, offsetPx: number): [Point, Point][] {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-6) return [];
+  const nx = (-dy / length) * offsetPx;
+  const ny = (dx / length) * offsetPx;
+  return [1, -1].map((s) => [
+    { x: from.x + s * nx, y: from.y + s * ny },
+    { x: to.x + s * nx, y: to.y + s * ny },
+  ]);
+}
+
+/** A lit crease's stroke, CSS px: the subject ring's. */
+const CREASE_LIT_PX = 2;
 
 /** Two views at one scale, turn and line boost: one only pans from the other. */
 function samePlacing(a: CpSurfaceView, b: CpSurfaceView): boolean {
@@ -35,8 +53,8 @@ const PAN_SETTLE_MS = 120;
 /**
  * What a Layer order pane draws over its canvas, through its camera
  * (`implementation-plans/layer-order-dialog.md`, row U8; D20): the
- * changed spots' one fade, each marked face's ring inside it, and the
- * faces' letters on top.
+ * changed spots' one fade, each marked face's ring inside it, a crease a
+ * notice names (a line each side of it, D19), and the faces' letters on top.
  *
  * In CSS px rather than on a channel of the canvas, because each of these
  * holds a size on screen at every zoom: a ring sits a pixel clear of the line
@@ -53,7 +71,16 @@ const PAN_SETTLE_MS = 120;
  * measured, a frame late, only so a letter set beside its face stays on
  * screen.
  */
-export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; view: CpSurfaceView }) {
+export function LayerOrderPaneMarks({
+  pane,
+  view,
+  onUnlettered,
+}: {
+  pane: LayerPaneChannels;
+  view: CpSurfaceView;
+  /** The faces on offer this zoom leaves with no letter, ascending: told when they change (D7's addition). */
+  onUnlettered?: (faces: readonly LayerFace[]) => void;
+}) {
   const project = useMemo(() => projector(view), [view]);
   const linePx = pane.lineWidthCss(view.widthBoost);
   // The view the letters are placed in: this one, or while the camera pans, the one it panned from.
@@ -90,6 +117,13 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
       }),
     [pane.rings, project, linePx]
   );
+  const litCrease = useMemo(
+    () =>
+      pane.litCrease.flatMap(([from, to]) =>
+        besideSegment(project(from), project(to), ringInsetPx(CREASE_LIT_PX, linePx))
+      ),
+    [pane.litCrease, project, linePx]
+  );
   const flash = useMemo(
     () => (pane.flash ? { n: pane.flash.n, polygons: pane.flash.spots.map((spot) => pointsOf(spot.map(project))) } : null),
     [pane.flash, project]
@@ -99,6 +133,18 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
     () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, anchorProject, { frame, linePx: anchorLinePx }),
     [pane.labels, pane.labelSpots, pane.letterOf, anchorProject, frame, anchorLinePx]
   );
+  // The faces on offer whose chips found no room at this zoom: tinted, unlettered, until zoomed in.
+  const unlettered = useMemo(() => {
+    const placedFaces = new Set(labels.map((label) => label.face));
+    return pane.labels
+      .filter((label) => label.tone === 'plain' && !placedFaces.has(label.face))
+      .map((label) => label.face)
+      .sort((a, b) => a - b)
+      .join(',');
+  }, [labels, pane.labels]);
+  useEffect(() => {
+    onUnlettered?.(unlettered === '' ? [] : unlettered.split(',').map(Number));
+  }, [unlettered, onUnlettered]);
 
   return (
     <div ref={setElement} className={styles.marks} aria-hidden="true" data-layer-order-marks={pane.id}>
@@ -121,6 +167,13 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
             strokeWidth={widthPx}
           />
         ))}
+        {litCrease.length > 0 && (
+          <g className={styles.crease} data-layer-order-crease={litCrease.length / 2} strokeWidth={CREASE_LIT_PX}>
+            {litCrease.map(([from, to], k) => (
+              <line key={k} x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+            ))}
+          </g>
+        )}
       </svg>
       {labels.map((label) => (
         <span

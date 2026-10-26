@@ -67,23 +67,13 @@ export type {
   LayerTally,
   LayerVerb,
 };
-export { constraintSeen, constraintVerb, keepTrying };
-
-// ---------------------------------------------------------------------------
-// Limits
-
 /**
- * The limits each call the model asks for runs with. The open, preview,
- * commit and restore are the contract's (`LAYER_ORDER_LIMITS`); explain and a
- * step search like a preview. A count slice is not here: it is phase gate 2's
- * `LAYER_ORDER_COUNT_SLICE` (`layer-order/layerOrderBudgets.ts`), its one
- * source.
+ * The limits each call the model asks for runs with: the contract's, one per
+ * call (`LAYER_ORDER_LIMITS`: explain's 10 s among them). A count slice is not
+ * here: it is phase gate 2's `LAYER_ORDER_COUNT_SLICE`
+ * (`layer-order/layerOrderBudgets.ts`), its one source.
  */
-export const LAYER_ORDER_MODEL_LIMITS = {
-  ...LAYER_ORDER_LIMITS,
-  explain: LAYER_ORDER_LIMITS.preview,
-  step: LAYER_ORDER_LIMITS.preview,
-} as const satisfies Record<string, LayerOrderLimits>;
+export { LAYER_ORDER_LIMITS, constraintSeen, constraintVerb, keepTrying };
 
 // ---------------------------------------------------------------------------
 // The model's shapes

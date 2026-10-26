@@ -121,6 +121,54 @@
   color: var(--status-danger);
 }
 
+/* D19's line about the order opened on: the quiet tone, one line, cut short with its whole text as its title. */
+.footNote[data-tone='info'] {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.footIcon[data-tone='info'] {
+  color: var(--text-tertiary);
+}
+
+.footText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * On a phone, or under a finger, there is no title to hover for the rest: the
+ * note takes the foot's whole width, over Cancel and Apply, and wraps to
+ * three lines.
+ */
+.footNote[data-layout='narrow'] {
+  flex: 1 1 100%;
+  align-items: flex-start;
+}
+
+.footNote[data-layout='narrow'] .footText {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+@media (pointer: coarse) {
+  .footNote {
+    flex: 1 1 100%;
+    align-items: flex-start;
+  }
+
+  .footText {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
 /* After the title (Round3): a rule, the figure's name, then its credit, quieter; the credit gives way first. */
 .figure {
   display: flex;
