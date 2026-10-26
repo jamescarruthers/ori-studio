@@ -25,7 +25,9 @@ import {
   dialogClosedFact,
   dialogOpenedFact,
   solutionsBucket,
+  type LayerOrderClosedOutcome,
   type LayerOrderFact,
+  type LayerOrderRefusalCode,
 } from './layerOrderAnalytics';
 import {
   ADD_AFTER_PREVIEW_TIMEOUT,
@@ -96,14 +98,20 @@ import type {
 const NO_ROWS: LayerRows = { committed: [], carried: [] };
 
 /**
- * What goes when the order on screen changes (a commit lands, a step moves,
- * an open): the previews of it, the session's own (`lastPreview`), and the
- * sentences reported blocked against it.
+ * What goes when the list or the order on screen changes (a commit lands, an
+ * open): the previews, and the session's own (`lastPreview`). A step keeps
+ * the can't-fits ({@link cantFitsOnly}).
  */
-const NO_PREVIEWS = { previews: {}, lastPreview: null, blocked: [] } satisfies Pick<
-  LayerOrderDialogState,
-  'previews' | 'lastPreview' | 'blocked'
->;
+const NO_PREVIEWS = { previews: {}, lastPreview: null } satisfies Pick<LayerOrderDialogState, 'previews' | 'lastPreview'>;
+
+/**
+ * The previews a step leaves: a can't-fit, with its explain, is the list's and
+ * the creases', whatever order is on screen; a fit carries the stacks it
+ * would show, which a step has moved past, and goes.
+ */
+function cantFitsOnly(previews: LayerOrderDialogState['previews']): LayerOrderDialogState['previews'] {
+  return Object.fromEntries(Object.entries(previews).filter(([, entry]) => entry.kind === 'cant_fit'));
+}
 
 function openLimits(how: LayerOrderDialogState['how']): LayerOrderLimits {
   return how === 'restore' ? LAYER_ORDER_LIMITS.restore : LAYER_ORDER_LIMITS.open;
@@ -126,6 +134,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     phase: { kind: 'opening', request: 1, limits },
     figure: null,
     openedOn: null,
+    openedLimits: null,
     open: openIndexOf(new Uint32Array()),
     shown: null,
     rows: NO_ROWS,
@@ -136,6 +145,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     sentence: EMPTY_SENTENCE,
     pointedVerb: null,
     ...NO_PREVIEWS,
+    blocked: null,
     solutions: { runs: true, generation: 0, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     hover: { face: null, slot: null, row: null, reason: false },
     view: { side: init.side ?? 'front', xray: init.xray, openSpots: false },
@@ -270,7 +280,13 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
         (state.phase.kind === 'opening' && state.phase.request === action.request) ||
         (state.settle.kind === 'restoring' && state.settle.request === action.request);
       if (!waiting) return state;
-      const limits = state.phase.kind === 'opening' ? state.phase.limits : LAYER_ORDER_LIMITS.restore;
+      // The limits that open ran with, so Keep trying goes further than they did.
+      const limits =
+        state.phase.kind === 'opening'
+          ? state.phase.limits
+          : state.settle.kind === 'restoring'
+            ? state.settle.limits
+            : LAYER_ORDER_LIMITS.restore;
       return { ...state, phase: { kind: 'refused', refusal: action.refusal, limits } };
     }
     case 'previewed':
@@ -305,7 +321,8 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'stepped':
       return stepped(state, action, effects);
     case 'engine_lost': {
-      const limits = state.phase.kind === 'opening' ? state.phase.limits : openLimits(state.how);
+      // Try again opens as the session last did (Keep trying's limits included), not the defaults.
+      const limits = state.phase.kind === 'opening' ? state.phase.limits : (state.openedLimits ?? openLimits(state.how));
       return { ...state, phase: { kind: 'failed', limits } };
     }
 
@@ -334,7 +351,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'sentence_cleared':
       if (!builderLive(state)) return state;
       // Clear starts afresh: a sentence built again is reported again if it is blocked.
-      return { ...withSentence(state, clearSentence(state.sentence)), blocked: [] };
+      return { ...withSentence(state, clearSentence(state.sentence)), blocked: null };
     case 'verb_pointed':
       return state.pointedVerb === action.verb ? state : { ...state, pointedVerb: action.verb };
     case 'verb_set':
@@ -389,7 +406,14 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'apply':
       return apply(state, action.at, effects);
     case 'cancel': {
-      if (state.reportedOpen) {
+      // A refused open and a stopped engine are counted however far the dialog got; Cancel only on an
+      // open the dialog reported.
+      const { phase } = state;
+      if (phase.kind === 'refused') {
+        effects.push({ type: 'track', fact: closedFact(state, 'refused', action.at, phase.refusal.code) });
+      } else if (phase.kind === 'failed') {
+        effects.push({ type: 'track', fact: closedFact(state, 'crashed', action.at) });
+      } else if (state.reportedOpen) {
         effects.push({ type: 'track', fact: closedFact(state, 'cancelled', action.at) });
       }
       effects.push({ type: 'close' });
@@ -478,6 +502,7 @@ function opened(
       letterRank: letterRanksOf(facts.faces, facts.letterOrder),
     },
     openedOn: facts.openedOn,
+    openedLimits: limits,
     open,
     shown: facts.stacks,
     rows: { committed, carried },
@@ -542,21 +567,31 @@ function askExplain(state: LayerOrderDialogState, effects: LayerOrderEffect[]): 
 }
 
 /**
- * `layer constraint blocked`, once per sentence against the order on screen:
- * a sentence is its subject and its verb as read from the front, keyed as its
- * row would be, so turning over is no new sentence unless the constraint
- * really changes. Leaving a sentence and coming back reports nothing more;
- * once the previews go (a commit, a step that moves, an open), or after Add
- * or Clear, it can be reported again. The bucket is the objects at its first
- * block.
+ * A sentence as `layer constraint blocked` counts it (D21): its subject and
+ * its verb as read from the front, so turning over is no new sentence; its
+ * objects are not part of it. Null with no subject.
+ */
+function blockedKeyOf(state: LayerOrderDialogState): string | null {
+  const { subject, verb } = state.sentence;
+  if (subject === null) return null;
+  const fromFront = state.view.side === 'front' ? verb : verb === 'in_front_of' ? 'behind' : 'in_front_of';
+  return `${subject}:${fromFront}`;
+}
+
+/**
+ * `layer constraint blocked`, once per sentence (D21): until its subject or
+ * its verb as read from the front changes, an Add, or a Clear. A commit, a
+ * step, undo and redo change neither, so the same sentence blocked again
+ * after one is not counted again. The bucket is the objects at its block.
  */
 function reportBlocked(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOrderDialogState {
-  const chosen = chosenPreview(state);
-  if (chosen?.kind !== 'cant_fit') return state;
-  const key = constraintRowKey(chosen.candidates[0]!, state.figure);
-  if (state.blocked.includes(key)) return state;
-  effects.push({ type: 'track', fact: constraintBlockedFact(state.rows.committed.length, state.sentence.objects.length) });
-  return { ...state, blocked: [...state.blocked, key] };
+  const key = blockedKeyOf(state);
+  // The subject or the verb changed: the next block is a new sentence's.
+  const current = state.blocked !== null && state.blocked !== key ? { ...state, blocked: null } : state;
+  const chosen = chosenPreview(current);
+  if (chosen?.kind !== 'cant_fit' || key === null || current.blocked === key) return current;
+  effects.push({ type: 'track', fact: constraintBlockedFact(current.rows.committed.length, current.sentence.objects.length) });
+  return { ...current, blocked: key };
 }
 
 /**
@@ -709,7 +744,7 @@ function add(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOr
   const added = entry.candidates.map((constraint): LayerCommittedRow => ({ kind: 'committed', id: nextRowId++, constraint }));
   const rows = { ...state.rows, committed: [...state.rows.committed, ...added] };
   return ask(
-    { ...state, nextRowId, blocked: [] },
+    { ...state, nextRowId, blocked: null },
     {
       via: 'add',
       constraints: committedConstraints(rows),
@@ -1000,11 +1035,13 @@ function stepped(
   if (facts.verdict === 'timed_out') {
     return { ...state, solutions: { ...state.solutions, step: { kind: 'timed_out', direction: pending.direction } } };
   }
-  // The order on screen changed, and no constraint did: previews go (the session's too), the flash shows what moved.
+  // The order on screen changed, and no constraint did: the fits go (the session's preview too), a
+  // can't-fit and its explain stay, and the flash shows what moved.
   const next: LayerOrderDialogState = {
     ...state,
     shown: facts.stacks,
-    ...NO_PREVIEWS,
+    previews: cantFitsOnly(state.previews),
+    lastPreview: null,
     solutions: {
       ...state.solutions,
       position: facts.position,
@@ -1042,12 +1079,23 @@ function apply(state: LayerOrderDialogState, at: number, effects: LayerOrderEffe
     type: 'apply',
     result: unchanged ? { kind: 'no_change' } : { kind: 'changed', constraints, keepCarried },
   });
-  effects.push({ type: 'track', fact: closedFact(state, 'applied', at) });
+  effects.push({ type: 'track', fact: closedFact(state, unchanged ? 'unchanged' : 'applied', at) });
   return { ...state, phase: { kind: 'closed', outcome: 'applied' } };
 }
 
-function closedFact(state: LayerOrderDialogState, outcome: 'applied' | 'cancelled', at: number): LayerOrderFact {
+function closedFact(
+  state: LayerOrderDialogState,
+  outcome: LayerOrderClosedOutcome,
+  at: number,
+  refusal: LayerOrderRefusalCode | null = null
+): LayerOrderFact {
   const { solutions, view } = state;
   const count = solutions.count ? (view.xray ? solutions.count.orders : solutions.count[view.side]) : null;
-  return dialogClosedFact(outcome, state.rows.committed.length, solutionsBucket(count, solutions.runs), at - state.openedAt);
+  return dialogClosedFact(
+    outcome,
+    state.rows.committed.length,
+    solutionsBucket(count, solutions.runs),
+    at - state.openedAt,
+    refusal
+  );
 }

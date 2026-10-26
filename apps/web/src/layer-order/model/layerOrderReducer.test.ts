@@ -924,6 +924,51 @@ describe('Apply and Cancel (spec §6.8)', () => {
     expect(cancelled.effects).toEqual([{ type: 'close' }]);
   });
 
+  it('an untouched Apply is closed as unchanged (D16)', () => {
+    const applied = play(opened().state, { type: 'apply', at: 5_000 });
+    expect(lastOf(applied.effects, 'apply').result).toEqual({ kind: 'no_change' });
+    expect(lastOf(applied.effects, 'track').fact).toEqual(dialogClosedFact('unchanged', 0, 'pending', 4_000));
+  });
+
+  it('closing on a refused open says refused, with the refusal’s code and nothing of its details', () => {
+    const start = initLayerOrderDialog(INIT);
+    const refused = play(start.state, {
+      type: 'open_refused',
+      request: 1,
+      refusal: { code: 'source_non_convex_face', face: 3 },
+    });
+    const closed = play(refused.state, { type: 'cancel', at: 3_000 });
+    expect(lastOf(closed.effects, 'track').fact).toEqual(dialogClosedFact('refused', 0, 'pending', 2_000, 'source_non_convex_face'));
+    expect(JSON.stringify(lastOf(closed.effects, 'track').fact)).not.toContain('"face"');
+  });
+
+  it('closing on an engine that stopped says crashed, opened or not', () => {
+    const lostOpen = play(opened().state, { type: 'engine_lost' }, { type: 'cancel', at: 4_000 });
+    expect(lastOf(lostOpen.effects, 'track').fact).toEqual(dialogClosedFact('crashed', 0, 'pending', 3_000));
+    const lostOpening = play(initLayerOrderDialog(INIT).state, { type: 'engine_lost' }, { type: 'cancel', at: 2_000 });
+    expect(lastOf(lostOpening.effects, 'track').fact).toEqual(dialogClosedFact('crashed', 0, 'pending', 1_000));
+  });
+
+  it('Try again after a loss opens with the limits the session last opened with, Keep trying’s included', () => {
+    const start = initLayerOrderDialog(INIT);
+    const first = lastOf(start.effects, 'open');
+    const ranOut = play(start.state, {
+      type: 'open_refused',
+      request: first.request,
+      refusal: { code: 'session_timed_out', limit: 'deadline', nodes: 4 },
+    });
+    const again = play(ranOut.state, { type: 'keep_trying' });
+    const asked = lastOf(again.effects, 'open');
+    expect(asked.limits).toEqual(keepTrying(first.limits));
+    const reopened = play(
+      again.state,
+      { type: 'opened', request: asked.request, facts: openFactsOf() },
+      { type: 'engine_lost' },
+      { type: 'retry_open' }
+    );
+    expect(lastOf(reopened.effects, 'open').limits).toEqual(asked.limits);
+  });
+
   it('once closed, nothing more happens', () => {
     const closed = play(opened().state, { type: 'cancel', at: 2_000 }).state;
     const late = dispatch(closed, { type: 'face_picked', face: 2, origin: 'pattern' });

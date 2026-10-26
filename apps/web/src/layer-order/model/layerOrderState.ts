@@ -274,6 +274,8 @@ export interface LayerOrderDialogState {
   readonly phase: LayerPhase;
   readonly figure: LayerFigure | null;
   readonly openedOn: LayerOpenedOn | null;
+  /** The limits the session last opened or restored with: what Try again opens with after a loss. */
+  readonly openedLimits: LayerOrderLimits | null;
   readonly open: LayerOpenIndex;
   /** The order on screen's stacks, top first, per side. */
   readonly shown: LayerSidesStacks | null;
@@ -288,7 +290,11 @@ export interface LayerOrderDialogState {
   readonly sentence: LayerSentence;
   /** The verb under the pointer or focus in the open verb menu: previewed in place of the sentence's (Round3:457, 893). */
   readonly pointedVerb: LayerVerb | null;
-  /** Each sentence's preview against the order on screen, by its candidates' key (`candidatesKey`); emptied when the order changes. */
+  /**
+   * Each sentence's preview, by its candidates' key (`candidatesKey`): emptied when the list changes
+   * (a commit) or the session opens again; a step keeps the can't-fits, which no order on screen
+   * changes, and drops the fits.
+   */
   readonly previews: Readonly<Record<string, LayerPreviewEntry>>;
   /**
    * The request of the preview the session holds: the last one asked, until
@@ -297,12 +303,13 @@ export interface LayerOrderDialogState {
    */
   readonly lastPreview: number | null;
   /**
-   * The sentences `layer constraint blocked` went out for against the order
-   * on screen, each keyed as its row would be (subject and verb as read from
-   * the front): once per sentence. Emptied with the previews, and by Add and
-   * Clear.
+   * The sentence `layer constraint blocked` last went out for, by its subject
+   * and its verb as read from the front (D21): once per sentence, until the
+   * subject or that verb changes, an Add, or a Clear. A commit, a step, undo
+   * and redo leave it, so a sentence blocked again after one is not counted
+   * again.
    */
-  readonly blocked: readonly LayerRowKey[];
+  readonly blocked: string | null;
 
   readonly solutions: LayerSolutionsState;
   readonly hover: LayerHover;
@@ -323,10 +330,11 @@ export type LayerOrderApplyResult =
       /** The committed constraints, as built: what the session saves first. */
       readonly constraints: readonly LayerConstraint[];
       /**
-       * The carried rows to write back, by record index. The hook removes every
-       * other carried row from the session (`layer_remove_carried`) before it
-       * saves, then reads the order on screen (`layer_oriedita_relations`) for
-       * the host.
+       * The carried rows to write back, by record index: the save's `keep`
+       * (`layer_save`), which leaves the session's carried rows as they are,
+       * so a save the host refuses has removed nothing an undo would want
+       * back. Then the hook reads the order on screen
+       * (`layer_oriedita_relations`) for the host.
        */
       readonly keepCarried: readonly number[];
     };

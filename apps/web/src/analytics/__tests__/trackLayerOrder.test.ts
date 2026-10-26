@@ -75,6 +75,21 @@ describe('trackLayerOrderFact', () => {
     });
   });
 
+  it('sends a close on a refused open with the refusal’s code, and a crash or an untouched Apply by outcome', () => {
+    trackLayerOrderFact(dialogClosedFact('refused', 0, 'pending', 2_000, 'source_non_convex_face'));
+    expect(runtime.track).toHaveBeenLastCalledWith('layer order dialog closed', {
+      outcome: 'refused',
+      refusal: 'source_non_convex_face',
+      constraint_count_bucket: '<=0',
+      solutions_bucket: 'pending',
+      elapsed_ms_bucket: '<=5000',
+    });
+    trackLayerOrderFact(dialogClosedFact('crashed', 2, 'pending', 2_000, 'session_timed_out'));
+    expect(runtime.track).toHaveBeenLastCalledWith('layer order dialog closed', expect.not.objectContaining({ refusal: expect.anything() }));
+    trackLayerOrderFact(dialogClosedFact('unchanged', 0, '<=1', 9_000));
+    expect(runtime.track).toHaveBeenLastCalledWith('layer order dialog closed', expect.objectContaining({ outcome: 'unchanged' }));
+  });
+
   it('sends the hosts’ constraints needing attention as a fact too', () => {
     trackLayerOrderFact(needsAttentionFact('diagram_step', 2));
     expect(runtime.track).toHaveBeenCalledWith('layer constraints need attention', {

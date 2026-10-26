@@ -10,6 +10,7 @@
  * Pure: no React, no store, no engine calls.
  */
 import { bucketCount } from '../../analytics/events';
+import type { LayerRefusal } from '../engine/layerOrderEngine';
 import type { LayerPickOrigin } from './layerOrderSentence';
 import type { LayerTally, LayerVerb } from './layerOrderEngineFacts';
 
@@ -17,6 +18,17 @@ import type { LayerTally, LayerVerb } from './layerOrderEngineFacts';
 export type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
 
 export type LayerOrderOutcome = 'applied' | 'cancelled';
+
+/**
+ * How `layer order dialog closed` says the dialog ended: Apply with a record
+ * (`applied`) or with nothing to write (`unchanged`, D16); Cancel on an open
+ * dialog (`cancelled`); or closed on an open the engine refused (`refused`,
+ * with the refusal's code) or on an engine that stopped (`crashed`).
+ */
+export type LayerOrderClosedOutcome = 'applied' | 'unchanged' | 'cancelled' | 'refused' | 'crashed';
+
+/** A refused open's code: an enum, never its details. */
+export type LayerOrderRefusalCode = LayerRefusal['code'];
 
 /** A figure's faces: a handful, a typical design, a large one, the iguana's class. */
 export const LAYER_ORDER_FACE_COUNT_BUCKETS = [20, 50, 100, 200, 500, 1000, 2000] as const;
@@ -80,7 +92,9 @@ export type LayerOrderFact =
   | {
       readonly event: 'layer order dialog closed';
       readonly properties: {
-        readonly outcome: LayerOrderOutcome;
+        readonly outcome: LayerOrderClosedOutcome;
+        /** Only with `outcome: 'refused'`. */
+        readonly refusal?: LayerOrderRefusalCode;
         readonly constraint_count_bucket: string;
         readonly solutions_bucket: LayerOrderSolutionsBucket;
         readonly elapsed_ms_bucket: string;
@@ -140,15 +154,17 @@ export function constraintBlockedFact(constraints: number, objects: number): Lay
 }
 
 export function dialogClosedFact(
-  outcome: LayerOrderOutcome,
+  outcome: LayerOrderClosedOutcome,
   constraints: number,
   solutions: LayerOrderSolutionsBucket,
-  elapsedMs: number
+  elapsedMs: number,
+  refusal: LayerOrderRefusalCode | null = null
 ): LayerOrderFact {
   return {
     event: 'layer order dialog closed',
     properties: {
       outcome,
+      ...(outcome === 'refused' && refusal !== null ? { refusal } : {}),
       constraint_count_bucket: bucketCount(constraints, LAYER_ORDER_CONSTRAINT_COUNT_BUCKETS),
       solutions_bucket: solutions,
       elapsed_ms_bucket: bucketCount(Math.max(0, elapsedMs), LAYER_ORDER_ELAPSED_MS_BUCKETS),
