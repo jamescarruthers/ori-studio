@@ -1276,6 +1276,11 @@ async function applyThroughOpenDialog(page) {
       const relations = await engine.relations();
       const applied = { record: saved.record, relations, source: request.source };
       if (!settleLayerOrderDialog(opening.id, { kind: 'applied', applied })) throw new Error('the dialog had already answered');
+      // Let the app answer Apply (the dialog closing, Pose capturing the order) before this returns.
+      // Chromium holds an evaluate's promise weakly: a GC in those microtasks, after it settles but
+      // before Playwright hears, drops the answer ("Promise was collected"), which Playwright reports
+      // as "Execution context was destroyed, most likely because of a navigation". Nothing navigates.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       return { candidate: chosen.candidate, relations: relations.length / 2 };
     } finally {
       runtime.dispose();
