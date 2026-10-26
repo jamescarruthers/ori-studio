@@ -4350,6 +4350,234 @@ function editSelectionCases(theme) {
 }
 
 // ---------------------------------------------------------------------------
+// Fold's Import CP (H10)
+
+const IMPORT_DIALOG = { role: 'dialog', name: 'Import crease pattern' };
+
+/** The shown Fold sequence as the store holds it: its steps, the cursor, the history's labels. */
+async function foldSequenceState(page) {
+  return page.evaluate(() => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    const held = state.foldSequences[0];
+    const steps = held?.document.steps ?? [];
+    return {
+      steps: steps.length,
+      kinds: steps.map((step) => step.op?.kind ?? null),
+      last: steps.at(-1) ? { expect: steps.at(-1).expect ?? null, origin: steps.at(-1).op?.origin ?? null } : null,
+      history: state.foldHistory.past.map((entry) => entry.label),
+    };
+  });
+}
+
+/**
+ * Import CP of `file` as a user drops it on Import CP's dialog: the dialog
+ * opened as the menu opens it, the file dropped on it.
+ */
+async function importIntoFold(page, file) {
+  await page.evaluate(async () => {
+    const { useFoldImportUiStore } = await import('/src/fold/io/foldImportUiStore.ts');
+    useFoldImportUiStore.getState().open();
+  });
+  const dialog = page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name });
+  await dialog.waitFor({ state: 'visible', timeout: 30000 });
+  const text = await readFile(path.join(repoRoot, file), 'utf8');
+  const dataTransfer = await page.evaluateHandle(
+    ({ text, name }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([text], name));
+      return transfer;
+    },
+    { text, name: path.basename(file) }
+  );
+  await dialog.dispatchEvent('drop', { dataTransfer });
+}
+
+/**
+ * The order the open dialog's engine lands on for one sentence added from
+ * the order it opened on, worked out by a session of the check's own on the
+ * same request (`inspectorFacts`): its relations, `[upper, lower, …]`.
+ */
+async function relationsAfter(page, { subject, verb, object }) {
+  return page.evaluate(
+    async ({ subject, verb, object }) => {
+      const { constraintSeen, LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+      const { runtime, open } = window.__layerOrderCheck.figure;
+      const committed = await runtime.engine.commit(
+        [constraintSeen(subject, verb, object, 'front', open.opened.front_up[object] === 1)],
+        LAYER_ORDER_LIMITS.commit
+      );
+      if (committed.verdict !== 'committed') throw new Error(`the check's own commit: ${JSON.stringify(committed)}`);
+      return Array.from(await runtime.engine.relations());
+    },
+    { subject, verb, object }
+  );
+}
+
+/**
+ * Which of the import's own orders the step on screen is, by Fold's own
+ * chooser: `file` imported again where the step was (an empty sequence),
+ * each listed order drawn over the dialog's faces and landed, and the one
+ * whose state is the step's (`expect`, its fingerprint) found. Answers its
+ * relations over the dialog's faces and how many orders there were.
+ */
+async function landedOrder(page, file, expect) {
+  const text = await readFile(path.join(repoRoot, file), 'utf8');
+  return page.evaluate(
+    async ({ text, expect }) => {
+      const { foldSession } = await import('/src/store/workspaceStore/foldSession.ts');
+      const { selectFoldCursorNode } = await import('/src/fold/session/foldSessionState.ts');
+      const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+      const session = foldSession();
+      const release = session.retain();
+      try {
+        const node = selectFoldCursorNode(session.store.getState());
+        const answer = await session.withState(node.state, async (worker) => {
+          const opened = await worker.importCp({ format: 'fold', text }, { kind: 'empty' });
+          if (opened.status !== 'ok') throw new Error(`reimport: ${JSON.stringify(opened.refusal)}`);
+          let choices = [[]];
+          for (const component of opened.components) {
+            choices = choices.flatMap((choice) => Array.from({ length: component.orders }, (_, k) => [...choice, k]));
+          }
+          const found = [];
+          for (const choice of choices) {
+            const picked = await worker.importPick(opened.import, choice);
+            if (picked.status !== 'ok') continue;
+            await worker.release([picked.state]);
+            if (picked.fingerprint !== expect) continue;
+            const opening = await worker.importLayerOpening(opened.import, choice);
+            if (opening.status !== 'ok') throw new Error(`opening: ${JSON.stringify(opening.refusal)}`);
+            found.push({ choice, relations: Array.from(layerOrderSceneRelations(opening.shown)) });
+          }
+          await worker.releaseImports([opened.import]);
+          return { found, orders: choices.length };
+        });
+        if (answer.status !== 'answered') throw new Error(`the engine: ${answer.status}`);
+        return answer.value;
+      } finally {
+        release();
+      }
+    },
+    { text, expect }
+  );
+}
+
+/**
+ * Fold's Import CP choosing its order in the Layer order dialog (H10), in one
+ * theme: kabuto dropped on Import CP opens the dialog on its default order,
+ * the import's own dialog stepped aside; Cancel leaves the sequence as it
+ * was; a constraint added and Applied lands one step, one undo entry, whose
+ * order (found among the import's own by Fold's chooser) is the order the
+ * dialog's engine lands on for that constraint, relation for relation; and
+ * a pattern with one order imports straight through, no dialog.
+ */
+function foldImportCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  const kabuto = 'tests/fixtures/flat-folder/kabuto.fold';
+  return async (page, url, record) => {
+    await openFold(page, url);
+    if (theme) {
+      await page.evaluate(async (theme) => {
+        const { useThemeStore } = await import('/src/store/themeStore.ts');
+        useThemeStore.getState().setThemeByName(theme);
+      }, theme);
+    }
+    const before = await foldSequenceState(page);
+
+    // Kabuto, dropped on Import CP: the Layer order dialog opens on it, alone.
+    await importIntoFold(page, kabuto);
+    let dialog = await readyDialog(page);
+    const asked = await openedRequest(page);
+    if (asked?.surface !== 'fold_import' || asked.record !== null || !asked.shown || asked.name !== 'kabuto.fold' || asked.xray) {
+      throw new Error(`the request: ${JSON.stringify(asked)}`);
+    }
+    if (await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).isVisible()) {
+      throw new Error('Import CP’s own dialog stayed up under the Layer order dialog');
+    }
+    console.log(`[${tag}] kabuto opened the Layer order dialog (${asked.segments} creases, ${asked.side}, turned ${asked.turnDeg}°); Import CP stepped aside`);
+    await record(`fold-import-${tag}-dialog`, await dialogShot(page));
+
+    // Cancel: the import is cancelled, the sequence as it was.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    const cancelled = await foldSequenceState(page);
+    if (JSON.stringify(cancelled) !== JSON.stringify(before)) throw new Error(`Cancel changed the sequence: ${JSON.stringify(cancelled)}`);
+    console.log(`[${tag}] Cancel: no step, no undo entry, Import CP closed`);
+
+    // A constraint added through the inspector, then Apply.
+    await importIntoFold(page, kabuto);
+    dialog = await readyDialog(page);
+    await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { kernelFoldSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      window.__layerOrderCheck = { source: kernelFoldSourceOf(request.source), scene: request.shown };
+    });
+    const facts = await inspectorFacts(page);
+    // The first subject's first object, the way round the order it opened on doesn't have it: from
+    // the front (whose viewer the relations' upper face is nearer), then as the side shown reads it.
+    const subject = facts.subjects[0];
+    const object = facts.partners[subject][0];
+    const verb = await page.evaluate(
+      async ({ subject, object }) => {
+        const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+        const relations = layerOrderSceneRelations(window.__layerOrderCheck.scene);
+        for (let i = 0; i < relations.length; i += 2) {
+          if (relations[i] === subject && relations[i + 1] === object) return 'behind';
+          if (relations[i] === object && relations[i + 1] === subject) return 'in_front_of';
+        }
+        throw new Error('the pair is not ordered in the scene the dialog opened on');
+      },
+      { subject: facts.faceOf[subject], object: facts.faceOf[object] }
+    );
+    const seenVerb = asked.side === 'back' ? (verb === 'behind' ? 'in_front_of' : 'behind') : verb;
+    await buildSentence(page, dialog, { subject, verb: seenVerb, objects: [object] });
+    await addSentence(page, dialog);
+    await record(`fold-import-${tag}-constrained`, await dialogShot(page));
+    const chosen = await relationsAfter(page, { subject: facts.faceOf[subject], verb, object: facts.faceOf[object] });
+    await dropInspectorFacts(page);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    await page.waitForFunction((steps) => window.__treemakerWorkspaceStore.getState().foldSequences[0]?.document.steps.length === steps + 1, before.steps, { timeout: 60000 });
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    const applied = await foldSequenceState(page);
+    if (applied.kinds.at(-1) !== 'cp-jump' || applied.last?.origin !== 'fold' || applied.history.length !== before.history.length + 1) {
+      throw new Error(`Apply: ${JSON.stringify(applied)}`);
+    }
+    await page.mouse.move(1, 1);
+    await record(`fold-import-${tag}-applied`, await foldPanes(page));
+    const landed = await landedOrder(page, kabuto, applied.last.expect);
+    if (landed.found.length !== 1) throw new Error(`the step is ${landed.found.length} of the import's ${landed.orders} orders`);
+    const [order] = landed.found;
+    // As sets of [upper, lower]: the scene's reading and the engine's list them in other orders.
+    const pairsOf = (flat) => [...Array(flat.length / 2).keys()].map((i) => `${flat[2 * i]}>${flat[2 * i + 1]}`).sort().join(' ');
+    if (pairsOf(order.relations) !== pairsOf(chosen)) {
+      throw new Error(`the step's order is not the dialog's: ${JSON.stringify({ step: order.relations, dialog: chosen })}`);
+    }
+    if (order.choice.every((k) => k === 0)) throw new Error('the constraint left the default order');
+    console.log(`[${tag}] "${subject} ${verb} ${object}", Applied: one step, one undo entry ("${applied.history.at(-1)}"); its order is the import's order [${order.choice}] of ${landed.orders}, relation for relation the dialog's (${chosen.length / 2} pairs)`);
+
+    // Undo takes the one step away; redo brings it back.
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    const undone = await foldSequenceState(page);
+    if (undone.steps !== before.steps) throw new Error(`undo left ${undone.steps} steps`);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    const redone = await foldSequenceState(page);
+    if (redone.steps !== before.steps + 1 || redone.last?.expect !== applied.last.expect) throw new Error(`redo: ${JSON.stringify(redone)}`);
+    console.log(`[${tag}] undo: the import gone in one entry; redo: back`);
+
+    // One order: straight through, no Layer order dialog.
+    await importIntoFold(page, 'tests/fixtures/fold-samples/preliminary-base.fold');
+    await page.waitForFunction((steps) => window.__treemakerWorkspaceStore.getState().foldSequences[0]?.document.steps.length === steps + 2, before.steps, { timeout: 60000 });
+    if (await page.getByRole(DIALOG.role, { name: DIALOG.name }).isVisible()) throw new Error('a pattern with one order opened the dialog');
+    await page.getByRole(IMPORT_DIALOG.role, { name: IMPORT_DIALOG.name }).waitFor({ state: 'detached', timeout: 30000 });
+    await page.mouse.move(1, 1);
+    await record(`fold-import-${tag}-one-order`, await foldPanes(page));
+    console.log(`[${tag}] a pattern with one order imported straight through, no dialog`);
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -4388,6 +4616,8 @@ const CASES = [
   { name: 'edit-selection-horizon', run: editSelectionCases('Horizon') },
   { name: 'pose-toolbar', run: poseToolbarCases(null) },
   { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
+  { name: 'fold-import', run: foldImportCases(null) },
+  { name: 'fold-import-horizon', run: foldImportCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
