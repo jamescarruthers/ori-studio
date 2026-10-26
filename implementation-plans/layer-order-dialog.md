@@ -855,6 +855,15 @@ Settled while building H4, for the PRs that meet it:
   - **Deleted.** The save marks an `order-not-given` entry whose figure is
     gone `figure-missing`, so a figure folded on the reused id is never
     shown it. `figure-missing` entries stay in the bag, unshown.
+  - **No id reused in a session.** Figure ids come from a session high-water
+    mark (`foldedFigureIds.ts`) that opening a file raises past every figure
+    id it holds and every id its bag names, so a fold after a Delete, with
+    no save between, never takes the deleted figure's id.
+  - **The session's bag follows each save** (`foldedFigureLayerOrdersAfterSave`):
+    an entry a save dropped stays dropped, and a figure that shows a record,
+    after an undo, writes its entry again.
+  - **`sourceKey`,** the key development builds saved before `refoldKey`, is
+    known and ignored: those entries never lock a figure, and are not shown.
   - **Blind spots, display only.** A figure the older build moved or
     renamed shows nothing. One it deleted and folded again from the same
     region, unmoved, on the reused id with the same title, is shown the
