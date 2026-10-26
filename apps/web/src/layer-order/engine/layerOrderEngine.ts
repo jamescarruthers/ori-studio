@@ -205,12 +205,19 @@ const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
  * a wasm call can't be stopped, so a longer one would hold the worker from the
  * user's next preview or Apply; one that runs out offers Keep trying. The
  * count's slice is `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
+ *
+ * An open and a restore get a minute: the dialog opens behind "Working out
+ * the layer orders…" with Cancel, which ends its worker at once, and a host's
+ * restore (H2's resolve, which a refold or a reopen makes) behind its Stop.
+ * The figures stacked deepest take that long: the source admits stacks up to
+ * `LAYER_ORDER_MAX_STACKED_TRIPLES` (`crates/oristudio-fold/src/steer/source.rs`),
+ * whose deepest real design opened in 33–39 s and restored in 30–37 s.
  */
 export const LAYER_ORDER_LIMITS = {
-  open: { ...NODES, deadlineMs: 30_000 },
+  open: { ...NODES, deadlineMs: 60_000 },
   preview: { ...NODES, deadlineMs: 3_000 },
   commit: { ...NODES, deadlineMs: 10_000 },
-  restore: { ...NODES, deadlineMs: 30_000 },
+  restore: { ...NODES, deadlineMs: 60_000 },
   step: { ...NODES, deadlineMs: 3_000 },
   explain: { ...NODES, deadlineMs: 3_000 },
 } as const satisfies Record<string, LayerOrderLimits>;

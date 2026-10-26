@@ -625,6 +625,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Lagenreihenfolgen werden ermittelt…",
+    "openingLong": "Bei großen Figuren kann das bis zu einer Minute dauern.",
     "pane": {
       "creasePattern": "Faltmuster",
       "folded": "Gefaltet",

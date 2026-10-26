@@ -643,6 +643,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calcul des ordres des couches…",
+    "openingLong": "Pour les grandes figures, cela peut prendre jusqu’à une minute.",
     "pane": {
       "creasePattern": "Patron de plis",
       "folded": "Pliée",

@@ -607,6 +607,7 @@
     },
     "objectSeparator": "、",
     "opening": "重なり順を求めています…",
+    "openingLong": "大きな図では最大 1 分ほどかかることがあります。",
     "pane": {
       "creasePattern": "展開図",
       "folded": "折り上がり",

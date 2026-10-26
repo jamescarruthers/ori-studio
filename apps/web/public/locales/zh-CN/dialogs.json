@@ -607,6 +607,7 @@
     },
     "objectSeparator": "、",
     "opening": "正在计算层叠顺序…",
+    "openingLong": "大型图形最多可能需要一分钟。",
     "pane": {
       "creasePattern": "折痕图",
       "folded": "折叠图",

@@ -253,38 +253,48 @@ fn deepest_over(cap: u64) -> usize {
     (3..).find(|&d| choose3(d) > cap).unwrap_or(3) as usize
 }
 
-/// The dialog takes stacks deeper than Fold's cap: an accordion one layer
-/// past the deepest stack Fold imports is the dialog's to order, while Fold's
-/// Import CP still refuses the same pattern.
+/// The dialog's cap while its deadlines were 30 s: 60 s ones take deeper
+/// stacks than it.
+const THIRTY_SECOND_CAP: u64 = 20_000_000;
+
+/// The dialog takes stacks deeper than Fold's cap: accordions one layer past
+/// the deepest stack Fold imports and one past the dialog's 30 s cap are the
+/// dialog's to order, while Fold's Import CP still refuses the same patterns.
 #[test]
 fn a_stack_too_deep_for_fold_is_admitted_up_to_the_dialog_s_own_cap() {
-    const { assert!(LAYER_ORDER_MAX_STACKED_TRIPLES > MAX_STACKED_TRIPLES) };
-    let strips = deepest_over(MAX_STACKED_TRIPLES);
-    assert_eq!(strips, 418);
-    let triples = choose3(strips as u64);
-    assert!(triples <= LAYER_ORDER_MAX_STACKED_TRIPLES);
+    const { assert!(LAYER_ORDER_MAX_STACKED_TRIPLES > THIRTY_SECOND_CAP) };
+    const { assert!(THIRTY_SECOND_CAP > MAX_STACKED_TRIPLES) };
+    let depths = [
+        deepest_over(MAX_STACKED_TRIPLES),
+        deepest_over(THIRTY_SECOND_CAP),
+    ];
+    assert_eq!(depths, [418, 495]);
+    for strips in depths {
+        let triples = choose3(strips as u64);
+        assert!(triples <= LAYER_ORDER_MAX_STACKED_TRIPLES, "{strips}");
 
-    let layer = LayerSource::from_oriedita(&source_of_cp(&accordion_cp(strips)))
-        .unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(layer.view().faces().len(), strips);
-    let depth = layer.problem().stack_depth(layer.view());
-    assert_eq!((depth.deepest, depth.triples), (strips, triples));
+        let layer = LayerSource::from_oriedita(&source_of_cp(&accordion_cp(strips)))
+            .unwrap_or_else(|e| panic!("{strips}: {e}"));
+        assert_eq!(layer.view().faces().len(), strips);
+        let depth = layer.problem().stack_depth(layer.view());
+        assert_eq!((depth.deepest, depth.triples), (strips, triples));
 
-    let refusal = ImportedPattern::new(
-        &accordion_input(strips),
-        ImportTarget::Empty {
-            start: StartSide::Front,
-        },
-    )
-    .err();
-    assert_eq!(
-        refusal,
-        Some(ImportRefusal::StackedTooDeep {
-            deepest: strips,
-            triples,
-            limit: MAX_STACKED_TRIPLES,
-        })
-    );
+        let refusal = ImportedPattern::new(
+            &accordion_input(strips),
+            ImportTarget::Empty {
+                start: StartSide::Front,
+            },
+        )
+        .err();
+        assert_eq!(
+            refusal,
+            Some(ImportRefusal::StackedTooDeep {
+                deepest: strips,
+                triples,
+                limit: MAX_STACKED_TRIPLES,
+            })
+        );
+    }
 }
 
 /// One layer past the deepest stack the dialog's cap takes is refused with

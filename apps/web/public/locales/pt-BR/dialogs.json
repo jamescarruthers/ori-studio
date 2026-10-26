@@ -643,6 +643,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calculando as ordens das camadas…",
+    "openingLong": "Figuras grandes podem levar até um minuto.",
     "pane": {
       "creasePattern": "Padrão de vincos",
       "folded": "Dobrada",

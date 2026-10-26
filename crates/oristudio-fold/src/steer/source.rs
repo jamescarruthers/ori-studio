@@ -73,8 +73,8 @@ use crate::pattern::FaceId;
 /// ([`MAX_STACKED_TRIPLES`](oristudio_layer_order::MAX_STACKED_TRIPLES),
 /// 12,000,000), which the Fold workspace keeps: Fold's is set so that a
 /// step replays in about 3 s, while the dialog opens one figure, behind
-/// "Working out the layer orders…" with Cancel, against a 30 s deadline, and
-/// a host's restore has 30 s too (`LAYER_ORDER_LIMITS`,
+/// "Working out the layer orders…" with Cancel, against a 60 s deadline, and
+/// a host's restore, which its Stop ends, has 60 s too (`LAYER_ORDER_LIMITS`,
 /// `apps/web/src/layer-order/engine/layerOrderEngine.ts`). A count, not a
 /// clock, as Fold's is, so a figure is refused, or not, alike on every
 /// machine.
@@ -84,11 +84,13 @@ use crate::pattern::FaceId;
 /// built Fold bridge in Node 22, making the calls the dialog's worker and the
 /// host engine make (census 2's harness, `scripts/layer-order-census.mjs`),
 /// one design at a time on an Apple Silicon Mac that was running other work
-/// (load 7–17 on 10 cores). Open is `layer_open_showing` on Edit's order,
+/// (load 7–17 on 10 cores, up to 53 on the last runs). Open is
+/// `layer_open_showing` on Edit's order,
 /// building the source included; previews are 13 single flips; restore is a
 /// fresh instance restoring the record the dialog saved; memory is each
 /// instance's wasm memory at its peak. The designs at 19.0 and 51.4 million
-/// were run three times each; each figure is the slowest of its runs:
+/// were run three and five times (two of those with the dialog's own 60 s
+/// limits); each figure is the slowest of its runs:
 ///
 /// | triples | deepest | faces | open | previews p50 / max | restore | memory, dialog / host |
 /// | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -96,7 +98,7 @@ use crate::pattern::FaceId;
 /// | 12.8 M | 324 | 1,110 | 4.6 s | 258 / 504 ms | 4.3 s | 101 / 99 MiB |
 /// | 17.9 M | 302 | 1,056 | 3.5 s | 4 / 4 ms | 3.3 s | 109 / 107 MiB |
 /// | 19.0 M | 261 | 1,524 | 18.6 s | 83 / 118 ms | 19.8 s | 143 / 140 MiB |
-/// | 51.4 M | 320 | 3,449 | 38.6 s | 134 / 215 ms | 37.3 s | 361 / 353 MiB |
+/// | 51.4 M | 320 | 3,449 | 38.7 s | 147 / 215 ms | 39.2 s | 361 / 353 MiB |
 /// | 67.9 M | 370 | 3,224 | 54.5 s | 339 ms / 1.5 s | none: its record is over budget | 391 MiB |
 /// | 68.3 M | 604 | 3,119 | 50.1 s | 809 / 887 ms | 65.4 s | 269 / 262 MiB |
 /// | 79.8 M | 358 | 3,332 | 60.8 s | 380 ms / 3.1 s | 81.3 s | 418 / 408 MiB |
@@ -107,12 +109,19 @@ use crate::pattern::FaceId;
 /// restore, the completion session's deduction and first order, and both
 /// swing with the machine's load: the design at 19.0 million opened in
 /// 11–19 s and restored in 12–20 s over its runs, the slowest at load 13.
-/// The four designs up to 19.0 million open and restore within the
-/// deadlines on every run. The next, at 51.4 million, opened in 33–39 s and
-/// restored in 30–37 s, past both deadlines on every run, and the three
-/// above it take 50–81 s. No real design lies between the two, so the cap
-/// sits just above the last one that fits.
-pub const LAYER_ORDER_MAX_STACKED_TRIPLES: u64 = 20_000_000;
+///
+/// The five designs up to 51.4 million open and restore within the 60 s
+/// deadlines on every run. The one at 51.4 million, the slowest, opened in
+/// 33–39 s and restored in 30–39 s; in Chromium, opened through Edit's Fold
+/// with layer order…, the dialog was ready 29–44 s after it showed, and the
+/// host engine restored its record in 29–31 s. Above it, none is usable at
+/// 60 s: the one at 67.9 million opens in 54.5 s, but its record is over the
+/// 1 MB budget, so its Apply would refuse; the two at 68.3 and 79.8 million
+/// restore in 65 and 81 s. No real design lies between 51.4 and 67.9
+/// million, so the cap sits just above the last one that fits. (It was
+/// 20,000,000, just above the design at 19.0 million, while both deadlines
+/// were 30 s.)
+pub const LAYER_ORDER_MAX_STACKED_TRIPLES: u64 = 52_000_000;
 
 /// How crease-pattern coordinates map to the solver's: y up, the paper's
 /// longer side 1, the corner of its bounding box with the least x and the

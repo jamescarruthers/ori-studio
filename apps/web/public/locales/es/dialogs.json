@@ -643,6 +643,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Calculando los órdenes de capas…",
+    "openingLong": "Con figuras grandes puede tardar hasta un minuto.",
     "pane": {
       "creasePattern": "Patrón de pliegues",
       "folded": "Plegada",

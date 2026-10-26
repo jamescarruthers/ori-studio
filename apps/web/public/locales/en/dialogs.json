@@ -625,6 +625,7 @@
     },
     "objectSeparator": ", ",
     "opening": "Working out the layer orders…",
+    "openingLong": "Large figures can take up to a minute.",
     "pane": {
       "creasePattern": "Crease pattern",
       "folded": "Folded",
