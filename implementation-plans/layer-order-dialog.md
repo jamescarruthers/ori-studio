@@ -818,12 +818,15 @@ H3's new rehydrate, so it can only follow H3.
 
 Settled while building H4, for the PRs that meet it:
 - **The request gained two fields:** `applyRefolds` (D12: the foot's note,
-  and an untouched Apply still writes, `untouchedApplyWrites`) and `review`
-  (D14: opened from a flag's Review…; Edit's and the Diagram's both set it).
-  U10's `useLayerOrderDialog` should init the reducer with
-  `recordNeedsAttention: untouchedApplyWrites(request.record, request.applyRefolds)`
-  and `review: request.review === true`, where it now has
-  `recordNeedsAttentionOf(request.record)` and `false`.
+  and an untouched Apply on a record still writes, `untouchedApplyWrites`;
+  with no record the dialog opens on the order a plain Refold draws, and
+  Edit runs that Refold for an untouched Apply) and `review` (D14: opened
+  from a flag's Review…; Edit's and the Diagram's both set it). Both
+  deciders read them through one helper,
+  `layer-order/dialog/layerOrderDialogInit.ts` (`layerOrderRequestInit`):
+  U10's `useLayerOrderDialog` should spread it into the reducer's init
+  (adding its own `surface`, `side` and clock), where it now has
+  `recordNeedsAttentionOf(request.record)` and `review: false`.
 - **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`, added
   in H4 line for line as U10 has it (the frame and its styles merge clean);
   the one line that conflicts, in `LayerOrderDialog`, resolves to D19's
@@ -833,9 +836,17 @@ Settled while building H4, for the PRs that meet it:
   creases in 3D again on the reused id inherits the record, flagged as
   waiting; flat figures have the snapshot check for that, 3D ones have no
   flat snapshot.
-- **Not built:** a figure whose record a reload detached (`detached` in the
-  bag) shows nothing yet; the States board's "Detached by an older build"
-  frame needs the bag's detached list read back onto its figure.
+- **Detached by an older build** (the Refusals board's frame), built in H4:
+  saved entries carry a `sourceKey` (the source fingerprint alone); an
+  `order-not-given` record whose figure is still there, flat and folded
+  from the same creases is shown for review ("Not applied", Review…),
+  never used to fold, its entry kept in `detached[]` until an Apply takes
+  it up. A reused id folded from other creases shows nothing, and
+  `figure-missing` entries stay in the bag, unshown. Entries saved before
+  the key existed (dev builds only) are never shown.
+- **A 3D figure whose creases fold flat again,** and whose record a
+  refold on them could not draw, is a stale figure on flat creases:
+  flagged, opened on them, refolded flat by its Apply.
 
 ### Risks
 
