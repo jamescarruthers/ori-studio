@@ -400,6 +400,24 @@ For U6: a step while the count is unfinished first counts for half its
 deadline, so on the 5 designs whose count doesn't end, 19 of their 20 steps
 took 1.4 to 2.5 s of a 5 s deadline. The stepper's deadline should be short.
 
+**E9, 2026-10-25: the stepper without the count.** A step before the count
+has what it steps through now searches for the solution the count would
+list next, in the count's order, within nine tenths of its limits, and the
+count gets the tenth held back, unless the answer came from what earlier
+steps proved or the cursor was started with `countInSteps: false` (row E9).
+A step that runs out answers `timed_out`; `end` is always a proof. On
+iguana-c0, with no count and the dialog's 3 s, in wasm: X-ray › moves in
+0.3 s a step (0.9 s the first; with `countInSteps: false`, 2–3 ms, 0.6 s
+the first), ‹ back over what it found takes 1 ms, and the positions read
+"2 of 2+", "3 of 3+". By picture it does not move: the picture on screen is
+the first from the front and the last from the back (each proved in under
+1 s), and the next one hinges on whether a picture with the first top of
+one and the second of the other exists, which a check leaves undecided
+after 600 s (the converse is refuted in 13 s); those steps now say
+`timed_out`, at 3, 12 and 48 s. Keeping the count's order there needs that
+answer; the options (keep the order, step out of order on figures the count
+skips, or clause learning) are in the PR, and the choice is open.
+
 **Where the gates run.**
 - **CI:** small fixtures only (kabuto, `solution_sample_1`,
   `colorconstrainttest`), in the workspace test step, not added to the

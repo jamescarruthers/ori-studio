@@ -310,8 +310,16 @@ export interface LayerSolutionCaps {
   ordersPerComponent?: number;
   /** Combinations a look group walks; default 1,000,000. */
   combinationsPerGroup?: number;
-  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). */
+  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). The stepper's own finds are held within as many again. */
   storedBits?: number;
+  /**
+   * Whether a step counts on, a tenth of its limits held back for it;
+   * default true, for a host that never advances the count. False for one
+   * that advances it itself (the dialog's slices) or chose not to count
+   * (above `LAYER_ORDER_COUNT_MAX_OPEN_PAIRS`): a step then spends all its
+   * limits on the step.
+   */
+  countInSteps?: boolean;
 }
 
 /** A count: exact, or a lower bound ("at least `n`"); past 2⁵³ − 1 it is sent as that bound, inexact. */
@@ -337,8 +345,10 @@ export type LayerStepBy = { picture: LayerSide } | 'layer_order';
 
 /**
  * Where the order on screen lies in the stepper's fixed order ("3 of 12"):
- * `index` from 1, final once `total.exact`. Past 2⁵³ − 1 (layer orders with
- * X-ray on can be) it is sent as that bound, as a tally is.
+ * `index` from 1, final once `total.exact`. Before the count has every
+ * solution the stepper steps through, `index` counts the solutions found so
+ * far ("Solution 3") and `total` is at least those. Past 2⁵³ − 1 (layer
+ * orders with X-ray on can be) it is sent as that bound, as a tally is.
  */
 export interface LayerPosition {
   index: number;
@@ -354,9 +364,16 @@ export type LayerStepped =
       /** The order on screen's stacks now. */
       stacks: { front: LayerStacks; back: LayerStacks };
     }
-  /** No solution lies that way among those counted: final once the count is done. */
+  /**
+   * No solution lies that way: proved, so nothing is to be gained by asking
+   * again (with a count capped at its limits, none among those it counted).
+   */
   | { verdict: 'end' }
-  /** The check within the next solution ran out with nothing counted to fall back on: nothing changed. */
+  /**
+   * Out of its limits, nothing changed: the search for the next solution,
+   * or the check within it, ran out first. Asked again with longer limits
+   * (Keep trying), the step goes on from what it proved.
+   */
   | LayerTimedOut;
 
 /** The `layer_*` methods of the Fold bridge's `FoldEngine`, as the wasm glue exposes them. */
@@ -427,8 +444,13 @@ export interface LayerOrderBridge {
   /**
    * Show the next or previous solution: only the order on screen changes,
    * the cursor stays good, and a preview kept from before is dropped (Add
-   * then commits from the stepped order). Unless the count is done it first
-   * counts on within half its limits.
+   * then commits from the stepped order). Before the count has every
+   * solution it steps through, it searches for the one the count would list
+   * next (E9) within nine tenths of its limits, every check's nodes taken
+   * from one budget, and the count gets the last tenth after it, unless the
+   * answer came from what earlier steps proved or the cursor was started
+   * with `countInSteps: false`. Once the count has them, it first counts on
+   * within half its limits, as before.
    */
   layer_step(
     session: number,
