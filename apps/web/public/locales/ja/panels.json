@@ -488,6 +488,7 @@
       "replay": "平らに戻す",
       "setUpright": "上方向を設定"
     },
+    "layerOrderSelectionName": "選択範囲",
     "linesCount_other": "{{count}} 本の線",
     "measure": "測定",
     "measurePickFirstPoint": "1 点目を選択",
@@ -532,6 +533,8 @@
       "exportPng": "PNG 画像",
       "exportSvg": "SVG 画像",
       "fold": "折る",
+      "foldWithLayerOrder": "重なり順を指定して折る…",
+      "foldWithLayerOrder3d": "重なり順は平らな折りで使えます",
       "label": "展開図の操作",
       "references": "折りのリファレンス",
       "saveImage": "画像として保存",

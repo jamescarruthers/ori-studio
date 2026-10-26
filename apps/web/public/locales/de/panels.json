@@ -515,6 +515,7 @@
       "replay": "Auf flach zurücksetzen",
       "setUpright": "Oben festlegen"
     },
+    "layerOrderSelectionName": "Auswahl",
     "linesCount_one": "{{count}} Linie",
     "linesCount_other": "{{count}} Linien",
     "measure": "Messen",
@@ -561,6 +562,8 @@
       "exportPng": "PNG-Bild",
       "exportSvg": "SVG-Bild",
       "fold": "Falten",
+      "foldWithLayerOrder": "Mit Lagenreihenfolge falten…",
+      "foldWithLayerOrder3d": "Die Lagenreihenfolge funktioniert bei flachen Faltungen",
       "label": "Aktionen für Faltmuster",
       "references": "Faltreferenzen",
       "saveImage": "Als Bild speichern",

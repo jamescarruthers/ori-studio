@@ -77,19 +77,14 @@ import {
   deleteFoldedFigure,
   duplicateFoldedFigure,
   exportFoldedFigure,
+  foldCreases,
   setFoldedFigureDisplayStyle,
   showAnotherFoldedSolution,
 } from './foldedFigureVerbs';
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
-
-/**
- * The face folding holds fixed. Oriedita lets this be chosen and the kernel still
- * takes it per fold, but the product does not offer the choice: the picker was the
- * only thing that ever set it, so every fold was already from face 1.
- */
-const FOLD_STARTING_FACE_ID = 1;
+import { foldSelectionWithLayerOrder } from './foldSelectionWithLayerOrder';
 
 /**
  * How long a wheel must go quiet before a figure's zoom is written to the
@@ -160,7 +155,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
   const setOristudioCpActiveFoldedFigure = useWorkspaceStore(
     (state) => state.setOristudioCpActiveFoldedFigure
   );
-  const foldOristudioCpDocument = useWorkspaceStore((state) => state.foldOristudioCpDocument);
   const setOristudioCpFoldedFigurePlacement = useWorkspaceStore(
     (state) => state.setOristudioCpFoldedFigurePlacement
   );
@@ -738,21 +732,32 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
     [setOristudioCpFoldedFigurePlacement]
   );
 
+  // Fold, and Fold with layer order…, on given creases: the selection
+  // toolbar's sheet, or the selection `G` and its sibling key fold. A colour
+  // run still open lands as its own entry first, as for every verb run
+  // through `runFoldedFigureAction`.
+  const handleFoldLines = useCallback(
+    (lineIds: readonly number[]) => {
+      endOpenMenuGesture();
+      void foldCreases(lineIds, t);
+    },
+    [endOpenMenuGesture, t]
+  );
+  const handleFoldLinesWithLayerOrder = useCallback(
+    (lineIds: readonly number[]) => {
+      endOpenMenuGesture();
+      void foldSelectionWithLayerOrder(lineIds, t);
+    },
+    [endOpenMenuGesture, t]
+  );
+
   const handleFoldModel = useCallback(() => {
-    if (!canFoldSelectedModel) return;
-    runFoldedFigureAction(t('panels:creasePattern.foldModelAction', 'Fold model'), () =>
-      foldOristudioCpDocument({
-        startingFaceId: FOLD_STARTING_FACE_ID,
-        lineIds: selectedFoldLineIds,
-      })
-    );
-  }, [
-    canFoldSelectedModel,
-    foldOristudioCpDocument,
-    selectedFoldLineIds,
-    runFoldedFigureAction,
-    t,
-  ]);
+    if (canFoldSelectedModel) handleFoldLines(selectedFoldLineIds);
+  }, [canFoldSelectedModel, handleFoldLines, selectedFoldLineIds]);
+
+  const handleFoldModelWithLayerOrder = useCallback(() => {
+    if (canFoldSelectedModel) handleFoldLinesWithLayerOrder(selectedFoldLineIds);
+  }, [canFoldSelectedModel, handleFoldLinesWithLayerOrder, selectedFoldLineIds]);
 
   const trackStyled = useCallback(
     (figure: OristudioCpFoldedFigureEntry, options: readonly FoldedFigureStyleOption[]) => {
@@ -1121,6 +1126,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
     gestureLabel: foldedGestureLabel,
     applyBoxUpdate: handleFoldedFigureBoxUpdate,
     foldModel: handleFoldModel,
+    /** Fold with layer order… on the selection, for its key (row H5). */
+    foldModelWithLayerOrder: handleFoldModelWithLayerOrder,
+    /** Fold given creases, and Fold with layer order… on them: the selection toolbar's two fold verbs. */
+    foldLines: handleFoldLines,
+    foldLinesWithLayerOrder: handleFoldLinesWithLayerOrder,
     duplicate: handleDuplicateFoldedFigure,
     remove: handleDeleteFoldedFigure,
   };

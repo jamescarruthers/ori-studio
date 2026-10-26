@@ -569,6 +569,7 @@
       "replay": "Вернуть в плоское состояние",
       "setUpright": "Задать верх"
     },
+    "layerOrderSelectionName": "Выделение",
     "linesCount_one": "{{count}} линия",
     "linesCount_few": "{{count}} линии",
     "linesCount_many": "{{count}} линий",
@@ -619,6 +620,8 @@
       "exportPng": "Изображение PNG",
       "exportSvg": "Изображение SVG",
       "fold": "Сложить",
+      "foldWithLayerOrder": "Сложить с порядком слоёв…",
+      "foldWithLayerOrder3d": "Порядок слоёв работает с плоскими складываниями",
       "label": "Действия с паттерном складок",
       "references": "Референсы складывания",
       "saveImage": "Сохранить как изображение",

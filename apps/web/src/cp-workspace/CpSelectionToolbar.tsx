@@ -18,6 +18,9 @@ import { IconButton } from '../components/ui/IconButton';
 import { MenuIconButton } from '../components/ui/MenuIconButton';
 import { useCanvasObjectAnchor } from './canvasObjects/useCanvasObjectAnchor';
 import { useSimulateSelection } from './inlineSimulation/useSimulateSelection';
+import { resolveFoldRoute } from './folded/foldRoute';
+import { selectionFoldActions } from './folded/selectionFoldActions';
+import { FoldWithLayerOrderIcon } from '../components/ui/FoldWithLayerOrderIcon';
 import { selectionCoversEntireCp, useOpenReferences } from './references/useOpenReferences';
 import type { AnnotationBox } from './annotations/annotationTransform';
 import { useWorkspaceStore } from '../store/workspaceStore/store';
@@ -78,17 +81,28 @@ function ExportMenu({
 
 /**
  * Floating actions for a crease selection that is one whole sheet — every line
- * inside one closed outer border: fold, export (all per-sheet formats),
+ * inside one closed outer border: fold, or fold with a layer order chosen in
+ * the Layer order dialog (`selectionFoldActions`), export (all per-sheet formats),
  * save-to-image, and simulate. Hovers above the selection via
  * {@link FloatingToolbar}, mirroring {@link CpImageInspector}. Renders nothing
  * unless the selection resolves to exactly one sheet (see
  * {@link resolveSelectedSheet}).
  */
-export function CpSelectionToolbar({ container }: { container: HTMLElement | null }) {
+export interface CpSelectionToolbarProps {
+  container: HTMLElement | null;
+  /**
+   * Fold the sheet's creases, and Fold with layer order… on them: the folded
+   * layer's verbs as the panel binds them (`useFoldedFigures`), so a Style-menu
+   * colour run still open lands as its own entry first, as it does for G.
+   */
+  fold: (lineIds: readonly number[]) => void;
+  foldWithLayerOrder: (lineIds: readonly number[]) => void;
+}
+
+export function CpSelectionToolbar({ container, fold, foldWithLayerOrder }: CpSelectionToolbarProps) {
   const { t } = useTranslation();
   const selection = useWorkspaceStore((s) => s.oristudioCpSelection);
   const cpDocument = useWorkspaceStore((s) => s.oristudioCpDocument?.document ?? null);
-  const foldOristudioCpDocument = useWorkspaceStore((s) => s.foldOristudioCpDocument);
   const exportSheet = useWorkspaceStore((s) => s.exportOristudioCpSheet);
   const simulateSheet = useWorkspaceStore((s) => s.simulateOristudioCpSheet);
   const shareSheet = useWorkspaceStore((s) => s.shareOristudioCpSheet);
@@ -126,6 +140,12 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
   const match = useMemo(
     () => resolveSelectedSheet(sheetIndex, selection.lines),
     [sheetIndex, selection.lines]
+  );
+
+  // How the sheet folds, flat or in 3D: Fold with layer order… is a flat fold's.
+  const foldRoute = useMemo(
+    () => (match ? resolveFoldRoute(cpDocument, match.cpLineIds).kind : 'none'),
+    [match, cpDocument]
   );
 
   const box: AnnotationBox | null = useMemo(() => {
@@ -174,16 +194,25 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
       className="cp-selection-toolbar"
       ariaLabel={t('panels:creasePattern.selectionToolbar.label', 'Crease pattern actions')}
     >
-      <IconButton
-        size="sm"
-        variant="toolbar"
-        title={t('panels:creasePattern.selectionToolbar.fold', 'Fold')}
-        onClick={() =>
-          runAndDismiss(() => void foldOristudioCpDocument({ lineIds: [...cpLineIds] }))
-        }
-      >
-        <Origami size={14} />
-      </IconButton>
+      {selectionFoldActions({
+        t,
+        route: foldRoute,
+        fold: () => runAndDismiss(() => fold(cpLineIds)),
+        foldWithLayerOrder: () => runAndDismiss(() => foldWithLayerOrder(cpLineIds)),
+      }).map((action) => (
+        <IconButton
+          key={action.id}
+          size="sm"
+          variant="toolbar"
+          aria-label={action.label}
+          // While it cannot act, its tooltip says why.
+          title={(action.disabled ? action.hint : undefined) ?? action.label}
+          disabled={action.disabled}
+          onClick={action.run}
+        >
+          {action.id === 'fold' ? <Origami size={14} /> : <FoldWithLayerOrderIcon size={14} />}
+        </IconButton>
+      ))}
       <ExportMenu
         label={t('panels:creasePattern.selectionToolbar.export', 'Export…')}
         onExport={(format) => runAndDismiss(() => void exportSheet(format, sheet))}

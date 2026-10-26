@@ -142,6 +142,7 @@ import {
   type ScriptedSolutionStep,
 } from '../../cp-workspace/folded/foldedSolutionCursor.fixtures';
 import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
 import { resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
 
@@ -406,7 +407,12 @@ describe('the cursor’s life', () => {
     const cursor = script(movedTo(2, 3));
     await showAnotherFoldedSolution(figure.id, t);
     const applied = twoConstraintRecord({ constraints: [[0, 1, 1]] });
-    await applyFoldedFigureLayerOrder(figure.id, { record: applied, relations: Uint32Array.of(1, 0), source: SOURCE() }, t);
+    await applyFoldedFigureLayerOrder(
+      figure.id,
+      { record: applied, relations: Uint32Array.of(1, 0), source: SOURCE() },
+      markFoldPress(state()),
+      t
+    );
     expect(figureNow().layerOrder).toEqual(held(applied));
     expect(cursor.closed).toBe(true);
     expect(foldedSolutionCursorFigure()).toBeNull();

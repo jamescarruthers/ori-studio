@@ -115,6 +115,7 @@ import {
   applyFoldedFigureLayerOrder,
   openFoldedFigureLayerOrder,
 } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 import { buildFoldedFigureActions } from '../../cp-workspace/folded/foldedFigureActions';
 import { buildFoldedFigureProperties } from '../../cp-workspace/folded/foldedFigureProperties';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
@@ -11332,8 +11333,9 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
     return figure;
   }
 
-  /** Apply as the verb runs it: one entry through the folded layer's bracket. */
-  const applyAsEntry = (id: string, answer: LayerOrderApplied) => applyFoldedFigureLayerOrder(id, answer, t);
+  /** Apply as the verb runs it: one entry through the folded layer's bracket, its press made just now. */
+  const applyAsEntry = (id: string, answer: LayerOrderApplied) =>
+    applyFoldedFigureLayerOrder(id, answer, markFoldPress(useWorkspaceStore.getState()), t);
 
   /** `folded figure rehydrated`, as sent since the last reset. */
   const rehydratedEvents = () =>

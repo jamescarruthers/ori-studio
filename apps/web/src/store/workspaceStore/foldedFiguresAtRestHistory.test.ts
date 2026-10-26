@@ -121,6 +121,7 @@ import {
   showPreviousFoldedSolution,
 } from '../../cp-workspace/folded/foldedFigureVerbs';
 import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 const DIGEST = '00000000c0ffee01';
@@ -410,7 +411,12 @@ describe('an undo while a press folds, then a redo', () => {
 
     const applied = twoConstraintRecord({ constraints: [[0, 1, 1]] });
     await undoWhile(() =>
-      applyFoldedFigureLayerOrder(figure.id, { record: applied, relations: Uint32Array.of(1, 0), source }, t)
+      applyFoldedFigureLayerOrder(
+        figure.id,
+        { record: applied, relations: Uint32Array.of(1, 0), source },
+        markFoldPress(state()),
+        t
+      )
     );
     await state().redo();
     expect(figures()[0]).toMatchObject({ handle: turned.handle, status: 'ready', layerOrder: held() });
