@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 import { renderDefox } from './defoxRenderer.js';
 import { PAGE } from '../../../../../third_party/step-folder/src/defox/page.js';

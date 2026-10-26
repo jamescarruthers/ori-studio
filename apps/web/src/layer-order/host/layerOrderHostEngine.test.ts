@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The host engine against fake workers that run the real worker shell over
  * the fake backend through comlink (`engine/layerOrderEngine.fixtures.ts`):

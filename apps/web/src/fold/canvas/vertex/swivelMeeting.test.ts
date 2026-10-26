@@ -36,6 +36,17 @@ describe('a swivel’s meeting points', () => {
     expect(swivelMeetings(index, valley)).toBe(swivelMeetings(index, valley));
   });
 
+  it('are where a layer’s edge crosses the folded edge, though the engine’s shown stretch starts just past it', () => {
+    // A layer on top hides the folded edge below y = 0.3, its edge crossing
+    // there at 45°: the engine, measuring the stretch a probe inside the
+    // edge's layers, shows it from 1e-4 above the crossing.
+    const [meeting, ...rest] = swivelMeetings(foldPickIndex(bookScene(), bookLandmarks([[0.3001, 1]]), []), valley);
+    expect(rest).toEqual([]);
+    expect(meeting?.pick.sheet[1]).toBeCloseTo(0.3, 14);
+    // Farther under it than the engine's slack, half its minimum feature: none.
+    expect(swivelMeetings(foldPickIndex(bookScene(), bookLandmarks([[0.3006, 1]]), []), valley)).toEqual([]);
+  });
+
   it('are none where a layer hides the folded edge, or past its ends', () => {
     expect(swivelMeetings(foldPickIndex(bookScene(), bookLandmarks([[0.5, 1]]), []), valley)).toEqual([]);
     const past = { n: [c, s] as [number, number], d: c * 0.5 + s * 1.2 };

@@ -589,6 +589,8 @@ export function useFoldRepeatTool(
     view: {
       range: range ? { entries, starts: range.starts, first: range.first.id!, count: range.count } : null,
       axes: axes === undefined ? null : (axes ?? []),
+      // The axes are named as the folded pane shows them: the step on screen, in its view.
+      foldedView: parent?.summary?.view ?? null,
       states: axisViews,
       axis,
       hovered,

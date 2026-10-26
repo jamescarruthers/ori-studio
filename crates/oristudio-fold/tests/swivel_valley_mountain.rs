@@ -2,8 +2,8 @@ mod beloch;
 mod support;
 mod vertex;
 use oristudio_fold::{
-    CompoundRefused, Direction, FoldRefusal, Letter, State, SwivelByEdge, SwivelKind,
-    SwivelValleyMountain, VertexChoices, VertexFolded,
+    CompoundRefused, CreaseKind, Direction, FoldRefusal, Letter, SegmentKind, State, SwivelByEdge,
+    SwivelKind, SwivelValleyMountain, VertexChoices, VertexFolded,
 };
 use oristudio_geometry::Line;
 use vertex::cases;
@@ -187,6 +187,121 @@ fn lines_that_meet_on_no_folded_edge_or_bound_no_flap_are_refused() {
         refusal(x_eq(0.5), low),
         FoldRefusal::SwivelNoFlap { .. }
     ));
+}
+
+/// The folded square with its bottom left corner, both layers, valley
+/// folded up along the line from (0, 3/4) to (3/8, 0): the corner lands at
+/// (3/5, 3/10), past the folded edge, and the flap's raw edge from there to
+/// (0, 3/4) crosses the folded edge at (1/2, 3/8), hiding it below there
+/// down to (1/2, 1/6).
+fn spine_crossed_by_a_flap() -> State {
+    use support::*;
+    let corner = through([0.0, 0.75], [0.375, 0.0]);
+    fold(
+        &folded_square(),
+        &all(corner, [0.05, 0.05], Direction::Valley),
+    )
+    .state
+}
+
+/// Where the flap's edge crosses the folded edge.
+const CROSSING: [f64; 2] = [0.5, 0.375];
+
+/// The letter of the crease `after` has at the sheet point `at`, as the
+/// viewer saw the face holding it `before` it folded: its own on a face
+/// showing its front, the other on one showing its back (the view is not
+/// turned over).
+fn letter_seen(before: &State, after: &State, at: [f64; 2]) -> Letter {
+    let crease = after
+        .crease_at(at)
+        .unwrap_or_else(|| panic!("no crease at {at:?}"));
+    let CreaseKind::Folded(letter) = crease.kind else {
+        panic!("the crease at {at:?} is not folded: {:?}", crease.kind);
+    };
+    let front_up = before
+        .face_at(at)
+        .and_then(|f| before.front_up(f))
+        .unwrap_or_else(|| panic!("no face at {at:?}"));
+    match (letter, front_up) {
+        (letter, true) => letter,
+        (Letter::Valley, false) => Letter::Mountain,
+        (Letter::Mountain, false) => Letter::Valley,
+    }
+}
+
+#[test]
+fn the_lines_can_meet_where_a_layers_edge_crosses_the_folded_edge() {
+    use support::*;
+    let state = spine_crossed_by_a_flap();
+    // The landmarks see the crossing, the corner the flap's edge makes with
+    // the folded edge, though they measure the folded edge's visible part a
+    // probe inside its layers, where it starts a little above the crossing.
+    let landmarks = state.landmarks(&[]);
+    let crossing = landmarks
+        .points
+        .iter()
+        .find(|p| (p.at[0] - CROSSING[0]).hypot(p.at[1] - CROSSING[1]) < 1e-9)
+        .expect("the crossing is a point");
+    assert!(crossing.visible);
+    let spine = landmarks
+        .segments
+        .iter()
+        .find(|s| {
+            s.kind == SegmentKind::Bend
+                && s.at.iter().all(|p| (p[0] - 0.5).abs() < 1e-12)
+                && s.at.iter().any(|p| p[1] > 0.9)
+        })
+        .expect("the folded edge above the crossing");
+    let along = |y: f64| {
+        let [a, b] = spine.at;
+        (y - a[1]) / (b[1] - a[1])
+    };
+    let shown = spine
+        .visible
+        .iter()
+        .find(|[lo, hi]| lo.min(*hi) < along(0.9) && along(0.9) < lo.max(*hi));
+    let [lo, hi] = *shown.expect("the folded edge is in view above the crossing");
+    let starts = if along(1.0) > along(0.0) { lo } else { hi };
+    let gap = (starts - along(CROSSING[1])).abs() * (spine.at[1][1] - spine.at[0][1]).abs();
+    assert!(gap > 1e-6 && gap < 1e-3 / 2.0, "{gap}");
+    // On the layer in front, the mountain toward (3/8, 1) and the valley
+    // toward (1/8, 1): the strip between them swung over, open.
+    let op = SwivelValleyMountain {
+        valley: through(CROSSING, [0.125, 1.0]),
+        mountain: through(CROSSING, [0.375, 1.0]),
+        kind: SwivelKind::Open,
+    };
+    let analysis = state
+        .analyse_swivel_valley_mountain(&op)
+        .unwrap_or_else(|e| panic!("refused: {:?}", e.refusal));
+    assert!((analysis.vertex[0] - 0.5).abs() < 1e-12 && (analysis.vertex[1] - 0.375).abs() < 1e-12);
+    let folds = landed(&state, &op);
+    assert!(!folds.is_empty());
+    for folded in &folds {
+        // Flat: the full gate, from scratch.
+        assert_valid(&folded.state);
+        let after = &folded.state;
+        // The front layer — the right half, turned over onto the left by the
+        // book fold, so its sheet point is (1 − x, y) — creased as named, as
+        // the viewer sees it.
+        let front = |p: [f64; 2]| [1.0 - p[0], p[1]];
+        let between = |p: [f64; 2], q: [f64; 2]| [(p[0] + q[0]) / 2.0, (p[1] + q[1]) / 2.0];
+        let mountain_at = front(between(CROSSING, [0.375, 1.0]));
+        let valley_at = front(between(CROSSING, [0.125, 1.0]));
+        assert_eq!(letter_seen(&state, after, mountain_at), Letter::Mountain);
+        assert_eq!(letter_seen(&state, after, valley_at), Letter::Valley);
+        // The layer behind — the left half, which the book fold left where it
+        // was, so its sheet point is (x, y) — creased along s = b − c from
+        // the half of the folded edge that opens, the half above the crossing.
+        let behind = analysis.creases[0].direction;
+        let probe = [0.5 + 0.2 * behind[0], 0.375 + 0.2 * behind[1]];
+        assert!(matches!(
+            after.crease_at(probe).map(|c| c.kind),
+            Some(CreaseKind::Folded(_))
+        ));
+        // The folded edge below the crossing, under the flap, still folded.
+        assert!(matches!(kind_at(after, [0.5, 0.25]), CreaseKind::Folded(_)));
+    }
 }
 
 #[test]

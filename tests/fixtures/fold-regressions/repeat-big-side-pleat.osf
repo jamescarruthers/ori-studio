@@ -1,0 +1,227 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 11,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.6.2",
+    "savedAt": "2026-10-25T00:00:00.000Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.6.2",
+    "savedAt": "2026-10-25T00:00:00.000Z"
+  },
+  "workspace": {
+    "id": "workspace",
+    "title": "Repeat a pleat whose big side moves across the diagonal",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 2,
+        "id": "fold-regression-repeat-big-side-pleat",
+        "title": "Repeat a pleat whose big side moves across the diagonal",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "style": {
+          "preset": "diagram",
+          "style": {
+            "version": 1,
+            "paper": {
+              "front": "#ffffff",
+              "back": "#b3b3b3"
+            },
+            "edges": {
+              "width": 0.5,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "mountainFolds": {
+              "width": 0.25,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "valleyFolds": {
+              "width": 0.25,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "mountainDiagramCreases": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": [
+                8,
+                2,
+                1,
+                2
+              ],
+              "cap": "butt"
+            },
+            "valleyDiagramCreases": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": [
+                4,
+                2
+              ],
+              "cap": "butt"
+            },
+            "foldsAsEdges": false,
+            "auxCreases": {
+              "visible": true,
+              "pen": {
+                "width": 0.25,
+                "color": "#231f20",
+                "dash": null,
+                "cap": "butt"
+              }
+            },
+            "arrows": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "round"
+            },
+            "erode": 0.005,
+            "light": {
+              "enabled": true,
+              "azimuth": 322.19347,
+              "elevation": 42.80915
+            }
+          }
+        },
+        "steps": [
+          {
+            "id": "fstep-rbp-1",
+            "parent": null,
+            "op": {
+              "kind": "pleat",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.25
+                  ],
+                  [
+                    0.75,
+                    1
+                  ]
+                ]
+              },
+              "second": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.15
+                  ],
+                  [
+                    0.85,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.9,
+                0.1
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "expect": "fs1:35bfdf5dc8bf84f8",
+            "note": "Pleat: mountain along y = x + 1/4, valley along y = x + 0.15, both free lines across the top left corner. The side of the mountain that holds the valley moves (the engine’s rule for a pleat): the big side, across the diagonal y = x."
+          },
+          {
+            "id": "fstep-rbp-2",
+            "parent": "fstep-rbp-1",
+            "op": {
+              "kind": "repeat",
+              "source": {
+                "first": "fstep-rbp-1",
+                "last": "fstep-rbp-1",
+                "revision": "fh1:076bc742b1c940ef"
+              },
+              "parentState": "fs1:35bfdf5dc8bf84f8",
+              "axis": {
+                "n": [
+                  -0.7071067811865476,
+                  0.7071067811865476
+                ],
+                "d": 0
+              },
+              "steps": [
+                {
+                  "op": {
+                    "kind": "pleat",
+                    "line": {
+                      "via": "free",
+                      "through": [
+                        [
+                          0.24999999999999994,
+                          5.551115123125783e-17
+                        ],
+                        [
+                          1,
+                          0.75
+                        ]
+                      ]
+                    },
+                    "second": {
+                      "via": "free",
+                      "through": [
+                        [
+                          0.14999999999999997,
+                          3.3306690738754695e-17
+                        ],
+                        [
+                          1,
+                          0.85
+                        ]
+                      ]
+                    },
+                    "moving": [
+                      0.10000000000000017,
+                      0.8999999999999998
+                    ],
+                    "seed": {
+                      "scope": "flaps",
+                      "at": [
+                        [
+                          0.37746249184605357,
+                          0.6225375081539466
+                        ],
+                        [
+                          0.5994791666666667,
+                          0.4005208333333334
+                        ]
+                      ]
+                    }
+                  },
+                  "expect": "fs1:ec71a2d14f554c94",
+                  "sourceStep": "fstep-rbp-1"
+                }
+              ]
+            },
+            "expect": "fs1:ec71a2d14f554c94",
+            "note": "Repeat across the diagonal from the bottom left corner to the top right: the pleat mirrored, mountain along y = x − 1/4 and valley along y = x − 0.15, its big side moving across the diagonal too."
+          }
+        ]
+      }
+    ],
+    "viewState": {}
+  },
+  "artifacts": {},
+  "extensions": {}
+}

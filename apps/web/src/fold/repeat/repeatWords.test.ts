@@ -101,19 +101,49 @@ describe("Repeat's refusal words", () => {
     );
   });
 
-  it('names a symmetry axis by where it runs on the paper, as the crease pattern shows it, whichever way its normal points', () => {
+  it.each([null, { flipped: false, rotation: 0 }])(
+    'names a symmetry axis by where it runs on the paper, as the crease pattern shows it, whichever way its normal points (view %j)',
+    (view) => {
+      const s = Math.SQRT1_2;
+      const name = (n: [number, number]) => repeatAxisName(t, { n, d: 0.5 }, view);
+      expect(name([1, 0])).toBe('Center line, top to bottom');
+      expect(name([-1, 0])).toBe('Center line, top to bottom');
+      expect(name([0, 1])).toBe('Center line, left to right');
+      expect(name([0, -1])).toBe('Center line, left to right');
+      // y up, as the crease pattern pane shows the sheet: the line y = x runs from the bottom left corner to the top right.
+      expect(name([s, -s])).toBe('Diagonal, bottom left to top right');
+      expect(name([-s, s])).toBe('Diagonal, bottom left to top right');
+      expect(name([s, s])).toBe('Diagonal, top left to bottom right');
+      // Any other, by its angle from the horizontal.
+      expect(name([-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)])).toBe('Line through the center at 30°');
+    }
+  );
+
+  it('names a symmetry axis as the folded pane shows it, through the view of the step on screen', () => {
     const s = Math.SQRT1_2;
-    const name = (n: [number, number]) => repeatAxisName(t, { n, d: 0.5 });
-    expect(name([1, 0])).toBe('Center line, top to bottom');
-    expect(name([-1, 0])).toBe('Center line, top to bottom');
-    expect(name([0, 1])).toBe('Center line, left to right');
-    expect(name([0, -1])).toBe('Center line, left to right');
-    // y up, as the crease pattern pane shows the sheet: the line y = x runs from the bottom left corner to the top right.
-    expect(name([s, -s])).toBe('Diagonal, bottom left to top right');
-    expect(name([-s, s])).toBe('Diagonal, bottom left to top right');
-    expect(name([s, s])).toBe('Diagonal, top left to bottom right');
-    // Any other, by its angle from the horizontal.
-    expect(name([-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)])).toBe('Line through the center at 30°');
+    const named = (view: { flipped: boolean; rotation: number }) =>
+      [[1, 0], [0, 1], [-s, s], [s, s], [-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)]].map((n) =>
+        repeatAxisName(t, { n: n as [number, number], d: 0.5 }, view)
+      );
+    // Turned over, left to right: the diagonals trade names, the center lines keep theirs.
+    expect(named({ flipped: true, rotation: 0 })).toEqual([
+      'Center line, top to bottom',
+      'Center line, left to right',
+      'Diagonal, top left to bottom right',
+      'Diagonal, bottom left to top right',
+      'Line through the center at 150°',
+    ]);
+    // Rotated a quarter turn, either way: the center lines trade names, and so do the diagonals.
+    for (const rotation of [Math.PI / 2, -Math.PI / 2])
+      expect(named({ flipped: false, rotation })).toEqual([
+        'Center line, left to right',
+        'Center line, top to bottom',
+        'Diagonal, top left to bottom right',
+        'Diagonal, bottom left to top right',
+        'Line through the center at 120°',
+      ]);
+    // An eighth of a turn: the diagonals run as the center lines did.
+    expect(named({ flipped: false, rotation: Math.PI / 4 }).slice(2, 4)).toEqual(['Center line, top to bottom', 'Center line, left to right']);
   });
 
   it("says a sink's refusal by the sink tool's headline", () => {

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LOCALE_STORAGE_KEY } from '../../i18n/locales';
 import { storageKey, STORAGE_KEYS } from '../../lib/storage';

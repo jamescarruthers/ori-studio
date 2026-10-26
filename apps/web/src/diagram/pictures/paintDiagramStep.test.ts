@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { DiagramStep, KnownDiagramAsset, QuarterTurns } from '../document/diagramDocument';
 import { createStep, DEFAULT_DIAGRAM_STYLE } from '../document/diagramDocument';

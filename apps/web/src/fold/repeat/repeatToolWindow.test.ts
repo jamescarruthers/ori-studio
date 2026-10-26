@@ -27,6 +27,7 @@ function repeat(phase: FoldRepeatPhase, extra: Partial<FoldRepeatWindowView> = {
       { sheet: { n: [1, 0], d: 0.5 }, side: 'same' },
       { sheet: { n: [0, 1], d: 0.5 }, side: 'behind' },
     ],
+    foldedView: null,
     axis: 0,
     hovered: -1,
     side: 'same',
@@ -73,7 +74,7 @@ describe("Repeat's window", () => {
     const model = windowOf(repeat({ kind: 'ready', busy: false }), calls);
     expect(model.title).toBe('Repeat');
     expect(model.steps).toMatchObject({ label: 'Start with', value: 's1', options: [{ id: 's1', label: 'Step 1' }, { id: 's2', label: 'Step 2' }] });
-    // Each axis by where it runs on the paper, as the crease pattern shows it.
+    // Each axis by where it runs on the paper: with no view of the step on screen yet, as the crease pattern shows it.
     expect(model.repeat?.axis).toMatchObject({
       label: 'Symmetry axis',
       value: '0',
@@ -101,6 +102,27 @@ describe("Repeat's window", () => {
     expect(calls.repeat.setAxis).toHaveBeenCalledWith(1);
     expect(calls.repeat.setFirst).toHaveBeenCalledWith('s2');
     expect(calls.repeat.setIndividual).toHaveBeenCalledWith(true);
+  });
+
+  it('names each axis as the folded pane shows it, through the view of the step on screen', () => {
+    const s = Math.SQRT1_2;
+    const diagonals = { axes: [{ sheet: { n: [-s, s], d: 0 }, side: 'same' }, { sheet: { n: [s, s], d: s }, side: 'same' }] } as const;
+    const labels = (extra: Partial<FoldRepeatWindowView>) =>
+      windowOf(repeat({ kind: 'ready', busy: false }, extra)).repeat?.axis.options.map((option) => option.label);
+    expect(labels({ ...diagonals, foldedView: { flipped: false, rotation: 0 } })).toEqual([
+      'Diagonal, bottom left to top right',
+      'Diagonal, top left to bottom right',
+    ]);
+    // Turned over: the sheet's diagonal from the bottom left corner to the top right runs from top left to bottom right.
+    expect(labels({ ...diagonals, foldedView: { flipped: true, rotation: 0 } })).toEqual([
+      'Diagonal, top left to bottom right',
+      'Diagonal, bottom left to top right',
+    ]);
+    // Rotated a quarter turn: the center lines trade names. A drawn line's nearest axis is offered by the same name.
+    const rotated = { foldedView: { flipped: false, rotation: Math.PI / 2 } };
+    expect(labels(rotated)).toEqual(['Center line, left to right', 'Center line, top to bottom']);
+    const drawn = windowOf(repeat({ kind: 'ready', busy: false }, { ...rotated, drawn: { nearest: 1, line: true } }));
+    expect(drawn.refusal?.actions.map((action) => action.label)).toEqual(['Use Center line, top to bottom']);
   });
 
   it('offers an axis whose repeat is refused disabled, with why under it', () => {
