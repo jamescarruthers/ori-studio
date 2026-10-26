@@ -950,6 +950,11 @@ describe('Apply and Cancel (spec §6.8)', () => {
     expect(lastOf(lostOpening.effects, 'track').fact).toEqual(dialogClosedFact('crashed', 0, 'pending', 1_000));
   });
 
+  it('closing on an engine the browser couldn’t load says unavailable, not crashed', () => {
+    const unloaded = play(initLayerOrderDialog(INIT).state, { type: 'engine_lost', unavailable: true }, { type: 'cancel', at: 2_000 });
+    expect(lastOf(unloaded.effects, 'track').fact).toEqual(dialogClosedFact('unavailable', 0, 'pending', 1_000));
+  });
+
   it('Try again after a loss opens with the limits the session last opened with, Keep trying’s included', () => {
     const start = initLayerOrderDialog(INIT);
     const first = lastOf(start.effects, 'open');

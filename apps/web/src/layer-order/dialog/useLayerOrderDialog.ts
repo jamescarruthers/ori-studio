@@ -95,7 +95,7 @@ export function layerOrderFrameStatus(session: LayerOrderSessionStatus, state: L
   if (session.kind !== 'ready') return session;
   switch (state.phase.kind) {
     case 'failed':
-      return { kind: 'lost', cause: 'failed', limits: session.limits };
+      return { kind: 'lost', cause: state.phase.unavailable ? 'load' : 'failed', limits: session.limits };
     case 'refused':
       return { kind: 'refused', refusal: state.phase.refusal, limits: session.limits };
     case 'opening':
@@ -157,11 +157,12 @@ export function useLayerOrderDialog(
       // The dialog closing has nothing to say, and a worker that went away is the session's to say
       // (its status turns `lost`, which the model hears): a call of that worker answers nothing more.
       if (!alive.current || isLayerOrderEngineLost(error)) return;
-      if (!isLayerOrderLoadFailure(error) && !reported.current) {
+      const unavailable = isLayerOrderLoadFailure(error);
+      if (!unavailable && !reported.current) {
         reported.current = true;
         reportError(error, { surface: 'layer-order:dialog', tags: { call } });
       }
-      dispatch({ type: 'engine_lost' });
+      dispatch({ type: 'engine_lost', unavailable });
     },
     [dispatch]
   );
@@ -179,7 +180,7 @@ export function useLayerOrderDialog(
     awaiting.current = null;
     if (now.kind === 'ready') dispatch({ type: 'opened', request: waiting.request, facts: now.open.facts });
     else if (now.kind === 'refused') dispatch({ type: 'open_refused', request: waiting.request, refusal: now.refusal });
-    else dispatch({ type: 'engine_lost' });
+    else dispatch({ type: 'engine_lost', unavailable: now.cause === 'load' });
   }, [dispatch]);
 
   const host = useMemo<LayerOrderEffectHost>(
@@ -232,7 +233,7 @@ export function useLayerOrderDialog(
       settleOpen();
       return;
     }
-    if (status.kind === 'lost') dispatch({ type: 'engine_lost' });
+    if (status.kind === 'lost') dispatch({ type: 'engine_lost', unavailable: status.cause === 'load' });
   }, [status, settleOpen, dispatch]);
 
   // The count, as the runtime publishes it, with the position read again.

@@ -23,9 +23,10 @@ export type LayerOrderOutcome = 'applied' | 'cancelled';
  * How `layer order dialog closed` says the dialog ended: Apply with a record
  * (`applied`) or with nothing to write (`unchanged`, D16); Cancel on an open
  * dialog (`cancelled`); or closed on an open the engine refused (`refused`,
- * with the refusal's code) or on an engine that stopped (`crashed`).
+ * with the refusal's code), on an engine that stopped (`crashed`), or on one
+ * the browser couldn't load (`unavailable`: offline, say).
  */
-export type LayerOrderClosedOutcome = 'applied' | 'unchanged' | 'cancelled' | 'refused' | 'crashed';
+export type LayerOrderClosedOutcome = 'applied' | 'unchanged' | 'cancelled' | 'refused' | 'crashed' | 'unavailable';
 
 /** A refused open's code: an enum, never its details. */
 export type LayerOrderRefusalCode = LayerRefusal['code'];

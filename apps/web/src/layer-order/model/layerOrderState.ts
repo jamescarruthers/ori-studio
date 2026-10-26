@@ -86,8 +86,11 @@ export type LayerPhase =
   | { readonly kind: 'open' }
   /** No session: the refusal says why, by code. `session_timed_out` offers Keep trying. */
   | { readonly kind: 'refused'; readonly refusal: LayerRefusal; readonly limits: LayerOrderLimits }
-  /** The engine went away (a rejected call): Try again reopens. */
-  | { readonly kind: 'failed'; readonly limits: LayerOrderLimits }
+  /**
+   * The engine went away (a rejected call): Try again reopens. `unavailable`
+   * when the browser failed to load it (offline, say), not a crash.
+   */
+  | { readonly kind: 'failed'; readonly limits: LayerOrderLimits; readonly unavailable: boolean }
   | { readonly kind: 'closed'; readonly outcome: LayerOrderOutcome };
 
 // ---------------------------------------------------------------------------
@@ -432,8 +435,11 @@ export type LayerOrderAction =
     }
   | { readonly type: 'solutions_positioned'; readonly generation: number; readonly by: LayerStepBy; readonly position: LayerPosition }
   | { readonly type: 'stepped'; readonly request: number; readonly facts: LayerStepFacts }
-  /** A call rejected: the engine is gone, and so is its session. */
-  | { readonly type: 'engine_lost' }
+  /**
+   * A call rejected: the engine is gone, and so is its session; `unavailable`
+   * when the browser failed to load it (`isLayerOrderLoadFailure`).
+   */
+  | { readonly type: 'engine_lost'; readonly unavailable?: boolean }
   // The panes.
   | { readonly type: 'face_hovered'; readonly face: LayerFace | null }
   | { readonly type: 'face_picked'; readonly face: LayerFace; readonly origin: LayerPickOrigin }

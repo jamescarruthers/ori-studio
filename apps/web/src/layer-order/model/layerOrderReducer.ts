@@ -322,7 +322,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'engine_lost': {
       // Try again opens as the session last did (Keep trying's limits included), not the defaults.
       const limits = state.phase.kind === 'opening' ? state.phase.limits : (state.openedLimits ?? openLimits(state.how));
-      return { ...state, phase: { kind: 'failed', limits } };
+      return { ...state, phase: { kind: 'failed', limits, unavailable: action.unavailable === true } };
     }
 
     case 'face_hovered':
@@ -411,7 +411,8 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
       if (phase.kind === 'refused') {
         effects.push({ type: 'track', fact: closedFact(state, 'refused', action.at, phase.refusal.code) });
       } else if (phase.kind === 'failed') {
-        effects.push({ type: 'track', fact: closedFact(state, 'crashed', action.at) });
+        // A load failure is the browser's (offline, say), not the engine crashing.
+        effects.push({ type: 'track', fact: closedFact(state, phase.unavailable ? 'unavailable' : 'crashed', action.at) });
       } else if (state.reportedOpen) {
         effects.push({ type: 'track', fact: closedFact(state, 'cancelled', action.at) });
       }
