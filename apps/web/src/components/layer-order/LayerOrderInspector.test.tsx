@@ -338,6 +338,26 @@ describe('the sentence builder', () => {
     expect(state().sentence.objectPicks.map((pick) => pick.origin)).toEqual(['menu', 'menu']);
   });
 
+  it('lights a slot’s faces while the pointer is on the slot, not on its menu, so a menu closing under the pointer leaves none lit', () => {
+    const { state } = draw(picked(opened().state, 2, 0).state, { live: true });
+    const over = (element: Element, from: Element | null = null) =>
+      act(() => element.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: from })));
+    const slot = button(/^Subject: face C/);
+    key(slot, 'Enter');
+    const face = byRole(byRole(document.body, 'menu', 'Subjects'), 'menuitemradio', 'Face A');
+    // The menu, portalled out of the slot, is reached from elsewhere: the slot is not pointed at.
+    over(face);
+    expect(state().hover.slot).toBeNull();
+    over(slot, face);
+    expect(state().hover.slot).toBe('subject');
+    // From the slot onto its menu: off the slot, so the menu closing under the pointer leaves nothing lit.
+    over(face, slot);
+    expect(state().hover.slot).toBeNull();
+    click(face);
+    expect(queryByRole(document.body, 'menu', 'Subjects')).toBeNull();
+    expect(state().hover.slot).toBeNull();
+  });
+
   it('is inert, with the reason in danger, while saved rows clash (Round4-States, the clashing set)', () => {
     const facts = openFactsOf({
       restore: {

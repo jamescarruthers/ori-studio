@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { FaceLetters, LayerFace } from '../../layer-order/engine/faceIndex';
 import { builderLive } from '../../layer-order/model/layerOrderReducer';
 import { addState, hintLine, listControls, paneMarks } from '../../layer-order/model/layerOrderSelectors';
-import { LAYER_VERBS, facesWithChoices, openPartners, slotNow } from '../../layer-order/model/layerOrderSentence';
+import { LAYER_VERBS, facesWithChoices, openPartners, slotNow, type LayerSlot } from '../../layer-order/model/layerOrderSentence';
 import type { LayerOrderAction, LayerOrderDialogState } from '../../layer-order/model/layerOrderState';
 import { Button } from '../ui/Button';
 import { MenuCheckboxItem, MenuContent, MenuItemIcon, MenuItemLabel, MenuRadioGroup, MenuRadioItem } from '../ui/Menu';
@@ -54,6 +54,17 @@ function useMenuOpen(enabled: boolean): readonly [boolean, (next: boolean) => vo
   }
   const request = useCallback((next: boolean) => setOpen(next && enabled), [enabled]);
   return [open && enabled, request];
+}
+
+/**
+ * Which slot the pointer is on, for a pointer over `slot` or anything React
+ * holds inside it. A face menu is portalled out of its slot but stays its
+ * child in React, so the pointer on the menu reaches the slot's handlers: that
+ * is not the slot, and a menu that closed under the pointer would otherwise
+ * leave the slot lit, with no leave to come.
+ */
+function pointedSlot(event: PointerEvent<HTMLElement>, slot: LayerSlot): LayerSlot | null {
+  return event.target instanceof Node && event.currentTarget.contains(event.target) ? slot : null;
 }
 
 /**
@@ -160,7 +171,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       className={styles.slot}
       data-slot="subject"
       data-active={live && active === 'subject' ? '' : undefined}
-      onPointerEnter={() => dispatch({ type: 'slot_hovered', slot: 'subject' })}
+      onPointerOver={(event) => dispatch({ type: 'slot_hovered', slot: pointedSlot(event, 'subject') })}
       onPointerLeave={() => dispatch({ type: 'slot_hovered', slot: null })}
     >
       <DropdownMenu.Root modal={false} open={subjectsOpen} onOpenChange={setSubjectsOpen}>
@@ -276,7 +287,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
       className={styles.slot}
       data-slot="objects"
       data-active={live && active === 'object' ? '' : undefined}
-      onPointerEnter={() => dispatch({ type: 'slot_hovered', slot: 'object' })}
+      onPointerOver={(event) => dispatch({ type: 'slot_hovered', slot: pointedSlot(event, 'object') })}
       onPointerLeave={() => dispatch({ type: 'slot_hovered', slot: null })}
     >
       <DropdownMenu.Root modal={false} open={objectsOpen} onOpenChange={setObjectsOpen}>
