@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The precrease worker's lifetime, against a fake Worker.
  *

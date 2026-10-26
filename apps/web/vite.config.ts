@@ -575,8 +575,29 @@ export default defineConfig({
     // profiling so a CPU profile shows real frames.
     keepNames: profiling,
   },
+  /**
+   * Two environments, chosen by file type: component tests (`.test.tsx`) run in
+   * jsdom, and everything else runs in plain Node.
+   *
+   * Building a jsdom window is about a second per test file, and it was half of
+   * the suite's work while most `.ts` tests are geometry, documents and stores
+   * that never touch the DOM. A `.ts` test that does need it (`document`,
+   * `window`, `localStorage`, DOM events or a `DOMParser`) says so on its first
+   * line, `// @vitest-environment jsdom`, which wins over its project's
+   * environment. Without that line it fails loudly with "document is not
+   * defined" rather than passing quietly.
+   */
   test: {
-    environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    projects: [
+      {
+        extends: true,
+        test: { name: 'dom', environment: 'jsdom', include: ['**/*.test.tsx'] },
+      },
+      {
+        extends: true,
+        test: { name: 'node', environment: 'node', include: ['**/*.test.?(c|m)[jt]s'] },
+      },
+    ],
   },
 });

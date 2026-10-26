@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PickedFile } from '../../platform/fileService';
 import { useWorkspaceStore } from '../../store/workspaceStore';

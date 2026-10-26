@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The runtime's lifetimes, against a fake Worker. comlink's proxy never answers
  * a fake, which is exactly the hang each of these guards against: the runtime

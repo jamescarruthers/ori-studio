@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';

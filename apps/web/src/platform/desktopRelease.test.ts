@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { storageKey, STORAGE_KEYS } from '../lib/storage';
 import { fetchDesktopRelease, resetDesktopReleaseCache } from './desktopRelease';
