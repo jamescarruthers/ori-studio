@@ -74,16 +74,20 @@
 //! (lexicographic by variable, the smaller face above first), each
 //! component a group.
 //!
-//! Before the count is done, the stepper steps through what is counted so
-//! far (decision D7: ‹ › still steps, with no total): a group whose walk is
-//! not finished keeps the picture on screen, and an index is final only
-//! once the total is exact ([`Position`]).
+//! Until the count has every solution a step goes through (every look group
+//! of the side walked, or with X-ray every component's orders listed), a
+//! step does not wait for it (decision D7: ‹ › still steps, with no total):
+//! it searches for the solution the count would list next, in the same
+//! order, from the order on screen (`seek`), and what it finds is kept for
+//! the next. Its index then counts the solutions found so far, and is final
+//! only once the total is exact ([`Position`]).
 //!
 //! A step to another picture finds the layer order closest to the one on
 //! screen within it by the session's own check, steered by the order on
 //! screen, with the new picture's tops as seeds; should that check run out
-//! of time, the first order counted for that picture stands in. A step
-//! with X-ray on lands on exactly the next layer order.
+//! of time, the first order counted for that picture (or the one the search
+//! found it by) stands in. A step with X-ray on lands on exactly the next
+//! layer order.
 //!
 //! Ori Studio original work, not a port.
 
@@ -103,6 +107,10 @@ use super::session::{
 use super::stacks::{ChangedSpots, Spots, ViewSide};
 use crate::complete::{self, ChoiceCount};
 use crate::pattern::FaceId;
+
+mod seek;
+
+use seek::{Seek, Sought};
 
 /// The top of an open spot whose candidates leave none above (from the
 /// front) or below (from the back) all the others: never for an order
@@ -635,6 +643,11 @@ pub struct Solutions {
     kept_bits: u64,
     nodes: u64,
     done: bool,
+    /// The seeds the committed constraints counted are, for a search of
+    /// its own.
+    seeds: Vec<Seed>,
+    /// What a step found by searching while the count was unfinished.
+    seek: Seek,
 }
 
 /// Where a step goes.
@@ -890,6 +903,8 @@ impl Solutions {
             kept_bits: 0,
             nodes: 0,
             done: false,
+            seeds: seeds.to_vec(),
+            seek: Seek::default(),
         })
     }
 
@@ -1365,6 +1380,9 @@ impl Solutions {
     }
 
     pub(crate) fn position_values(&self, by: StepBy, values: &[PairOrder]) -> Position {
+        if !self.counted(by) {
+            return self.seek_position(by, values);
+        }
         let (views, positions) = self.views(by, values);
         let before = rank(&views, positions);
         let count = self.count();
@@ -1505,11 +1523,16 @@ impl ConstraintSession {
     /// [`StepBy::LayerOrder`] (X-ray) the next layer order. It adds no
     /// constraint, and only the order on screen changes.
     ///
-    /// Unless the count is done, it first counts on within half of `limits`
-    /// (the other half is the check's), so on a figure the count finishes
-    /// the step follows the final order; the dialog keeps that work off the
-    /// step by advancing the count between calls. Past that it steps
-    /// through what is counted, and what it counted is kept.
+    /// Once the count has every solution stepping `by` goes through, a
+    /// step follows it; unless the count is done, it first counts on within
+    /// half of `limits` (the other half is the check's). Before that it
+    /// does not wait for the count: it searches, within `limits`, for the
+    /// solution the count would list next (see `seek` in this module's
+    /// source), and then counts on within what is left of the first half
+    /// of `limits`, so a host that never advances the count still sees it
+    /// finish on a figure it can. A search that runs out of `limits` is
+    /// [`Stepped::End`], not final, and keeps what it proved for the same
+    /// step asked again with longer ones.
     pub fn step(
         &mut self,
         solutions: &mut Solutions,
@@ -1518,6 +1541,9 @@ impl ConstraintSession {
         limits: &Limits,
     ) -> Result<Stepped, SessionRefusal> {
         solutions.ensure_for(self)?;
+        if !solutions.counted(by) {
+            return self.step_uncounted(solutions, by, direction, limits);
+        }
         if !solutions.is_done() {
             solutions.advance_on(self.letter_search(), &halved(limits))?;
         }
@@ -1559,6 +1585,41 @@ impl ConstraintSession {
             changed,
             position: solutions.position_values(by, self.shown_values()),
         }))
+    }
+
+    /// [`Self::step`] before the count has what `by` steps through.
+    fn step_uncounted(
+        &mut self,
+        solutions: &mut Solutions,
+        by: StepBy,
+        direction: StepDirection,
+        limits: &Limits,
+    ) -> Result<Stepped, SessionRefusal> {
+        // The count's share, the first half of the step's window, as a
+        // counted step gives it; it counts once the search is done.
+        let counting = halved(limits);
+        let sought = solutions.seek(
+            self.letter_search(),
+            &*self,
+            by,
+            self.shown_values(),
+            direction,
+            limits,
+        )?;
+        let changed = match sought {
+            Sought::Found(values) => Some(self.show_values(values)),
+            Sought::End | Sought::Undecided => None,
+        };
+        if !solutions.is_done() && !counting.deadline.is_some_and(|d| d.passed()) {
+            solutions.advance_on(self.letter_search(), &counting)?;
+        }
+        Ok(match changed {
+            Some(changed) => Stepped::Moved(Moved {
+                changed,
+                position: solutions.position_values(by, self.shown_values()),
+            }),
+            None => Stepped::End,
+        })
     }
 }
 
@@ -2065,6 +2126,130 @@ mod tests {
         }
     }
 
+    /// The check a random problem's step asks: its seeds standing in for
+    /// the constraints, and a step's, from the open's state.
+    struct Raw<'a> {
+        search: &'a Search,
+        seeds: &'a [Seed],
+        prefer: &'a [PairOrder],
+    }
+
+    impl seek::Check for Raw<'_> {
+        fn fits(&self, extra: &[Seed], limits: &Limits) -> Result<seek::Fits, SessionRefusal> {
+            let Some(seeds) = seek::merged(self.seeds, extra) else {
+                return Ok(seek::Fits::No);
+            };
+            let options = treemaker_flatfold::CheckOptions {
+                budget: complete::search_budget(limits.max_nodes, limits.deadline),
+                fast_nodes: limits.fast_nodes,
+                prefer: Some(self.prefer),
+                prefer_fits: false,
+            };
+            Ok(match self.search.check(&seeds, &options).expect("check") {
+                treemaker_flatfold::CheckOutcome::Fits(fit) => seek::Fits::Fit(fit.order),
+                treemaker_flatfold::CheckOutcome::Undecided { .. } => {
+                    panic!("an unlimited check undecided")
+                }
+                _ => seek::Fits::No,
+            })
+        }
+    }
+
+    /// Stepping without the count against brute force: from any order, a
+    /// step on a cursor that never counted lands on the next (previous)
+    /// solution in the count's order, or ends exactly at the ends; and a
+    /// walk from any one to the last, back to the first and on again visits
+    /// every one once, in order, each numbered among those found, until
+    /// every one is found and every position is exact.
+    fn check_uncounted(
+        start: &dyn Fn() -> Solutions,
+        search: &Search,
+        check: &dyn seek::Check,
+        truth: &Brute,
+        rng: &mut Rng,
+    ) {
+        for by in [
+            StepBy::Picture(ViewSide::Front),
+            StepBy::Picture(ViewSide::Back),
+            StepBy::LayerOrder,
+        ] {
+            let keys: Vec<Vec<u32>> = match by {
+                StepBy::Picture(side) => truth.of[side_index(side)].clone(),
+                StepBy::LayerOrder => truth
+                    .orders
+                    .iter()
+                    .map(|o| o.iter().map(|&v| value_key(v)).collect())
+                    .collect(),
+            };
+            let sequence: Vec<Vec<u32>> = keys
+                .iter()
+                .cloned()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            let rank_of_values = |values: &[PairOrder]| -> usize {
+                let i = truth
+                    .orders
+                    .iter()
+                    .position(|o| o == values)
+                    .expect("a step lands on an order that fits");
+                sequence.binary_search(&keys[i]).expect("a counted key")
+            };
+            let step = |solutions: &mut Solutions, values: &[PairOrder], direction| match solutions
+                .seek(search, check, by, values, direction, &UNLIMITED)
+                .expect("seek")
+            {
+                Sought::Found(order) => Some(order),
+                Sought::End => None,
+                Sought::Undecided => panic!("unlimited, but undecided"),
+            };
+            for _ in 0..4 {
+                let values = &truth.orders[rng.below(truth.orders.len())];
+                let at = rank_of_values(values);
+                for (direction, expected) in [
+                    (
+                        StepDirection::Next,
+                        (at + 1 < sequence.len()).then_some(at + 1),
+                    ),
+                    (StepDirection::Previous, at.checked_sub(1)),
+                ] {
+                    let landed = step(&mut start(), values, direction);
+                    assert_eq!(landed.as_deref().map(rank_of_values), expected, "{by:?}");
+                }
+            }
+            let mut solutions = start();
+            let mut values = truth.orders[rng.below(truth.orders.len())].clone();
+            let mut at = rank_of_values(&values);
+            let mut low = at;
+            for direction in [
+                StepDirection::Next,
+                StepDirection::Previous,
+                StepDirection::Next,
+            ] {
+                let next = direction == StepDirection::Next;
+                while let Some(order) = step(&mut solutions, &values, direction) {
+                    let now = rank_of_values(&order);
+                    assert_eq!(now, if next { at + 1 } else { at - 1 }, "{by:?}");
+                    (values, at) = (order, now);
+                    low = low.min(at);
+                    let position = solutions.position_values(by, &values);
+                    assert_eq!(position.index, (at - low) as u64 + 1, "{by:?}");
+                }
+                assert_eq!(at, if next { sequence.len() - 1 } else { 0 }, "{by:?}");
+            }
+            for order in &truth.orders {
+                assert_eq!(
+                    solutions.position_values(by, order),
+                    Position {
+                        index: rank_of_values(order) as u64 + 1,
+                        total: exact(sequence.len()),
+                    },
+                    "{by:?}"
+                );
+            }
+        }
+    }
+
     /// A problem of up to seven faces in up to four cells, letters fixed at
     /// random from one total order, and spots: the cells, smaller sets
     /// within them, and faces that overlap pairwise without sharing one cell
@@ -2210,6 +2395,18 @@ mod tests {
                 };
                 let solutions = check_count(&search, start, &truth, &mut rng);
                 check_stepper(&solutions, &truth, &mut rng);
+                let raw = Raw {
+                    search: &search,
+                    seeds: &seeds,
+                    prefer: &hold,
+                };
+                check_uncounted(
+                    &|| start(SolutionCaps::default()),
+                    &search,
+                    &raw,
+                    &truth,
+                    &mut rng,
+                );
                 *tally.entry("rounds").or_default() += 1;
                 let components = solutions.components.len();
                 if components > 1 {
@@ -2362,6 +2559,13 @@ mod tests {
                 };
                 let solutions = check_count(session.letter_search(), start, &truth, &mut rng);
                 check_stepper(&solutions, &truth, &mut rng);
+                check_uncounted(
+                    &|| session.solutions().expect("solutions"),
+                    session.letter_search(),
+                    &session,
+                    &truth,
+                    &mut rng,
+                );
                 rows.push(format!(
                     "{} constraints: {} front / {} back pictures, {} orders",
                     session.constraints().len(),

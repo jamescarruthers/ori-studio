@@ -429,6 +429,136 @@ fn a_step_before_the_count_is_done_still_moves_forward() {
     }
 }
 
+/// Decision D7 without the count (row E9): a step on a cursor that has
+/// counted nothing searches for the solution the count would list next, so
+/// it lands exactly where a step on a finished count does, the same layer
+/// order included, at the same place, from every solution and both ways.
+#[test]
+fn a_step_before_any_count_lands_where_the_count_would() {
+    let mut tally: BTreeMap<String, usize> = BTreeMap::new();
+    for &(name, relative) in FIXTURES {
+        for by in BY {
+            let mut counted = open(relative);
+            let mut uncounted = open(relative);
+            let mut solutions = counted.solutions().expect("count");
+            solutions.advance(&counted, &unlimited()).expect("advance");
+            for direction in [
+                StepDirection::Previous,
+                StepDirection::Next,
+                StepDirection::Previous,
+            ] {
+                loop {
+                    let mut fresh = uncounted.solutions().expect("a cursor");
+                    let stepped = uncounted
+                        .step(&mut fresh, by, direction, &unlimited())
+                        .expect("a step with no count");
+                    let expected = counted
+                        .step(&mut solutions, by, direction, &unlimited())
+                        .expect("a counted step");
+                    assert_eq!(
+                        uncounted.shown_order(),
+                        counted.shown_order(),
+                        "{name} {by:?} {direction:?}"
+                    );
+                    match (stepped, expected) {
+                        (Stepped::Moved(a), Stepped::Moved(b)) => {
+                            assert_eq!(a, b, "{name} {by:?}");
+                            assert_fits(&uncounted, "a step with no count");
+                            *tally.entry(format!("{name} {by:?}")).or_default() += 1;
+                        }
+                        (Stepped::End, Stepped::End) => break,
+                        other => panic!("{name} {by:?} {direction:?}: {other:?}"),
+                    }
+                }
+            }
+        }
+    }
+    println!("{tally:?}");
+}
+
+/// Row E9's local measurement on iguana-c0 (850 faces, 65,851 open pairs,
+/// so the dialog starts no count), in release, behind an env var:
+///
+/// ```sh
+/// LAYER_ORDER_IGUANA=1 cargo test -p oristudio-fold --features kernel --release \
+///   --test steer_solutions the_iguana_steps -- --nocapture
+/// ```
+///
+/// On a cursor no slice ever advances, as the dialog's on this figure, each
+/// step is asked with the dialog's limits (3 s, 200,000 nodes) and, while it
+/// ends unmoved, again with Keep trying's (×4, then ×16). Prints how long
+/// each took and where it landed.
+#[test]
+fn the_iguana_steps_without_its_count() {
+    if std::env::var("LAYER_ORDER_IGUANA").is_err() {
+        println!("SKIPPED: the_iguana_steps_without_its_count\n  LAYER_ORDER_IGUANA is not set.");
+        return;
+    }
+    fn now_ms() -> f64 {
+        static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        START
+            .get_or_init(std::time::Instant::now)
+            .elapsed()
+            .as_secs_f64()
+            * 1e3
+    }
+    let limits = |factor: f64| Limits {
+        max_nodes: Some((200_000.0 * factor) as u64),
+        fast_nodes: 128,
+        deadline: Some(Deadline {
+            now_ms,
+            at_ms: now_ms() + 3_000.0 * factor,
+        }),
+    };
+    let t = std::time::Instant::now();
+    let mut session = open("tests/fixtures/precrease/iguana-c0.fold");
+    println!(
+        "iguana-c0: {} open pairs, opened in {:.0} ms",
+        session.open_pairs().len(),
+        t.elapsed().as_secs_f64() * 1e3
+    );
+    let mut solutions = session.solutions().expect("a cursor");
+    let front = StepBy::Picture(ViewSide::Front);
+    let back = StepBy::Picture(ViewSide::Back);
+    let plan = [
+        (front, StepDirection::Next),
+        (front, StepDirection::Previous),
+        (back, StepDirection::Next),
+        (back, StepDirection::Previous),
+        (StepBy::LayerOrder, StepDirection::Next),
+        (StepBy::LayerOrder, StepDirection::Next),
+        (StepBy::LayerOrder, StepDirection::Next),
+        (StepBy::LayerOrder, StepDirection::Previous),
+        (StepBy::LayerOrder, StepDirection::Previous),
+        (StepBy::LayerOrder, StepDirection::Previous),
+        (StepBy::LayerOrder, StepDirection::Previous),
+    ];
+    for (by, direction) in plan {
+        for factor in [1.0, 4.0, 16.0] {
+            let t = std::time::Instant::now();
+            let stepped = session
+                .step(&mut solutions, by, direction, &limits(factor))
+                .expect("step");
+            let ms = t.elapsed().as_secs_f64() * 1e3;
+            let landed = match &stepped {
+                Stepped::Moved(moved) => format!(
+                    "moved to {} ({} of {}{})",
+                    moved.position.index,
+                    moved.position.index,
+                    moved.position.total.n,
+                    if moved.position.total.exact { "" } else { "+" }
+                ),
+                Stepped::End => "end".to_string(),
+                Stepped::TimedOut(out) => format!("timed out {out:?}"),
+            };
+            println!("{by:?} {direction:?} at ×{factor}: {landed} in {ms:.0} ms");
+            if !matches!(stepped, Stepped::End) {
+                break;
+            }
+        }
+    }
+}
+
 // Gate 4: explain's set is a smallest one.
 
 /// Every layer order of the creases alone, through the X-ray stepper,
