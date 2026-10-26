@@ -11576,6 +11576,18 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
           },
           shown: scene,
           name: 'Folded model 1',
+          // The sheet it was folded from, which the crease-pattern pane shows alone: the unit square, no aux lines.
+          region: {
+            paper: [
+              [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 1, y: 1 },
+                { x: 0, y: 1 },
+              ],
+            ],
+            auxSegments: [],
+          },
         });
         expect(oristudioCpMocks.foldOristudioCpWithOrder, kind).not.toHaveBeenCalled();
         expect(figureNow(), kind).toMatchObject({ handle: 3, renderSnapshot: figure.renderSnapshot });
@@ -12623,11 +12635,13 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
             expect(kernelCalls()).toEqual(['getOristudioCpSelectionFoldSource']);
             expect(request).not.toHaveProperty('shown');
           } else {
-            // None: the order a plain Refold draws, Oriedita's first, on a fold of its own that goes once it closes.
+            // None: the order a plain Refold draws, Oriedita's first, on a fold of its own that goes once it closes;
+            // and the sheet index, built once, for the pattern the crease-pattern pane shows.
             expect(kernelCalls()).toEqual([
               'getOristudioCpSelectionFoldSource',
               'foldOristudioCpWithOrder',
               'getOristudioCpFoldedFigurePaperScene',
+              'fetchOristudioCpSheetIndex',
               'freeOristudioCpFoldedFigure',
             ]);
             expect(oristudioCpMocks.foldOristudioCpWithOrder).toHaveBeenCalledWith(
