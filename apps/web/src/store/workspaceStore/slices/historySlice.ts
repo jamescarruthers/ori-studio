@@ -47,6 +47,7 @@ import {
   releaseFoldedFigureHandles,
   retainFoldedFigureHandles,
 } from '../../../cp-workspace/folded/foldedFigureHandles';
+import { foldedFiguresAtRest, foldedSelectionAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 
 const MAX_HISTORY = 100;
 
@@ -82,8 +83,10 @@ function cpHistoryEntry(
     ...(content.kind === 'selection' ? { selectedLines: content.replacedLines } : {}),
     selection,
     annotations,
-    foldedFigures,
-    activeFoldedFigureId,
+    // As they were before any press still running: never a figure that waits on
+    // a fold an undo or a redo will have taken from it (`foldedFiguresAtRest.ts`).
+    foldedFigures: foldedFiguresAtRest(foldedFigures),
+    activeFoldedFigureId: foldedSelectionAtRest(activeFoldedFigureId, foldedFigures),
     inlineSimulations,
     overlayOnly: content.kind === 'overlay',
     label,

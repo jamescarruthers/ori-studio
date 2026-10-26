@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MenuContent } from '../../components/ui/Menu';
@@ -20,6 +20,7 @@ import {
 } from './foldedFigureActions';
 import { foldedFigureActionIconNode } from './foldedFigureActionIcons';
 import { choiceMenuItems, styleMenuItems } from './foldedFigureMenuItems';
+import { foldedSolutionCursorVersion, subscribeFoldedSolutionCursor } from './foldedSolutionCursor';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { ToolbarSeparator } from '../../components/ui/Toolbar';
 
@@ -178,9 +179,14 @@ export function CpFoldedFigureToolbar({
   // Subscribed in this small component (not the panel) so the toolbar tracks the
   // camera live; see useCanvasObjectAnchor.
   const anchorRect = useCanvasObjectAnchor(box, 'user', container);
+  // A constrained figure's Another solution waits at its last solution, which
+  // its solutions cursor learns without the figure changing.
+  const cursorVersion = useSyncExternalStore(subscribeFoldedSolutionCursor, foldedSolutionCursorVersion);
   const actions = useMemo(
     () => buildFoldedFigureActions(figure, { ...deps, t }),
-    [figure, deps, t]
+    // The cursor's version is read by the catalog through `foldedSolutionPlace`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [figure, deps, t, cursorVersion]
   );
 
   // A figure that draws nothing (still folding, errored, empty) has no box to

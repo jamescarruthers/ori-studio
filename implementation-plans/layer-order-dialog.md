@@ -534,10 +534,13 @@ disagrees, the artboard wins):
   X-ray, Undecided) and the panes' zoom are no step (my call): undo in the app
   covers what is saved, never the view. Edit's Flip is undoable because it
   changes the figure the file saves; here Front/Back is a lens Apply never
-  writes (spec §5, §6.2). Undo of a step steps back by what it stepped by, so
-  it brings back that side's picture (with X-ray, the very layer order).
-- Undo, redo, remove and Clear all re-solve for the fitting order closest to
-  the one on screen, and flash the spots that changed (Round3:1150-1190).
+  writes (spec §5, §6.2).
+- Remove and Clear all re-solve for the fitting order closest to the one on
+  screen, and flash the spots that changed (Round3:1150-1190). Undo and redo
+  restore the exact order the action started from or landed on (my call,
+  2026-10-26, from #539's review: relative re-solving made a step's undo stick
+  or land on another picture, and undoing everything didn't come back to the
+  opening order), and flash the spots that changed.
 
 **Fidelity list** (U8, U10 acceptance):
 - The verb menu previews the verb under the pointer or focus (Round3:457, 893).
@@ -546,7 +549,10 @@ disagrees, the artboard wins):
   strengthens the tints (Round3:473, 883).
 - The faint subject tint is on the crease pattern only (spec §6.4).
 - Each pane has its own zoom toolbar, and Fit frames both (Round3:385-389,
-  421-425).
+  421-425). Each pane fits its own content (the crease pattern it came from;
+  the folded figure itself), filling about 70% of the pane: in your words
+  (2026-10-26), "it should not fill totally edge to edge, but like 70% or
+  something larger than what it currently does".
 - The flash is one 1.6 s fade (Round3:172-176).
 - The status dot turns to success when the order is decided (Round3:200).
 - The footer note ("Apply keeps the order on screen…", Round3:1536) is
@@ -749,7 +755,7 @@ notice has no board of its own; U10 builds it from the approved copy.
     line for the objects). So that two objects fit on a line in the approved
     grid, an object chip in the builder is just its letter: a click on it
     removes that object ("Remove H"), and the slot's one × clears them all
-    (my call; the list's rows keep a × per object).
+    (my call; the list's rows have no per-object ×, your call 2026-10-26).
   - **Which faces can be objects** (my call): the faces open against the
     subject in the committed order, as now, whatever else is picked. Picking
     one never changes which others are offered, so the tints hold still.
@@ -780,7 +786,8 @@ notice has no board of its own; U10 builds it from the approved copy.
     constraint if they want." Carried rows group the same way, within one status, so a row
     never mixes statuses; intact and clashing count as one there, since both
     still apply and a clash is marked per object, as on committed rows. A
-    row keeps its place and identity when one of its objects is removed.
+    row keeps its place and identity when an undo removes one of its
+    objects.
     When a row's own objects are the whole clash, it says they can't all fit
     together. A pressed or hovered row lights its subject and all
     its objects; a row click puts its subject in the builder, as now. A clash
@@ -1070,12 +1077,13 @@ Settled while building H4, for the PRs that meet it:
       (`claude/lo-inspector-undo-all`)
 - [x] H2: host engine (#512)
 - [ ] H10: Fold's Import CP chooses its order in the dialog
+- [ ] Deeper stacks: measure the too-deep designs through the dialog's engine and raise the dialog's own cap as far as they stay usable (your ask, 2026-10-26)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
 - [x] H4: Edit refold with constraints (#529)
 - [x] H5: Fold with layer order… (#526)
-- [ ] H6: Edit "Another solution" within constraints
+- [x] H6: Edit "Another solution" within constraints (#528)
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
 - [ ] H9: the Diagram's ‹ › within constraints

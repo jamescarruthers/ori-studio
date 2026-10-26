@@ -68,6 +68,17 @@ export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntr
 }
 
 /**
+ * Whether a constrained figure's ‹ › wait for its constraints to be reviewed:
+ * they need a look since an edit (D14, {@link foldedFigureLayerOrderAttention}),
+ * as when they clash and no order fits them all, so there is nothing to step
+ * through until they are. Read from saved data alone; the verbs and the store
+ * both ask this.
+ */
+export function foldedFigureSolutionsHeldForReview(figure: OristudioCpFoldedFigureEntry): boolean {
+  return foldedFigureLayerOrderAttention(figure) !== null;
+}
+
+/**
  * A 3D figure whose creases fold flat again, and whose record a refold on
  * them did not draw: it keeps its 3D picture, and its record a summary other
  * than waiting for flat creases (D10 after D13). It is a stale figure on flat

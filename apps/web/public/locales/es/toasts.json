@@ -177,7 +177,14 @@
     "refoldKeptChosenOrder": "El orden de capas elegido para {{name}} necesita atención, así que conserva su imagen.",
     "refoldLost": "El orden de capas se detuvo inesperadamente, así que {{name}} no se volvió a plegar.",
     "refoldLostLoad": "No se pudo cargar el orden de capas, así que {{name}} no se volvió a plegar. Comprueba tu conexión y vuelve a intentarlo.",
-    "unavailable": "Orden de capas no se cargó. Comprueba tu conexión y vuelve a intentarlo."
+    "stepCheckTimedOut": "No se pudieron comprobar a tiempo las restricciones de capas de este modelo, así que no cambió.",
+    "stepLost": "El orden de capas se detuvo inesperadamente, así que el modelo no cambió.",
+    "stepLostLoadOffline": "No se pudo cargar el orden de capas sin conexión, así que el modelo no cambió. Vuelve a conectarte y recarga Ori Studio para intentarlo de nuevo.",
+    "stepLostLoadReload": "No se pudo cargar el orden de capas, así que el modelo no cambió. Recarga Ori Studio para intentarlo de nuevo.",
+    "stepNotFoundInTime": "No se pudo encontrar otra solución a tiempo, así que el modelo no cambió.",
+    "stepUnrestored": "Las restricciones de capas de este modelo necesitan atención, así que no puede recorrer sus soluciones. Abre «Orden de capas…» para revisarlas.",
+    "unavailableOffline": "Orden de capas no se cargó sin conexión. Vuelve a conectarte y recarga Ori Studio para intentarlo de nuevo.",
+    "unavailableReload": "Orden de capas no se cargó. Recarga Ori Studio para intentarlo de nuevo."
   },
   "paperExport": {
     "saved": "Se exportó {{name}}"

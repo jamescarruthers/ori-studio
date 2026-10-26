@@ -10,6 +10,15 @@ import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './fo
 import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
+import { dropFoldedSolutionCursor } from './foldedSolutionCursor';
+import { landedAt, scriptedSolutionCursor, seatFoldedSolutionCursor } from './foldedSolutionCursor.fixtures';
+
+/** The host engine's door: a constrained figure's cursor is the test's to script (H6). */
+const gateway = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock('../../layer-order/host/hostEngineGateway', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../layer-order/host/hostEngineGateway')>()),
+  openLayerOrderSolutionCursor: (...args: unknown[]) => gateway.open(...args),
+}));
 
 afterEach(() => resetSolutionFrontiers());
 
@@ -249,20 +258,23 @@ describe('buildFoldedFigureProperties', () => {
     };
     const SOLVED = { ...FLAT, snapshot: { ...FLAT.snapshot!, outcome: 'Solved' } } as OristudioCpFoldedFigureEntry;
 
-    it('says how many constraints hold a constrained figure, and holds ‹ › until they step within them (D9, D11)', () => {
+    it('says how many constraints hold a constrained figure, and steps ‹ › within them with no count at rest (D9, D11)', () => {
       const d = deps();
       const constrained = { ...SOLVED, layerOrder: held() };
       const layerOrder = stepper(sheetFor(constrained, d));
       expect(layerOrder).toMatchObject({
         support: 'supported',
-        // The count of the solutions that fit is the dialog's (D11).
+        // No cursor before the first press, and the host never counts at rest (D11).
         readout: '',
         note: { kind: 'status', text: '2 constraints' },
         action: { label: 'Edit…', disabled: false },
+        previous: { label: 'Previous solution', disabled: false },
+        next: { label: 'Another solution', disabled: false },
       });
-      for (const verb of [layerOrder.previous, layerOrder.next]) {
-        expect(verb).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
-      }
+      layerOrder.next?.run();
+      expect(d.foldAnother).toHaveBeenCalledWith(constrained);
+      layerOrder.previous?.run();
+      expect(d.foldPrevious).toHaveBeenCalledWith(constrained);
       layerOrder.action?.run();
       expect(d.openLayerOrder).toHaveBeenCalledWith(constrained);
       // One reads as one; the header keeps states only.
@@ -393,8 +405,8 @@ describe('buildFoldedFigureProperties', () => {
       const d = deps({ stale: true });
       const layerOrder = stepper(sheetFor({ ...SOLVED, layerOrder: held() }, d));
       expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
-      // ‹ › stay as a constrained figure has them, held for the dialog.
-      expect(layerOrder.next).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
+      // ‹ › wait: the solutions of its fold are not its creases' now (H6); Refold or Edit… first.
+      expect(layerOrder.next).toMatchObject({ disabled: true, hint: 'Its creases changed since it was folded' });
     });
 
     it('holds Edit… on a 3D figure with why, stepping on as before when no record waits on it', () => {
@@ -466,6 +478,69 @@ describe('buildFoldedFigureProperties', () => {
     it('waits with the pager while the figure folds', () => {
       const layerOrder = stepper(sheetFor({ ...SOLVED, status: 'loading' } as OristudioCpFoldedFigureEntry));
       expect(layerOrder.action).toMatchObject({ disabled: true, hint: 'Its layer order is being found' });
+    });
+  });
+
+  describe('the Layer order row on a constrained figure, from its solutions cursor (H6)', () => {
+    afterEach(() => {
+      dropFoldedSolutionCursor();
+      gateway.open.mockReset();
+    });
+    const held = () => {
+      const made = foldedFigureLayerOrder(twoConstraintRecord());
+      if (!made.ok) throw new Error('the fixture record encodes');
+      return made.layerOrder;
+    };
+    const CONSTRAINED = {
+      ...FLAT,
+      snapshot: { ...FLAT.snapshot!, outcome: 'Solved', shown_order: 'given' },
+      layerOrder: held(),
+    } as OristudioCpFoldedFigureEntry;
+
+    /** A press landed the figure on `index` of `n`. */
+    async function at(figure: OristudioCpFoldedFigureEntry, index: number, n: number, { exact = true, counted = true } = {}) {
+      gateway.open.mockReturnValueOnce(scriptedSolutionCursor([landedAt(twoConstraintRecord(), index, n, { exact, counted })]));
+      await seatFoldedSolutionCursor(figure, twoConstraintRecord());
+    }
+
+    it('reads where the cursor stands in the frontier’s words, its note kept', async () => {
+      await at(CONSTRAINED, 2, 3, { exact: false });
+      expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({
+        readout: '2 of 3+',
+        note: { kind: 'status', text: '2 constraints' },
+        previous: { disabled: false },
+        next: { disabled: false },
+      });
+      await at(CONSTRAINED, 3, 3);
+      expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({
+        readout: '3 of 3',
+        next: { disabled: true, hint: 'This is its last solution' },
+      });
+      // Too large to count (D7): it steps on, with no total.
+      await at(CONSTRAINED, 3, 1, { exact: false, counted: false });
+      expect(stepper(sheetFor(CONSTRAINED))).toMatchObject({ readout: 'Solution 3', next: { disabled: false } });
+    });
+
+    it('reads nothing once the figure holds another fold or record, or turned over', async () => {
+      await at(CONSTRAINED, 2, 3);
+      expect(stepper(sheetFor({ ...CONSTRAINED, handle: 9 })).readout).toBe('');
+      const back = { ...CONSTRAINED, snapshot: { ...CONSTRAINED.snapshot!, model: { ...MODEL, state: 'Back1' } } };
+      expect(stepper(sheetFor(back as OristudioCpFoldedFigureEntry)).readout).toBe('');
+      dropFoldedSolutionCursor();
+      expect(stepper(sheetFor(CONSTRAINED)).readout).toBe('');
+    });
+
+    it('steps a constrained figure reopened from a file: the press folds it as it goes', () => {
+      const reopened = { ...CONSTRAINED, handle: null } as OristudioCpFoldedFigureEntry;
+      const layerOrder = stepper(sheetFor(reopened));
+      expect(layerOrder).toMatchObject({
+        support: 'supported',
+        readout: '',
+        previous: { disabled: false },
+        next: { disabled: false },
+        action: { disabled: false },
+      });
+      expect(gateway.open).not.toHaveBeenCalled();
     });
   });
 

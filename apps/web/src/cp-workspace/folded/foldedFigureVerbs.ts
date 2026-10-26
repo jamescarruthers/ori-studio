@@ -4,11 +4,15 @@ import type {
   OristudioCpFoldedFigureDisplayStyle,
   OristudioCpFoldedFigureModel,
 } from '../../engine/oristudioCpTypes';
+import { toast } from 'sonner';
 import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, track } from '../../analytics';
+import { layerOrderOffline, layerOrderReloadAction } from '../../layer-order/engine/layerOrderLoadFailure';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import type { OristudioCpFigureSolutionStep } from '../../store/workspaceStore/types';
 import type { FoldedFigureCamera } from './folded3dCamera';
 import { foldedFigureCapabilities } from './foldedFigureCapabilities';
 import { foldedFigureGesture } from './foldedFigureGesture';
+import { foldedFigureLayerOrderHold } from './foldedFigureLayerOrderState';
 import { sayFoldedFigureLayerOrderRefold } from './foldedFigureLayerOrderToasts';
 import { foldedFigureCurrentCase, foldedFigureFrontier } from './foldedFigureState';
 import { openFoldedFigureExport } from './openFoldedFigureExport';
@@ -152,13 +156,143 @@ export function refoldFoldedFigure(id: string, t: TFunction): Promise<boolean | 
   );
 }
 
-/** On to the next layer order, or past the last back to the first, as one entry. */
+/**
+ * On to the next layer order, or past the last back to the first, as one
+ * entry. On a constrained figure, on to the next solution that fits its
+ * constraints instead ({@link stepConstrainedFoldedSolution}).
+ */
 export function showAnotherFoldedSolution(id: string, t: TFunction): Promise<boolean | undefined> {
+  if (isConstrainedFigure(id)) return stepConstrainedFoldedSolution(id, 'next', t);
   return foldedFigureGesture.run(
     'verb',
     t('panels:creasePattern.anotherSolutionAction', 'Show another solution'),
     () => useWorkspaceStore.getState().foldAnotherOristudioCpFigure(id)
   );
+}
+
+/** Whether figure `id` shows a chosen layer order this build reads: it steps within its constraints (H6). */
+function isConstrainedFigure(id: string): boolean {
+  const figure = useWorkspaceStore.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+  return figure !== undefined && foldedFigureLayerOrderHold(figure) === 'record';
+}
+
+/**
+ * Another solution, or back one, on a constrained figure (row H6, D9), as
+ * one entry under the same labels as an unconstrained figure's: through the
+ * solutions that fit its record, on the host engine's cursor, which the first
+ * press makes (`foldedSolutionCursor.ts`). A press that moves nothing writes
+ * nothing, and says why when the reason is news ({@link sayFoldedSolutionStep}).
+ * `tries` counts the user's Keep trying after running out of time.
+ */
+export function stepConstrainedFoldedSolution(
+  id: string,
+  direction: 'next' | 'previous',
+  t: TFunction,
+  { tries = 0 }: { tries?: number } = {}
+): Promise<boolean | undefined> {
+  const label =
+    direction === 'next'
+      ? t('panels:creasePattern.anotherSolutionAction', 'Show another solution')
+      : t('panels:creasePattern.previousSolutionAction', 'Show previous solution');
+  return foldedFigureGesture.run('verb', label, async () => {
+    const step = await useWorkspaceStore.getState().stepOristudioCpFigureLayerOrder(id, direction, { tries });
+    sayFoldedSolutionStep(step, t, () => void stepConstrainedFoldedSolution(id, direction, t, { tries: tries + 1 }), tries);
+    return step.status === 'moved';
+  });
+}
+
+/**
+ * The toast id of a step's message, by how many times the user has kept
+ * trying: presses at the same try replace one another, and each Keep trying
+ * gets a fresh one. Clicking Keep trying dismisses its toast, and a toast
+ * shown again under that id while it leaves is lost in its exit.
+ */
+function stepToastId(tries: number): string {
+  return `layer-order-step-${tries}`;
+}
+
+/**
+ * What a constrained step that moved nothing says, if anything:
+ *
+ * - the engine didn't load, with Reload, the only retry there is (offline:
+ *   reconnect first), or it stopped;
+ * - the record couldn't be checked in time (D10), or the search for the next
+ *   solution ran out (E9's `timed_out`): each with Keep trying, which asks
+ *   again with a longer deadline (`keepTrying`), and the step goes on from
+ *   what it proved;
+ * - its constraints need attention; or the next solution is too large to save.
+ *
+ * An end (proved since E9: asking again gains nothing), a Stop, a figure that
+ * moved on, or one that can't step now says nothing: the pager waits at the
+ * end and shows where it stands, and the rest the user did or already sees.
+ * A fold the kernel couldn't draw said so through the store.
+ */
+export function sayFoldedSolutionStep(
+  step: OristudioCpFigureSolutionStep,
+  t: TFunction,
+  keepTrying: () => void,
+  tries = 0
+): void {
+  const keepTryingAction = {
+    label: t('dialogs:layerOrder.keepTrying', 'Keep trying'),
+    onClick: keepTrying,
+  };
+  const toastId = stepToastId(tries);
+  switch (step.status) {
+    case 'lost':
+      if (step.cause === 'load') {
+        // Only a reload retries a load that failed (`layerOrderReloadAction`).
+        toast.error(
+          layerOrderOffline()
+            ? t(
+                'toasts:layerOrder.stepLostLoadOffline',
+                'Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+              )
+            : t(
+                'toasts:layerOrder.stepLostLoadReload',
+                'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.'
+              ),
+          { id: toastId, action: layerOrderReloadAction(t) }
+        );
+        return;
+      }
+      toast.error(t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'), {
+        id: toastId,
+      });
+      return;
+    case 'timed_out':
+      toast.error(
+        step.stage === 'restore'
+          ? t(
+              'toasts:layerOrder.stepCheckTimedOut',
+              'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.'
+            )
+          : t('toasts:layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so the figure wasn’t changed.'),
+        { id: toastId, action: keepTryingAction }
+      );
+      return;
+    case 'unrestored':
+      toast.error(
+        t(
+          'toasts:layerOrder.stepUnrestored',
+          'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.'
+        ),
+        { id: toastId }
+      );
+      return;
+    case 'too-large':
+      toast.error(
+        t('errors:cp.layerOrderTooLarge', 'This layer order is too large to save with the figure, so it is unchanged.'),
+        { id: toastId }
+      );
+      return;
+    case 'moved':
+    case 'end':
+    case 'not-drawn':
+    case 'stopped':
+    case 'blocked':
+      return;
+  }
 }
 
 /**
@@ -167,9 +301,11 @@ export function showAnotherFoldedSolution(id: string, t: TFunction): Promise<boo
  * (`foldOristudioCpFigureToCase`), as the Diagram's ‹ goes back. Counted as
  * Another solution is (`fold solution cycled`), with the solutions known
  * once it lands. Refused on the first, and on a 3D figure, which has no
- * numbered solutions to go back to.
+ * numbered solutions to go back to. On a constrained figure, back one
+ * solution that fits its constraints instead ({@link stepConstrainedFoldedSolution}).
  */
 export function showPreviousFoldedSolution(id: string, t: TFunction): Promise<boolean | undefined> {
+  if (isConstrainedFigure(id)) return stepConstrainedFoldedSolution(id, 'previous', t);
   return foldedFigureGesture.run(
     'verb',
     t('panels:creasePattern.previousSolutionAction', 'Show previous solution'),

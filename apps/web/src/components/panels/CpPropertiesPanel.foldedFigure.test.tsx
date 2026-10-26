@@ -8,12 +8,29 @@ import type {
   OristudioCpFoldedFigureEntry,
 } from '../../engine/oristudioCpTypes';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
+import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { dropFoldedSolutionCursor } from '../../cp-workspace/folded/foldedSolutionCursor';
 import { TooltipProvider } from '../ui/Tooltip';
 
 const exporter = vi.hoisted(() => ({ open: vi.fn(async () => {}) }));
 vi.mock('../../cp-workspace/folded/openFoldedFigureExport', () => ({
   openFoldedFigureExport: exporter.open,
+}));
+
+/** The CP kernel's answer for what a figure was folded from, read on a constrained figure's first press (H6). */
+const cpRuntime = vi.hoisted(() => ({
+  getOristudioCpFoldedFigureSource: vi.fn(async () => ({
+    segments: [],
+    starting_face_id: 1,
+    aux_segments: [],
+    digest: '00000000c0ffee01',
+  })),
+}));
+vi.mock('../../store/workspaceStore/oristudioCpRuntime', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../store/workspaceStore/oristudioCpRuntime')>()),
+  getOristudioCpFoldedFigureSource: cpRuntime.getOristudioCpFoldedFigureSource,
 }));
 
 const { CpPropertiesPanel } = await import('./CpPropertiesPanel');
@@ -314,5 +331,61 @@ describe('E, a figure with no layer order', () => {
     }
     expect(store.foldAnotherOristudioCpFigure).not.toHaveBeenCalled();
     expect(store.foldOristudioCpFigureToCase).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The Fold engine never loads at rest (approach 5, row H6): selecting a
+ * constrained figure and drawing its pane — its Layer order row's ‹ › live,
+ * from saved data — starts no worker; the first press of › does, the host
+ * engine's, through the cursor it makes. (That worker never comes here, so
+ * the press writes nothing and says the engine stopped.)
+ */
+describe('a constrained figure (H6)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    dropFoldedSolutionCursor();
+  });
+
+  it('starts no worker when it is selected and its pane drawn; the first press of › does', async () => {
+    const spawned: string[] = [];
+    class WorkerSpy {
+      constructor(url: URL | string) {
+        spawned.push(String(url));
+        throw new Error('no worker in this test');
+      }
+    }
+    vi.stubGlobal('Worker', WorkerSpy);
+    const record = foldedFigureLayerOrder(twoConstraintRecord());
+    if (!record.ok) throw new Error('the fixture record encodes');
+    const constrained = {
+      ...FLAT,
+      snapshot: { ...FLAT.snapshot!, outcome: 'Solved', shown_order: 'given' },
+      sourceBounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+      layerOrder: record.layerOrder,
+    } as unknown as OristudioCpFoldedFigureEntry;
+
+    mount(constrained);
+    const layerOrder = rowOf('Layer order')!;
+    expect(layerOrder.querySelector('[data-field-note="status"]')?.textContent).toBe('2 constraints');
+    const next = button(layerOrder, 'Another solution');
+    expect(next?.getAttribute('aria-disabled')).toBeNull();
+    expect(button(layerOrder, 'Previous solution')?.getAttribute('aria-disabled')).toBeNull();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(spawned).toEqual([]);
+    expect(cpRuntime.getOristudioCpFoldedFigureSource).not.toHaveBeenCalled();
+
+    await press(next);
+    await vi.waitFor(() => expect(spawned).toHaveLength(1));
+    expect(spawned[0]).toMatch(/layerOrderWorker/);
+    expect(cpRuntime.getOristudioCpFoldedFigureSource).toHaveBeenCalledWith(constrained.handle);
+    await vi.waitFor(() => expect(useWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.status).toBe('ready'));
+    expect(useWorkspaceStore.getState().oristudioCpFoldedFigures[0]).toMatchObject({
+      handle: constrained.handle,
+      layerOrder: record.layerOrder,
+    });
+    expect(useWorkspaceStore.getState().oristudioCpHistoryPast).toEqual([]);
   });
 });
