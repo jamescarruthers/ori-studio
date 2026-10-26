@@ -13,6 +13,7 @@ import type {
   OristudioCpLineSegment,
 } from '../../engine/oristudioCpTypes';
 import type { OristudioCpLineStyle } from '../creasePatternViewport';
+import type { Point } from '../geometry';
 import type { PaperStyle } from '../paper/paperStyle';
 import type { SurfaceStylePolicy } from '../paper/paperStyleResolve';
 import type { LayerOrderRecord } from './layerOrderRecord';
@@ -39,6 +40,25 @@ export interface LayerOrderSource {
    * the new fold at Apply.
    */
   readonly digest: string;
+}
+
+/**
+ * The crease pattern a fold came from, out of a document that may hold many:
+ * the sheet its creases lie on, as a Diagram step links one
+ * (`cp-workspace/regions/regionCreases.ts`). What the crease-pattern pane
+ * draws besides the source's creases, and what it frames. The host finds it
+ * (`cp-workspace/regions/layerOrderRegion.ts`); the dialog never sees the
+ * document.
+ */
+export interface LayerOrderRegion {
+  /** The sheet's paper, its rings in the crease pattern's coordinates: what the pane fits. */
+  readonly paper: readonly (readonly Point[])[];
+  /**
+   * The sheet's lines that fold nothing, its aux lines: drawn under the
+   * source's creases in place of the whole document's, which the source
+   * carries for the folded paper to clip.
+   */
+  readonly auxSegments: readonly OristudioCpLineSegment[];
 }
 
 /**
@@ -90,6 +110,12 @@ export interface LayerOrderRequest {
   /** Which host asked, for the dialog's analytics (`LayerOrderRequestSurface`). */
   readonly surface?: LayerOrderRequestSurface;
   readonly source: LayerOrderSource;
+  /**
+   * The sheet the source's creases lie on, which the crease-pattern pane
+   * shows alone. Left out when they lie on no one sheet: the pane then frames
+   * the source's creases.
+   */
+  readonly region?: LayerOrderRegion | null;
   /** What is saved, if anything, with its points in the crease pattern's coordinates (`paperFrame.ts`). */
   readonly record: LayerOrderRecord | null;
   readonly look: LayerOrderLook;

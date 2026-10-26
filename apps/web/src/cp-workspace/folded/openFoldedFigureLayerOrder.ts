@@ -21,14 +21,23 @@
  */
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
-import type { OristudioCpFoldedFigureEntry, OristudioCpFoldedFigureModel } from '../../engine/oristudioCpTypes';
+import type {
+  OristudioCpDocumentSnapshot,
+  OristudioCpFoldedFigureEntry,
+  OristudioCpFoldedFigureModel,
+} from '../../engine/oristudioCpTypes';
 import {
   openLayerOrderDialog,
   prefetchLayerOrderDialog,
   type LayerOrderDialogOutcome,
 } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { EDIT_PAPER_FRAME, layerOrderRecordToSource } from '../../lib/layerOrder/paperFrame';
-import type { LayerOrderApplied, LayerOrderLook, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import type {
+  LayerOrderApplied,
+  LayerOrderLook,
+  LayerOrderRegion,
+  LayerOrderRequest,
+} from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
 import { radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
 import {
@@ -46,7 +55,9 @@ import type {
   WorkspaceState,
 } from '../../store/workspaceStore/types';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
+import { layerOrderRegionOfLines } from '../regions/layerOrderRegion';
 import { foldedFigureGesture } from './foldedFigureGesture';
+import { reselectFoldableLineIds } from './foldedFigureStaleness';
 import { foldedFigureLayerOrderDialogRecord } from './foldedFigureLayerOrderState';
 import { refoldFoldedFigure } from './foldedFigureVerbs';
 import { foldPressMoved, foldPressMovedMessage, markFoldPress, type FoldPress } from './foldPress';
@@ -96,18 +107,22 @@ export function editFigureView(state: WorkspaceState): EditFigureView {
  *   restores the record itself;
  * - **the figure's name**, and the surface for the dialog's analytics;
  * - **that its Apply also refolds it** (`applyRefolds`), when its creases
- *   changed since the fold and the source is them as they are now (D12).
+ *   changed since the fold and the source is them as they are now (D12);
+ * - **the sheet it was folded from** (`region`, {@link foldedFigureRegion}),
+ *   which the crease-pattern pane shows alone.
  */
 export function foldedFigureLayerOrderRequest(
   figure: OristudioCpFoldedFigureEntry,
   opening: Extract<OristudioCpFigureLayerOrderOpening, { status: 'ready' }>,
-  view: EditFigureView
+  view: EditFigureView,
+  region: LayerOrderRegion | null = null
 ): LayerOrderRequest {
   // Its own, or one a reload detached, shown for review (never folded with).
   const record = foldedFigureLayerOrderDialogRecord(figure);
   return {
     surface: 'edit_figure',
     source: layerOrderSourceOf(opening.source, opening.model),
+    ...(region ? { region } : {}),
     record: record ? layerOrderRecordToSource(record, EDIT_PAPER_FRAME) : null,
     look: editFigureLook(view, {
       style: effectiveObjectPaperStyle(figure, view.display),
@@ -120,6 +135,23 @@ export function foldedFigureLayerOrderRequest(
     // Opened on creases that changed since the fold: its Apply refolds it too (D12).
     ...(opening.refold ? { applyRefolds: true } : {}),
   };
+}
+
+/**
+ * The sheet figure `figure` was folded from, in `document`: the one holding
+ * the creases its refold would fold, reselected from its provenance box as
+ * the opening reselects them (`reselectFoldableLineIds`), or the ids it
+ * folded for a figure from before boxes. Null when they lie on no one sheet.
+ */
+export function foldedFigureRegion(
+  document: OristudioCpDocumentSnapshot | null | undefined,
+  figure: Pick<OristudioCpFoldedFigureEntry, 'sourceBounds' | 'sourceLineIds'>
+): Promise<LayerOrderRegion | null> {
+  if (!document) return Promise.resolve(null);
+  const lineIds = figure.sourceBounds
+    ? reselectFoldableLineIds(document, figure.sourceBounds)
+    : (figure.sourceLineIds ?? []);
+  return layerOrderRegionOfLines(document, lineIds);
 }
 
 /**
@@ -182,6 +214,8 @@ export async function openFoldedFigureLayerOrder(
     return 'not-opened';
   }
   try {
+    // The crease pattern it came from, out of however many the canvas holds.
+    const region = await foldedFigureRegion(store.getState().oristudioCpDocument?.document, figure);
     const state = store.getState();
     // A crease edited or another document opened while the fold was read or
     // made: its Apply would be refused, so the dialog does not open.
@@ -190,7 +224,7 @@ export async function openFoldedFigureLayerOrder(
       return 'not-opened';
     }
     const shown = state.oristudioCpFoldedFigures.find((entry) => entry.id === id) ?? figure;
-    const request = foldedFigureLayerOrderRequest(shown, opening, editFigureView(state));
+    const request = foldedFigureLayerOrderRequest(shown, opening, editFigureView(state), region);
     // From the flag's Review…: the dialog opens on the rows that need attention (D14).
     const outcome = await openLayerOrderDialog(via === 'review' ? { ...request, review: true } : request);
     if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, press, t, opening.refold);

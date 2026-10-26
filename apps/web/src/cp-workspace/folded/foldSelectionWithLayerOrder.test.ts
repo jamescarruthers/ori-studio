@@ -130,6 +130,14 @@ vi.mock('../../layer-order/dialog/layerOrderDialogGateway', async (importOrigina
   };
 });
 
+/** The canvas's sheet index, as each test sets it: none unless it says. */
+const sheets = vi.hoisted(() => ({ index: null as import('../../engine/oristudioCpSheetIndex').CpSheetIndex | null }));
+vi.mock('../sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sheets/cpSheetIndex')>()),
+  peekCpSheetIndex: () => sheets.index,
+  ensureCpSheetIndex: async () => sheets.index,
+}));
+
 vi.mock('../../analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../analytics')>();
   return { ...actual, track: analytics.track };
@@ -149,6 +157,13 @@ import { isFoldedFigureStale } from './foldedFigureStaleness';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { IDENTITY_FOLDED_PLACEMENT } from '../../engine/oristudioCpTypes';
+import {
+  cpDocument,
+  LEFT_FOLD_LINE_IDS,
+  LEFT_LINE_IDS,
+  RIGHT_LINE_IDS,
+  twoSquaresIndex,
+} from '../../diagram/capture/capture.fixtures';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
@@ -287,6 +302,7 @@ beforeEach(async () => {
   kernel.checks = 0;
   dialog.requests.length = 0;
   dialog.answer = async () => ({ kind: 'cancelled' });
+  sheets.index = null;
   analytics.track.mockReset();
   useSettingsStore.setState({ foldWarningEnabled: true });
   useWorkspaceStore.setState({
@@ -694,5 +710,58 @@ describe('what a Layer order press found open', () => {
       expect(figures()[0]).toMatchObject({ id: figure.id, layerOrder: { kind: 'record' } });
       expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Set layer order']);
     });
+  });
+});
+
+describe('the crease pattern the dialog shows, on a canvas of two', () => {
+  // Two squares side by side, each its own sheet; the left one holds an aux line (10).
+  const twoSquares = () => cpDocument().crease_pattern.line_segments;
+  const LEFT = { paper: [[{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]], auxSegments: [twoSquares()[9]] };
+
+  beforeEach(() => {
+    useWorkspaceStore.setState({ oristudioCpDocument: cpState(twoSquares()) });
+    sheets.index = twoSquaresIndex();
+  });
+
+  it('Fold with layer order… on one square: that square alone, its paper and its own aux line', async () => {
+    await foldSelectionWithLayerOrder(LEFT_LINE_IDS, t);
+    expect(dialog.requests[0]!.region).toEqual(LEFT);
+    // Its creases alone, the aux line unselected: the same square.
+    await foldSelectionWithLayerOrder(LEFT_FOLD_LINE_IDS, t);
+    expect(dialog.requests[1]!.region).toEqual(LEFT);
+  });
+
+  it('a selection across both squares, or a canvas with no sheets yet: no region, so the pane frames the creases', async () => {
+    await foldSelectionWithLayerOrder([...LEFT_FOLD_LINE_IDS, ...RIGHT_LINE_IDS], t);
+    expect(dialog.requests[0]!.region).toBeUndefined();
+    sheets.index = null;
+    await foldSelectionWithLayerOrder(LEFT_LINE_IDS, t);
+    expect(dialog.requests[1]!.region).toBeUndefined();
+  });
+
+  it('Layer order… on a figure: the square its provenance box reselects, as its refold would', async () => {
+    const handle = arena.take();
+    retainFoldedFigureHandle(handle);
+    const figure: OristudioCpFoldedFigureEntry = {
+      id: 'generated-1',
+      title: 'Folded model 1',
+      handle,
+      sourceKind: 'generated-from-current-cp',
+      sourceCpRevision: 0,
+      startingFaceId: 1,
+      displayStyle: 'Paper5',
+      status: 'ready',
+      placement: IDENTITY_FOLDED_PLACEMENT,
+      snapshot: snapshot({ outcome: 'Solved', given: false }),
+      renderSnapshot: renderSnapshot(),
+      sourceBounds: { minX: 0, minY: 0, maxX: 100, maxY: 100 },
+      sourceFingerprint: null,
+      // Ids from before an edit renumbered them: the box, not these, finds the square.
+      sourceLineIds: RIGHT_LINE_IDS,
+      error: null,
+    };
+    useWorkspaceStore.setState({ oristudioCpFoldedFigures: [figure] });
+    await openFoldedFigureLayerOrder(figure.id, t);
+    expect(dialog.requests[0]!.region).toEqual(LEFT);
   });
 });
