@@ -13,7 +13,6 @@ import {
   PANE_USER_PER_UNIT,
   paneFacesOf,
   paneTurnDeg,
-  patternPaneBounds,
   patternPaneFrame,
   patternPaneLines,
   ringsBounds,
@@ -175,62 +174,89 @@ describe('the crease pattern’s lines', () => {
     ]);
   });
 
-  it('frames every line, through Edit’s map', () => {
-    expect(patternPaneBounds({ ...source, segments: [], auxSegments: [] })).toBeNull();
-    const bounds = patternPaneBounds(source)!;
-    const from = cpModelToSvg({ x: 0, y: 0 });
-    const to = cpModelToSvg({ x: 4, y: 10 });
-    expect(bounds).toEqual({ minX: from.x, minY: from.y, maxX: to.x, maxY: to.y });
+  it('with a region, its sheet’s aux lines in place of the whole document’s', () => {
+    const document = { ...source, auxSegments: [line('Cyan3', 4), line('Cyan3', 900)] };
+    const region = { paper: [], auxSegments: [line('Cyan3', 5)] };
+    expect(patternPaneLines(document, region).map(({ color, a }) => `${color}@${a.x}`)).toEqual([
+      'Cyan3@5',
+      'Red1@1',
+      'Blue2@2',
+      'Black0@0',
+      'Black0@3',
+    ]);
   });
 });
 
-describe('Fit (Round3’s fitAll)', () => {
-  const side = (bounds: { minX: number; maxX: number; minY: number; maxY: number }) => ({
-    width: bounds.maxX - bounds.minX,
-    height: bounds.maxY - bounds.minY,
+describe('Fit: each pane its own content', () => {
+  const user = (x: number, y: number) => cpModelToSvg({ x, y });
+  const boxOf = (from: { x: number; y: number }, to: { x: number; y: number }) => ({
+    minX: Math.min(from.x, to.x),
+    minY: Math.min(from.y, to.y),
+    maxX: Math.max(from.x, to.x),
+    maxY: Math.max(from.y, to.y),
   });
+  const segment = (color: string, ax: number, ay: number, bx: number, by: number): OristudioCpLineSegment => ({
+    a: { x: ax, y: ay },
+    b: { x: bx, y: by },
+    active: 'INACTIVE_0',
+    color,
+    selected: 0,
+    customized: 0,
+    customized_color: { red: 0, green: 0, blue: 0 },
+  });
+  // The Z's strip, 40 by 10, one pattern of a document whose aux lines run on across another, far off.
+  const strip: LayerOrderSource = {
+    segments: [
+      segment('Black0', 0, 0, 40, 0),
+      segment('Black0', 40, 0, 40, 10),
+      segment('Black0', 40, 10, 0, 10),
+      segment('Black0', 0, 10, 0, 0),
+      segment('Blue2', 20, 0, 20, 10),
+      segment('Red1', 30, 0, 30, 10),
+    ],
+    startingFaceId: 0,
+    auxSegments: [segment('Cyan3', 0, 5, 40, 5), segment('Cyan3', 900, 900, 960, 960)],
+    model: DEFAULT_FOLDED_MODEL,
+    digest: '0',
+  };
+  const paper = [
+    [
+      { x: 0, y: 0 },
+      { x: 40, y: 0 },
+      { x: 40, y: 10 },
+      { x: 0, y: 10 },
+    ],
+  ];
 
-  it('fills a pane’s shorter side to 1000 in 1100 with the sheet', () => {
+  it('fills a pane’s shorter side 1000 in 1100, about 91%', () => {
     expect(LAYER_ORDER_PANE_FIT_SHARE).toBeCloseTo(0.909, 3);
   });
 
-  it('frames the same square on both panes, so Fit takes one scale and a percentage means one size', () => {
-    // The Z's strip, 40 by 10 on the crease pattern; its sheet is 40.
-    const scene = zScene();
-    const edge = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
-      a,
-      b,
-      active: 'INACTIVE_0' as const,
-      color: 'Black0',
-      selected: 0,
-      customized: 0,
-      customized_color: { red: 0, green: 0, blue: 0 },
-    });
-    const strip: LayerOrderSource = {
-      segments: [edge({ x: 0, y: 0 }, { x: 40, y: 0 }), edge({ x: 40, y: 0 }, { x: 40, y: 10 }), edge({ x: 0, y: 10 }, { x: 0, y: 0 })],
-      startingFaceId: 0,
-      auxSegments: [],
-      model: DEFAULT_FOLDED_MODEL,
-      digest: '0',
-    };
-    const pattern = patternPaneFrame(strip)!;
-    const figure = ringsBounds(scene.faces.map((face) => face.outline), foldedPaneToUser(0, foldedPivot(scene)))!;
-    const folded = foldedPaneFrame(figure, scene.sheet);
-    expect(side(pattern).width).toBeCloseTo(40 * PANE_USER_PER_UNIT);
-    expect(side(pattern).height).toBeCloseTo(side(pattern).width);
-    expect(side(folded).width).toBeCloseTo(side(pattern).width);
-    expect(side(folded).height).toBeCloseTo(side(pattern).height);
-    // Each about its own figure’s middle: the strip’s, and the folded paper’s.
-    const middle = cpModelToSvg({ x: 20, y: 5 });
-    expect((pattern.minX + pattern.maxX) / 2).toBeCloseTo(middle.x);
-    expect((pattern.minY + pattern.maxY) / 2).toBeCloseTo(middle.y);
-    expect((folded.minX + folded.maxX) / 2).toBeCloseTo((figure.minX + figure.maxX) / 2);
-    expect((folded.minY + folded.maxY) / 2).toBeCloseTo((figure.minY + figure.maxY) / 2);
+  it('the crease pattern: its region’s paper, never the document’s other patterns', () => {
+    const region = { paper, auxSegments: [strip.auxSegments[0]!] };
+    expect(patternPaneFrame(strip, region)).toEqual(boxOf(user(0, 0), user(40, 10)));
   });
 
-  it('never frames less than the folded figure', () => {
-    const wide = { minX: 0, minY: 0, maxX: 500, maxY: 20 };
-    expect(side(foldedPaneFrame(wide, 1))).toEqual({ width: 500, height: 500 });
+  it('the crease pattern with no region: the creases folded, not the aux lines', () => {
+    expect(patternPaneFrame(strip)).toEqual(boxOf(user(0, 0), user(40, 10)));
+    expect(patternPaneFrame({ ...strip, segments: [] })).toBeNull();
+  });
+
+  it('the folded figure: itself, from either side and at the host’s turn, however small it folds', () => {
+    // The Z folds to 20 by 10, half its 40 sheet: the pane frames the 20, not the sheet.
+    for (const side of ['front', 'back'] as const) {
+      const scene = zScene(side);
+      const flat = foldedPaneFrame(scene, foldedPaneToUser(0, foldedPivot(scene)))!;
+      const outlines = ringsBounds(scene.faces.map((face) => face.outline), cpModelToSvg)!;
+      for (const key of ['minX', 'minY', 'maxX', 'maxY'] as const) expect(flat[key]).toBeCloseTo(outlines[key]);
+      expect(flat.maxX - flat.minX).toBeCloseTo(20 * PANE_USER_PER_UNIT);
+      expect(flat.maxY - flat.minY).toBeCloseTo(10 * PANE_USER_PER_UNIT);
+      // A quarter turn stands it on end, about its own middle.
+      const turned = foldedPaneFrame(scene, foldedPaneToUser(90, foldedPivot(scene)))!;
+      expect(turned.maxX - turned.minX).toBeCloseTo(10 * PANE_USER_PER_UNIT);
+      expect(turned.maxY - turned.minY).toBeCloseTo(20 * PANE_USER_PER_UNIT);
+      expect((turned.minX + turned.maxX) / 2).toBeCloseTo((flat.minX + flat.maxX) / 2);
+    }
   });
 });
 

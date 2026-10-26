@@ -8,9 +8,11 @@
  * - **The crease pattern** draws at once, from the request's source, as
  *   Edit draws a crease pattern whatever the host (D18): in the line style
  *   and width of Edit's view, which the host hands over in its look, in
- *   Edit's frame. Its faces, for tints, rings, letters and hits, come from
- *   the session's scene once it is open, or from the scene the host shows
- *   until then, so a refusal can name a face.
+ *   Edit's frame. Only the pattern the fold came from: the source's creases
+ *   and the aux lines of the host's region, its sheet, never the rest of a
+ *   document of many. Its faces, for tints, rings, letters and hits, come
+ *   from the session's scene once it is open, or from the scene the host
+ *   shows until then, so a refusal can name a face.
  * - **The folded figure** draws once the session is open: the side shown's
  *   scene, restacked for the order on screen (a preview's included),
  *   painted by the shared pipeline (`foldedFlatPaperScene`, then
@@ -18,10 +20,12 @@
  *   style and policy, turned as the host turns it from the side its picture
  *   shows, with no spread (D18). X-ray draws every layer, the buried ones
  *   too, see-through.
- * - **Fit** (Round3's `fitAll`): each pane frames a square of the sheet's
- *   size, the crease pattern's about the paper, the folded figure's about the
- *   figure, at {@link LAYER_ORDER_PANE_FIT_SHARE}, so both take one scale and
- *   their readouts agree; a turn over keeps the figure itself in view.
+ * - **Fit**: each pane fits its own content at
+ *   {@link LAYER_ORDER_PANE_FIT_SHARE}, about 91% of it: the crease pattern
+ *   its region's paper, the folded figure the figure itself, from either
+ *   side, X-ray or not. So a figure that folds small fills its pane, and the
+ *   two readouts each say their own scale (your call, 2026-10-26, over
+ *   Round3's one shared sheet). A turn over keeps the figure in view.
  * - **What follows the pointer** (the face pointed at, a row's faces) is
  *   painted apart, on the overlay channel (`pointerPanePaint`): under the
  *   creases on the crease pattern, as every tint there is (D20), over the
@@ -62,7 +66,6 @@ import {
   patternPaneLines,
   patternPaneToUser,
   restackedScene,
-  ringsBounds,
   stackDepth,
   xrayFaceAlpha,
   type LayerPaneSegment,
@@ -123,7 +126,7 @@ export interface LayerPaneChannels {
   readonly hitTest: (at: Point, radii: unknown, stack: StackHit | null) => LayerPaneHit | null;
   /** The faces a pick can take now: the pointer's cursor says so over them. */
   readonly pickable: ReadonlySet<LayerFace>;
-  /** What a fit frames: a square of the sheet's size (see the module docs). */
+  /** What a fit frames: the pane's own content (see the module docs). */
   readonly contentBounds: UserBounds | null;
   /** What the content is: the side shown, on the folded pane, so turning it over keeps the view while it shows. */
   readonly keepInViewKey: string | null;
@@ -294,9 +297,10 @@ export function useLayerPatternPane({
   themeKey,
 }: LayerPaneInputs): LayerPaneChannels {
   const { source, look } = request;
+  const region = request.region ?? null;
   const facesScene = figureOf(status, request).faces;
-  const lines = useMemo(() => patternPaneLines(source), [source]);
-  const contentBounds = useMemo(() => patternPaneFrame(source), [source]);
+  const lines = useMemo(() => patternPaneLines(source, region), [source, region]);
+  const contentBounds = useMemo(() => patternPaneFrame(source, region), [source, region]);
   const creases = useMemo(
     () =>
       element ? cpPatternStrokes(lines, element, { lineStyle: look.lineStyle, lineWidth: look.lineWidth }) : null,
@@ -442,11 +446,8 @@ export function useLayerFoldedPane({
   // The cells never move with the order: one index per scene.
   const index = useMemo(() => (kernel ? new StackHitIndex(kernel.subfaces) : null), [kernel]);
   const outlines = useMemo(() => (kernel ? foldedOutlinesOf(kernel) : null), [kernel]);
-  const figureBounds = useMemo(() => (outlines ? ringsBounds(outlines, modelToSvg) : null), [outlines, modelToSvg]);
-  const contentBounds = useMemo(
-    () => (figureBounds && kernel ? foldedPaneFrame(figureBounds, kernel.sheet) : null),
-    [figureBounds, kernel]
-  );
+  // Fit frames the figure itself, and a turn over keeps it in view.
+  const figureBounds = useMemo(() => (kernel ? foldedPaneFrame(kernel, modelToSvg) : null), [kernel, modelToSvg]);
   const basePaint = useMemo(() => (shown ? baseFoldedPaint(base, shown, view) : null), [base, shown, view]);
   const pointerPaint = useMemo(() => pointerPanePaint(marks, 'folded'), [marks]);
   const ringOf = useMemo(() => (face: LayerFace) => outlines?.[face], [outlines]);
@@ -508,7 +509,7 @@ export function useLayerFoldedPane({
     stacks: index,
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,
-    contentBounds,
+    contentBounds: figureBounds,
     keepInViewKey: side,
     keepInViewBounds: figureBounds,
     rings,
