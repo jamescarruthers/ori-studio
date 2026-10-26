@@ -4350,6 +4350,239 @@ function editSelectionCases(theme) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit's figure: Another solution within constraints (H6)
+
+/**
+ * The constraint on kabuto that leaves the most pictures from the front
+ * (three at least), chosen with no dialog (as `chosenOrder` does) and left
+ * for `applyChosenOrder`: the figure's fold opened on the Fold wasm, each
+ * open pair tried both ways and counted to the end, the best committed again
+ * and saved.
+ */
+async function severalSolutionsOrder(page, figureId) {
+  return page.evaluate(async (figureId) => {
+    const store = window.__treemakerWorkspaceStore;
+    const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === figureId);
+    const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS, constraintSeen } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const source = layerOrderSourceOf(await runtime.getOristudioCpFoldedFigureSource(figure.handle), figure.snapshot.model);
+    const engine = createLayerOrderRuntime({ role: 'dialog' });
+    try {
+      const opened = await engine.engine.open(source, LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`refused: ${JSON.stringify(opened.refusal)}`);
+      let best = null;
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        for (const verb of ['in_front_of', 'behind']) {
+          const [lo, hi] = [opened.open_pairs[i], opened.open_pairs[i + 1]];
+          const constraint = constraintSeen(lo, verb, hi, 'front', opened.front_up[hi] === 1);
+          const committed = await engine.engine.commit([constraint], LAYER_ORDER_LIMITS.commit);
+          if (committed.verdict !== 'committed') continue;
+          const counted = await engine.engine.countSlice(LAYER_ORDER_LIMITS.restore);
+          if (counted.count.done && counted.count.front.n >= 3 && counted.count.front.n > (best?.pictures ?? 0)) {
+            best = { constraint, pictures: counted.count.front.n };
+          }
+        }
+      }
+      if (!best) throw new Error('no one constraint on kabuto leaves three pictures');
+      const committed = await engine.engine.commit([best.constraint], LAYER_ORDER_LIMITS.commit);
+      if (committed.verdict !== 'committed') throw new Error('the best constraint no longer commits');
+      const saved = await engine.engine.save();
+      if (saved.status !== 'ok') throw new Error(`save refused: ${JSON.stringify(saved.refusal)}`);
+      window.__layerOrderApplied = { record: saved.record, relations: await engine.engine.relations(), source };
+      return { pictures: best.pictures };
+    } finally {
+      engine.dispose();
+    }
+  }, figureId);
+}
+
+/** The Properties pane's Layer order row: its readout, and its ‹ and ›. */
+function layerOrderRow(page) {
+  const row = page
+    .locator('[data-property-sheet] [data-field-row]')
+    .filter({ has: page.locator('[data-field-label]', { hasText: /^Layer order$/ }) });
+  return {
+    row,
+    readout: async () => (await row.locator('[aria-live="polite"]').innerText()).trim(),
+    note: async () => (await row.locator('[data-field-note]').innerText()).trim(),
+    next: row.getByRole('button', { name: 'Another solution' }),
+    previous: row.getByRole('button', { name: 'Previous solution' }),
+  };
+}
+
+/** Whether a pager verb waits: refused, not disabled, so it keeps its focus (`Pager.tsx`). */
+async function waits(verb) {
+  return (await verb.getAttribute('aria-disabled')) === 'true';
+}
+
+/** Press `verb` and let the step it starts land, or answer that it moved nothing: the figure ready, no fold running. */
+async function pressStep(page, verb) {
+  await verb.click();
+  await page.waitForFunction(
+    () => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      return state.oristudioCpFoldedFigures[0]?.status === 'ready' && Object.keys(state.oristudioCpFoldRuns).length === 0;
+    },
+    null,
+    { timeout: 60000 }
+  );
+  await settle(page);
+  return figureState(page);
+}
+
+/** How many undo entries Edit holds. */
+function undoDepth(page) {
+  return page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.length);
+}
+
+/**
+ * H6 on kabuto, in one theme: a constraint that leaves several pictures,
+ * applied; selecting the figure and drawing its pane starts no worker; the
+ * first › makes the host engine's cursor (one worker), and ‹ › then step
+ * through the solutions that fit, one entry each, the readout counting
+ * them, each end waiting once reached; an undo shows the order before and
+ * lets the cursor (and its worker) go; and a reload keeps the order the
+ * figure was left on, with no cursor and no worker until the next press.
+ */
+function editFigureSolutionCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record, { dir }) => {
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const id = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    const { pictures } = await severalSolutionsOrder(page, id);
+    if (!(await applyChosenOrder(page, id))) throw new Error('Apply wrote nothing');
+    const applied = await figureState(page);
+    console.log(`[${tag}] applied one constraint that leaves ${pictures} pictures from the front`);
+
+    // Selected again and its pane drawn, from saved data: ‹ › live, no readout, the note; no worker.
+    const watch = watchLayerOrderLoads(page);
+    const closed = [];
+    page.on('worker', (worker) => worker.on('close', () => closed.push(worker.url())));
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().setOristudioCpActiveFoldedFigure(null);
+      store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+    });
+    const row = layerOrderRow(page);
+    await row.row.waitFor({ state: 'visible', timeout: 30000 });
+    const atRest = await figureShots(page);
+    await page.waitForTimeout(1000);
+    if (watch.workers().length > 0) throw new Error(`selecting it spawned ${watch.workers().join(', ')}`);
+    if ((await row.readout()) !== '' || (await waits(row.next)) || (await waits(row.previous))) {
+      throw new Error(`at rest the row reads "${await row.readout()}", or a verb waits`);
+    }
+    if ((await row.note()) !== '1 constraint') throw new Error(`the note reads "${await row.note()}"`);
+    await record(`edit-${tag}-solutions-at-rest`, atRest);
+    console.log(`[${tag}] selected, its pane drawn: no worker; ‹ › live, no readout, note "1 constraint"`);
+
+    // Back to the first: the first press makes the cursor, one worker.
+    const readouts = [];
+    const depth = await undoDepth(page);
+    let last = applied;
+    for (let guard = 0; guard < 12 && !(await waits(row.previous)); guard += 1) {
+      last = await pressStep(page, row.previous);
+      readouts.push(await row.readout());
+    }
+    if (watch.workers().length !== 1) throw new Error(`the presses spawned ${watch.workers().length} workers, not one`);
+    if (!(await waits(row.previous))) throw new Error('‹ never reached the first solution');
+    if (!/^1 of \d+\+?$/.test(await row.readout())) throw new Error(`at the first it reads "${await row.readout()}"`);
+    console.log(`[${tag}] ‹ to the first: ${readouts.join(' → ')}, on one worker; ‹ waits`);
+    await record(`edit-${tag}-solutions-first`, await figureShots(page, { hover: true, hoverName: 'Another solution' }));
+
+    // On through the solutions that fit: each press a new fold and an entry; the readout counts on.
+    const firstPicture = (await figureState(page)).picture;
+    const onward = [];
+    for (let guard = 0; guard < 12 && !(await waits(row.next)); guard += 1) {
+      const before = await figureState(page);
+      const after = await pressStep(page, row.next);
+      if (after.handle === before.handle || after.layerOrder?.json === before.layerOrder?.json) {
+        throw new Error(`› wrote no new fold and record: ${JSON.stringify({ before: before.handle, after: after.handle })}`);
+      }
+      onward.push(await row.readout());
+    }
+    const expected = Array.from({ length: pictures - 1 }, (_, i) => `${i + 2} of ${pictures}`);
+    if (onward.join() !== expected.join()) throw new Error(`› read ${onward.join(', ')}, not ${expected.join(', ')}`);
+    if (!(await waits(row.next))) throw new Error('› never waited at the last solution');
+    const lastShots = await figureShots(page);
+    const moved = await pixelDiff(page, atRest.canvas, lastShots.canvas);
+    console.log(`[${tag}] › to the last: ${onward.join(' → ')}; › waits; ${moved.differing} canvas pixels from where it started`);
+    await record(`edit-${tag}-solutions-last`, lastShots);
+    const entries = (await undoDepth(page)) - depth;
+    if (entries !== readouts.length + onward.length) throw new Error(`${entries} undo entries for ${readouts.length + onward.length} steps`);
+
+    // The toolbar's Another solution waits there too, saying why.
+    const toolbar = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name });
+    if ((await toolbar.getByRole('button', { name: 'Another solution' }).isDisabled()) !== true) {
+      throw new Error('the toolbar’s Another solution does not wait at the last solution');
+    }
+    await record(`edit-${tag}-solutions-last-toolbar`, await figureShots(page, { hover: true, hoverName: 'Another solution' }));
+
+    // ‹ back one.
+    await pressStep(page, row.previous);
+    const backOne = await row.readout();
+    if (backOne !== `${pictures - 1} of ${pictures}`) throw new Error(`‹ read "${backOne}"`);
+    const leftOn = await figureState(page);
+    console.log(`[${tag}] ‹ back one: ${backOne}`);
+
+    // Undo: the order before, from its own fold; the cursor goes with its worker; nothing reads out.
+    const beforeUndo = closed.length;
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await settle(page);
+    const undone = await figureState(page);
+    if (undone.layerOrder?.json === leftOn.layerOrder?.json || undone.handle === leftOn.handle) {
+      throw new Error('undo did not put the order before back');
+    }
+    if ((await row.readout()) !== '') throw new Error(`after undo it reads "${await row.readout()}"`);
+    for (let waited = 0; closed.length === beforeUndo && waited < 5000; waited += 100) await page.waitForTimeout(100);
+    if (closed.length === beforeUndo) throw new Error('the cursor’s worker outlived the undo');
+    if ((await restyled(page, undone.id)) !== undone.picture) throw new Error('a restyle after undo drew another order');
+    console.log(`[${tag}] undo: the order before, from its own fold; the cursor's worker closed; no readout`);
+    await record(`edit-${tag}-solutions-undone`, await figureShots(page));
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    await settle(page);
+    if ((await figureState(page)).layerOrder?.json !== leftOn.layerOrder?.json) throw new Error('redo did not bring the step back');
+    watch.stop();
+
+    // Saved and opened again: the order it was left on, no cursor, no worker until a press.
+    const osf = await savedProject(page);
+    if (!tag.includes('horizon')) await writeFile(path.join(dir, 'kabuto-solutions.osf'), osf);
+    const reopenWatch = watchLayerOrderLoads(page);
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    await openTextInEdit(page, osf, 'kabuto-solutions.osf', theme);
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+    });
+    await zoomOutToFigure(page);
+    const reopenedShots = await figureShots(page);
+    await page.waitForTimeout(1000);
+    const reopened = await figureState(page);
+    if (reopened.handle !== null || reopened.layerOrder?.json !== leftOn.layerOrder?.json || reopened.picture !== leftOn.picture) {
+      throw new Error(`the file did not keep the order it was left on: ${JSON.stringify(reopened)}`);
+    }
+    if (reopenWatch.workers().length > 0) throw new Error(`opening and selecting spawned ${reopenWatch.workers().join(', ')}`);
+    const reopenedRow = layerOrderRow(page);
+    if ((await reopenedRow.readout()) !== '') throw new Error(`reopened, it reads "${await reopenedRow.readout()}"`);
+    await record(`edit-${tag}-solutions-reopened`, reopenedShots);
+    // A press folds it from its creases as it steps, on a fresh cursor.
+    await pressStep(page, reopenedRow.next);
+    const afterReload = await reopenedRow.readout();
+    if (afterReload !== `${pictures} of ${pictures}` || reopenWatch.workers().length !== 1) {
+      throw new Error(`after the reload › read "${afterReload}" on ${reopenWatch.workers().length} workers`);
+    }
+    if ((await figureState(page)).handle === null) throw new Error('the press did not fold the reopened figure');
+    reopenWatch.stop();
+    console.log(`[${tag}] reloaded: left on ${pictures - 1} of ${pictures}, no readout, no worker; › folds it and reads ${afterReload}`);
+    await record(`edit-${tag}-solutions-reopened-stepped`, await figureShots(page));
+    if (firstPicture === leftOn.picture) throw new Error('the first and the last solutions draw alike');
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -4386,6 +4619,8 @@ const CASES = [
   { name: 'edit-refold-horizon', run: editRefoldCases('Horizon') },
   { name: 'edit-selection', run: editSelectionCases(null) },
   { name: 'edit-selection-horizon', run: editSelectionCases('Horizon') },
+  { name: 'edit-figure-solutions', run: editFigureSolutionCases(null) },
+  { name: 'edit-figure-solutions-horizon', run: editFigureSolutionCases('Horizon') },
   { name: 'pose-toolbar', run: poseToolbarCases(null) },
   { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
 ];
