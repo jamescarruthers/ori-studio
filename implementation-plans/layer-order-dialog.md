@@ -524,6 +524,10 @@ disagrees, the artboard wins):
   dropped, per spec §6.7's "no routine status notes".
 
 **Analytics** (spec §10, plus D21's bucket):
+- `layer order dialog closed`'s `outcome` is `applied`, `cancelled`,
+  `unchanged` (an Apply that changed nothing), `refused` (with the refusal
+  code as an enum), `crashed` or `unavailable` (the engine couldn't load),
+  so refusals and crashes can be measured (U10's review, 2026-10-25).
 - U10 fires `layer order dialog opened` (`solutions_bucket: 'pending'` until
   the count arrives), `layer constraint added`, `layer constraint blocked` and
   `layer order dialog closed`. `subject_origin` and `object_origin` gain `menu`
@@ -980,7 +984,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
 - [ ] H4: Edit refold with constraints
-- [ ] H5: Fold with layer order…
+- [x] H5: Fold with layer order… (#526)
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
