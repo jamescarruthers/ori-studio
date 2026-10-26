@@ -84,6 +84,8 @@ describe('Import CP’s Layer order request', () => {
     // Only a file has a name to give.
     const sample: FoldImportLayerOrderAsk = { ...ASK, request: { kind: 'sample', sample: 'waterbomb-base' } };
     expect(foldImportLayerOrderRequest(sample, VIEW)).not.toHaveProperty('name');
+    // An import is its one sheet: the pane frames the source's creases, so no region.
+    expect(foldImportLayerOrderRequest(ASK, VIEW)).not.toHaveProperty('region');
   });
 
   it('reads Fold’s paper and Edit’s pen off the workspace', () => {
