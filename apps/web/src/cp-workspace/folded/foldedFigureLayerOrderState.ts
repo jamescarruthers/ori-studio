@@ -12,6 +12,7 @@
 import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { withLayerOrderAttention, type LayerOrderLossCause } from '../../layer-order/host/layerOrderResolution';
+import { solutionsHeldForReview } from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { isFolded3dFigure } from './foldedFigureCapabilities';
 import { foldedFigureHasLayerOrder } from './foldedFigureState';
@@ -71,11 +72,11 @@ export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntr
  * Whether a constrained figure's ‹ › wait for its constraints to be reviewed:
  * they need a look since an edit (D14, {@link foldedFigureLayerOrderAttention}),
  * as when they clash and no order fits them all, so there is nothing to step
- * through until they are. Read from saved data alone; the verbs and the store
- * both ask this.
+ * through until they are. Read from saved data alone, by every host's rule
+ * (`solutionsHeldForReview`); the verbs and the store both ask this.
  */
 export function foldedFigureSolutionsHeldForReview(figure: OristudioCpFoldedFigureEntry): boolean {
-  return foldedFigureLayerOrderAttention(figure) !== null;
+  return solutionsHeldForReview(foldedFigureLayerOrderAttention(figure));
 }
 
 /**

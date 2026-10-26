@@ -20,6 +20,7 @@ import {
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
 import { layerOrderSummaryOf, type CaptureLayerOrderResolve } from '../../diagram/capture/captureLayerOrder';
 import { abandonOnEngineLoss } from '../../diagram/capture/engineLoss';
+import { dropStepSolutionCursor } from '../../diagram/capture/stepSolutionCursor';
 import {
   DEFAULT_DIAGRAM_STYLE,
   DEFAULT_LAYER_SPREAD,
@@ -71,7 +72,7 @@ import type { ProjectDocumentCommit } from './projectDocumentHistory';
 import { landSeededFrame, type LandedFirstFrame } from '../../diagram/zoom/zoomFrames';
 import { trackSeeded } from './diagramZoom';
 import { releaseSimulatorClient, retainSimulatorClient } from './simulatorRuntime';
-import { stopFoldRun, withFoldInFlight } from './foldRuns';
+import { stopFoldRun, withFoldInFlight, type FoldRunControls, type FoldRunOptions } from './foldRuns';
 import { isFoldCancellation, oristudioCpError } from './oristudioCpRuntime';
 import type { WorkspaceState } from './types';
 import { bytesToBase64 } from '../../lib/base64';
@@ -257,20 +258,28 @@ export function endStepCapture(store: DiagramCaptureStore, stepId: string): void
  * "Folding…" toast, stoppable there and from the step's card, and abandoned if
  * the engine is lost, since a call on a dead worker never settles (D4). The
  * run's stop signal reaches `work` too, for what it runs outside the kernel
- * (a Layer order resolve).
+ * (a Layer order resolve or step), and its `controls` say when a Stop can
+ * reach it (`foldRuns.ts`; `options.stoppable` for work that starts outside
+ * the kernel, which a Stop always reaches by terminating its worker).
  */
 export function runStepFold<T>(
   store: DiagramCaptureStore,
   start: StepCaptureStart,
   kind: DiagramCaptureRequest['kind'],
-  work: (runtime: CpCaptureRuntime, stop: AbortSignal) => Promise<T>
+  work: (runtime: CpCaptureRuntime, stop: AbortSignal, controls: FoldRunControls) => Promise<T>,
+  options?: FoldRunOptions
 ): Promise<T> {
   const { stepId } = start.guard;
   return abandonOnEngineLoss(
-    withFoldInFlight(store, kind, (runId, stop) => {
-      if (Object.hasOwn(store.get().diagramCaptures, stepId)) setRun(store, stepId, { runId });
-      return work(createCpCaptureRuntime(runId, start.auxHandle), stop);
-    })
+    withFoldInFlight(
+      store,
+      kind,
+      (runId, stop, controls) => {
+        if (Object.hasOwn(store.get().diagramCaptures, stepId)) setRun(store, stepId, { runId });
+        return work(createCpCaptureRuntime(runId, start.auxHandle), stop, controls);
+      },
+      options
+    )
   );
 }
 
@@ -415,6 +424,10 @@ export async function runDiagramCapture(
 ): Promise<DiagramCaptureOutcome> {
   const start = beginStepCapture(store, stepId);
   if ('status' in start) return start;
+  // A capture from outside Pose — Refresh, Refresh All, Show as, a Relink, an
+  // Apply — restores the step's record afresh: a solutions cursor stepping it
+  // goes (layer order H9), and the next press makes one from what it lands.
+  dropStepSolutionCursor(stepId);
   try {
     const document = start.cp.document;
     const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));

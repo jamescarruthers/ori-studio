@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { registerCanvasSessionEnder } from '../../cp-workspace/canvasObjects/canvasSessions';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
@@ -11,6 +11,7 @@ import {
   buildDiagramSpreadControls,
   layerOrderLabel,
   SHOW_AS_ACTION,
+  solutionPlaceLabel,
   type DiagramLinkedPoseAction,
   type DiagramLinkedPoseState,
   type DiagramLinkedPoseVerb,
@@ -33,6 +34,8 @@ import {
 } from '../document/diagramDocument';
 import { creasePatternPaperShows, type CreasePatternPaperRequest } from './creasePatternSide';
 import { publishOpenLinkedPose } from './openLinkedPose';
+import { stepSolutionCursorVersion, stepSolutionPlace, subscribeStepSolutionCursor } from './stepSolutionCursor';
+import { useDiagramLinkStatuses } from './useLinkStatus';
 import type { DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 import {
   createPoseController,
@@ -71,8 +74,9 @@ export interface DiagramLinkedPose {
   toolbar: DiagramLinkedPoseAction[];
   /**
    * A flat fold's place among its layer orders ("2 of 5+"), for the Step
-   * pane's pager between its verbs; null otherwise, and for a step whose
-   * order is a record's (H7), which has no place among them.
+   * pane's pager between its verbs; for a step whose order is a record's
+   * (H7), its place among the solutions that fit once a press has asked (H9),
+   * and null before; null for any other render.
    */
   layerOrder: { count: string } | null;
   /** The toolbar's Edit order… (H8): the Layer order dialog on the fold Pose holds; null for a step not folded. */
@@ -127,6 +131,8 @@ export interface DiagramLinkedPose {
    */
   preview: DiagramStep | null;
 }
+
+const NO_STEPS: readonly DiagramStep[] = [];
 
 /**
  * Pose for a step linked to the crease pattern, while its detail is open
@@ -214,12 +220,41 @@ export function useDiagramLinkedPose(
   const seeThrough = render?.mode === 'folded-flat' && step?.picture?.kind === 'fixed';
   // From the saved source, never the engine: its order is the record's (H7, D9).
   const constrained = source?.layerOrder !== undefined;
+  // Where a constrained step stands among the solutions that fit, once a press has asked (H9): read from
+  // the solutions cursor's table, which moves without the step changing (an answer after a turn-over, the
+  // cursor let go). Nothing at rest: the host never counts (D11).
+  const cursorVersion = useSyncExternalStore(subscribeStepSolutionCursor, stepSolutionCursorVersion);
+  const place = useMemo(
+    () => (constrained && source && stepId !== null ? stepSolutionPlace(stepId, source) : null),
+    // The table's version is what `stepSolutionPlace` reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [constrained, source, stepId, cursorVersion]
+  );
+  // What its record says at rest: one that needs a look holds ‹ › until Review… (D10, D14), from saved data.
+  const record = layerOrderSummaryOf(source);
+  // Its pattern changed since it was captured: ‹ › wait for a Refresh. Asked only of a constrained step,
+  // as the Step pane asks it of every linked one (`useDiagramStepLink`).
+  const linkedSteps = useMemo(() => (constrained && step ? [step] : NO_STEPS), [constrained, step]);
+  const statuses = useDiagramLinkStatuses(linkedSteps);
+  const stale = stepId !== null && statuses.get(stepId) === 'stale';
   const poseState = useMemo(
     (): DiagramLinkedPoseState | null =>
       render
-        ? { render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView: liveView !== null, constrained }
+        ? {
+            render,
+            readOnly,
+            busy,
+            solutions,
+            seeThrough,
+            mirrorAxes,
+            liveView: liveView !== null,
+            constrained,
+            place,
+            record,
+            stale,
+          }
         : null,
-    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained]
+    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained, place, record, stale]
   );
   const [actions, toolbar] = useMemo(() => {
     if (!poseState || !controller) return [[], []];
@@ -241,7 +276,6 @@ export function useDiagramLinkedPose(
   }, [poseState, t, controller, liveView]);
 
   // The toolbar's Edit order…, from the saved source as the Step pane's Edit… is (H7, H8).
-  const record = layerOrderSummaryOf(source);
   const editLayerOrder = useCallback(
     async (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) =>
       controller !== null && !readOnly ? controller.editLayerOrder(via, surface) : false,
@@ -294,8 +328,13 @@ export function useDiagramLinkedPose(
     // A mark on the top layer stays on it, as it will when the spread is committed.
     return withCarriedAnnotations(step, shown, assets ?? {});
   }, [step, source, shownPreview, assets]);
-  // A record's order has no place in the kernel's enumeration to read out; the dialog counts what fits (D11).
-  const layerOrder = render && !constrained ? layerOrderLabel(render, solutions, t) : null;
+  // A record's order has no place in the kernel's enumeration: a constrained step reads out where its
+  // solutions cursor stands, once a press has asked (H9), and nothing before (D11).
+  const layerOrder = render
+    ? constrained
+      ? solutionPlaceLabel(render, place, t)
+      : layerOrderLabel(render, solutions, t)
+    : null;
 
   const rotateTo = useCallback(
     (degrees: number) => {

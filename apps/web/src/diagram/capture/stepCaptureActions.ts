@@ -14,7 +14,9 @@ import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNoti
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
 import { boundariesMatch, regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
+import { layerOrderOffline, layerOrderReloadAction } from '../../layer-order/engine/layerOrderLoadFailure';
 import { needsAttentionFact } from '../../layer-order/model/layerOrderAnalytics';
+import type { LayerOrderSolutionPress } from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -470,20 +472,123 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
 
 /**
  * The host engine was not there to restore a step's record, so nothing was
- * checked and nothing written: the browser did not load it (the host engine's
- * `load`, by `isLayerOrderLoadFailure`), which a connection may settle; or it
- * stopped or did not start, said neutrally, since that may be a defect.
+ * checked and nothing written. `loadFailed`: the browser did not load it (the
+ * host engine's `load`, by `isLayerOrderLoadFailure`), which only a reload
+ * retries — offered as Reload (`layerOrderReloadAction`), and offline, to
+ * reconnect first; otherwise it stopped or did not start, said neutrally,
+ * since that may be a defect.
  */
-export function sayLayerOrderLost(offline: boolean): void {
+export function sayLayerOrderLost(loadFailed: boolean, id?: string): void {
   const t = i18n.t;
+  // A step's ‹ › share a toast a try (`sayStepSolutionPress`); a capture's stands alone.
+  const shared = id === undefined ? {} : { id };
+  if (!loadFailed) {
+    const said = t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.');
+    if (id === undefined) toast.error(said);
+    else toast.error(said, shared);
+    return;
+  }
   toast.error(
-    offline
+    layerOrderOffline()
       ? t(
-          'toasts:diagram.layerOrder.lostLoad',
-          'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'
+          'toasts:diagram.layerOrder.lostLoadOffline',
+          'Layer order couldn’t load while offline, so this step wasn’t changed. Reconnect, then reload Ori Studio to try again.'
         )
-      : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.')
+      : t(
+          'toasts:diagram.layerOrder.lostLoadReload',
+          'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.'
+        ),
+    { ...shared, action: layerOrderReloadAction(t) }
   );
+}
+
+/**
+ * The toast id of a step's ‹ › message, by how many times the user has kept
+ * trying, as Edit's are (`foldedFigureVerbs.ts`): presses at the same try
+ * replace one another, and each Keep trying gets a fresh one, since clicking
+ * it dismisses its toast and a toast shown again under that id while it
+ * leaves is lost in its exit.
+ */
+function stepSolutionToastId(tries: number): string {
+  return `diagram-layer-order-step-${tries}`;
+}
+
+/**
+ * What a constrained step's ‹ or › that moved nothing says, if anything
+ * (layer order H9), by its cause, as Edit's figures say it
+ * (`sayFoldedSolutionStep`) in the Diagram's words:
+ *
+ * - the engine didn't load, with Reload, the only retry there is (offline:
+ *   reconnect first), or it stopped;
+ * - the record couldn't be checked in time (D10), or the search for the next
+ *   solution ran out (E9's `timed_out`): each with Keep trying
+ *   (`keepTrying`), which asks again on the same worker with longer limits,
+ *   and the step goes on from what it proved;
+ * - the next solution is too large to save with the step, or the engine
+ *   refused the step's creases;
+ * - its constraints clash with its pattern as it is now. Said so it reads
+ *   without a flag: a step whose creases changed since it was last captured
+ *   carries none until a Refresh, and a step flagged as needing attention
+ *   never gets here (its ‹ › wait for Review…).
+ *
+ * An end (proved since E9: asking again gains nothing), a Stop, a step that
+ * moved on, or one that can't step now says nothing: the pager waits at the
+ * end and shows where it stands, and the rest the user did or already sees.
+ * An order that can't be drawn said so through the capture. `tries` is how
+ * many times the user has kept trying, for the toast's id.
+ */
+export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying: () => void, tries = 0): void {
+  const t = i18n.t;
+  const id = stepSolutionToastId(tries);
+  const keepTryingAction = { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying };
+  switch (press.status) {
+    case 'lost':
+      sayLayerOrderLost(press.cause === 'load', id);
+      return;
+    case 'timed_out':
+      toast.error(
+        press.stage === 'step'
+          ? t(
+              'toasts:diagram.layerOrder.stepNotFoundInTime',
+              'Couldn’t find another solution in time, so this step wasn’t changed.'
+            )
+          : t(
+              'toasts:diagram.layerOrder.stepCheckTimedOut',
+              'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.'
+            ),
+        { id, action: keepTryingAction }
+      );
+      return;
+    case 'too-large':
+      toast.error(
+        t(
+          'toasts:diagram.layerOrder.stepTooLarge',
+          'The next layer order is too large to save with this step, so it wasn’t changed.'
+        ),
+        { id }
+      );
+      return;
+    case 'unrestored':
+      toast.error(
+        press.why === 'clash'
+          ? t(
+              'toasts:diagram.layerOrder.stepClash',
+              'This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.'
+            )
+          : t(
+              'toasts:diagram.layerOrder.stepRefused',
+              'Layer order can’t step through this step’s solutions, so it wasn’t changed.'
+            ),
+        { id }
+      );
+      return;
+    case 'moved':
+    case 'end':
+    case 'not-drawn':
+    case 'stopped':
+    case 'blocked':
+      return;
+  }
 }
 
 function trackedOutcome(outcome: DiagramCaptureOutcome): TrackedOutcome | null {

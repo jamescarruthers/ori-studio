@@ -67,5 +67,7 @@ pub use solutions::{
     CountShape, Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy,
     StepDirection, Stepped, Tally,
 };
-pub use source::{LayerSource, PaperFrame, SourceRefusal, ToleranceCause};
+pub use source::{
+    LAYER_ORDER_MAX_STACKED_TRIPLES, LayerSource, PaperFrame, SourceRefusal, ToleranceCause,
+};
 pub use stacks::{ChangedSpots, Stacks, ViewSide};

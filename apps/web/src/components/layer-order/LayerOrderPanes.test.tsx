@@ -11,6 +11,8 @@ import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import { faceLettersOf } from '../../layer-order/engine/faceIndex';
 import type { LayerOrderSessionOpen } from '../../layer-order/dialog/layerOrderSession';
 import type { LayerOrderSessionStatus } from '../../layer-order/dialog/useLayerOrderSession';
+import { DEFAULT_FIT_SHARE } from '../../cp-workspace/surface/useCpSurface';
+import { PANE_USER_PER_UNIT } from '../../layer-order/panes/layerPaneFigure';
 import { DOUBLE_TAP_MS } from '../../layer-order/panes/layerPaneInput';
 import { NO_FACE_MARKS, type LayerFaceMarks } from '../../layer-order/panes/layerPaneMarks';
 import { zScene } from '../../layer-order/panes/layerPanes.fixtures';
@@ -413,6 +415,55 @@ describe('the Layer order panes', () => {
     act(() => vi.advanceTimersByTime(800));
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledWith(5);
+  });
+
+  describe('Fit: each pane fills itself with its own content', () => {
+    /** Fit's zoom readout for content `width` by `height` (crease-pattern units) in the 400 px pane, at every pane's 70%. */
+    const fitted = (width: number, height: number) =>
+      `${Math.round(Math.min(VIEWPORT.width / width, VIEWPORT.height / height) * (DEFAULT_FIT_SHARE / PANE_USER_PER_UNIT) * 100)}%`;
+    const readouts = () => [
+      byRole(host, 'button', 'Reset the crease pattern zoom').textContent,
+      byRole(host, 'button', 'Reset the folded figure zoom').textContent,
+    ];
+    /** Zoom both panes in, then Fit: what Fit frames now, wherever the camera was. */
+    const zoomThenFit = () => {
+      act(() => byRole(host, 'button', 'Zoom in the folded figure').click());
+      act(() => byRole(host, 'button', 'Zoom in the crease pattern').click());
+      runFrames();
+      act(() => allByRole(host, 'button').find((button) => button.getAttribute('aria-label') === 'Fit both views')!.click());
+      runFrames();
+    };
+
+    it('the strip, 40 by 10, on the crease pattern; the Z it folds to, 20 by 10, at twice the scale', () => {
+      render();
+      expect(readouts()).toEqual([fitted(40, 10), fitted(20, 10)]);
+    });
+
+    it('the folded figure from the back, and see-through, framed as itself', () => {
+      render({ view: { side: 'back', xray: false, undecided: false } });
+      zoomThenFit();
+      expect(readouts()[1]).toBe(fitted(20, 10));
+      render({ view: { side: 'front', xray: true, undecided: false } });
+      zoomThenFit();
+      expect(readouts()[1]).toBe(fitted(20, 10));
+    });
+
+    it('a region: its paper framed, and its own aux lines drawn, not the document’s other patterns', () => {
+      // The strip sits in a document whose aux lines run across another pattern far off.
+      const far = segment('Cyan3', 900, 900, 980, 940);
+      const own = segment('Cyan3', 0, 5, 40, 5);
+      const strokes = () => (channels.last.get(canvasOf('pattern')!)?.get('setStrokes') as { count: number }).count;
+      const inDocument = { ...REQUEST, source: { ...REQUEST.source, auxSegments: [own, far] } };
+      render({ request: inDocument });
+      const withEvery = strokes();
+      // The region's paper is its sheet, 40 by 80 here: a margin below the strip.
+      const paper = [[{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 80 }, { x: 0, y: 80 }]];
+      act(() => root.unmount());
+      root = createRoot(host);
+      render({ request: { ...inDocument, region: { paper, auxSegments: [own] } } });
+      expect(strokes()).toBeLessThan(withEvery);
+      expect(readouts()[0]).toBe(fitted(40, 80));
+    });
   });
 
   it('X-ray draws every layer see-through, the buried ones too', () => {

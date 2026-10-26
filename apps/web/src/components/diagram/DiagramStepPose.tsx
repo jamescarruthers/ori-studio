@@ -186,9 +186,12 @@ export function DiagramStepPose({
               >
                 {source.layerOrder === undefined ? (
                   (linkedPose.layerOrder?.count ?? render.foldCase)
+                ) : linkedPose.layerOrder ? (
+                  // Where it stands among the solutions that fit its record, once a press asked (H9).
+                  linkedPose.layerOrder.count
                 ) : (
-                  // A record's order has no place among the kernel's to read out (D11): its place is
-                  // kept, unread, so the chevrons stay where a count puts them (until H9's stepper).
+                  // At rest the host never counts (D11): its place is kept, unread, so the chevrons
+                  // stay where a count puts them.
                   <span className={styles.reserved} data-reserved="" aria-hidden="true">
                     {t('panels:diagram.pose.layerOrderOf', '{{number}} of {{total}}', { number: 1, total: 1 })}
                   </span>

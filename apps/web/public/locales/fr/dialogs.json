@@ -669,7 +669,7 @@
       "recordUnreadable": "Les contraintes enregistrées de cette figure sont illisibles : Ordre des couches ne peut pas les ouvrir. Rien n’a été modifié.",
       "timedOut": "Impossible de calculer à temps les ordres des couches de cette figure.",
       "tolerance": "Certaines faces ou certains plis de cette figure sont trop petits ou trop rapprochés pour Ordre des couches. Rien n’a été modifié.",
-      "tooDeep": "Cette figure empile trop de couches au même endroit pour Ordre des couches pour l’instant. Rien n’a été modifié.",
+      "tooDeep": "Cette figure empile {{depth}} couches au même endroit, plus qu’Ordre des couches ne peut en gérer pour l’instant. Rien n’a été modifié.",
       "tooManyFaces": "Cette figure a {{faces}} faces, plus que les {{limit}} que gère Ordre des couches. Rien n’a été modifié.",
       "unreadable": "Ordre des couches n’a pas pu lire comment cette figure se plie : il ne peut pas l’ouvrir. Rien n’a été modifié."
     },

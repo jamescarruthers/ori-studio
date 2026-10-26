@@ -11576,6 +11576,18 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
           },
           shown: scene,
           name: 'Folded model 1',
+          // The sheet it was folded from, which the crease-pattern pane shows alone: the unit square, no aux lines.
+          region: {
+            paper: [
+              [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 1, y: 1 },
+                { x: 0, y: 1 },
+              ],
+            ],
+            auxSegments: [],
+          },
         });
         expect(oristudioCpMocks.foldOristudioCpWithOrder, kind).not.toHaveBeenCalled();
         expect(figureNow(), kind).toMatchObject({ handle: 3, renderSnapshot: figure.renderSnapshot });
@@ -12626,11 +12638,13 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
             expect(kernelCalls()).toEqual(['getOristudioCpSelectionFoldSource']);
             expect(request).not.toHaveProperty('shown');
           } else {
-            // None: the order a plain Refold draws, Oriedita's first, on a fold of its own that goes once it closes.
+            // None: the order a plain Refold draws, Oriedita's first, on a fold of its own that goes once it closes;
+            // and the sheet index, built once, for the pattern the crease-pattern pane shows.
             expect(kernelCalls()).toEqual([
               'getOristudioCpSelectionFoldSource',
               'foldOristudioCpWithOrder',
               'getOristudioCpFoldedFigurePaperScene',
+              'fetchOristudioCpSheetIndex',
               'freeOristudioCpFoldedFigure',
             ]);
             expect(oristudioCpMocks.foldOristudioCpWithOrder).toHaveBeenCalledWith(
@@ -12752,9 +12766,12 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
           'Kabuto’s chosen layer order needs attention, so it keeps its picture.',
         ]);
         expect(error.mock.calls.map(([text]) => text)).toEqual([
-          'Layer order couldn’t load, so Kabuto wasn’t refolded. Check your connection, then try again.',
+          'Layer order couldn’t load, so Kabuto wasn’t refolded. Reload Ori Studio to try again.',
           'Layer order stopped unexpectedly, so Kabuto wasn’t refolded.',
         ]);
+        // A load that failed offers Reload, the only retry there is; a crash offers nothing.
+        expect(error.mock.calls[0]![1]).toMatchObject({ action: { label: 'Reload' } });
+        expect(error.mock.calls[1]![1]).toBeUndefined();
       } finally {
         message.mockRestore();
         error.mockRestore();

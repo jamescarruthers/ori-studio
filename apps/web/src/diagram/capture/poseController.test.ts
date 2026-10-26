@@ -34,6 +34,7 @@ import type { LayerOrderRequest, LayerOrderSource } from '../../lib/layerOrder/l
 import { diagramStepLayerOrderLook } from './stepLayerOrderActions';
 import { createPoseController, linkedFoldKey } from './poseController';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
+import { ringsBounds } from '../../layer-order/panes/layerPaneFigure';
 import { stepsIn } from '../document/diagramSteps.fixtures';
 import type { DiagramCpRender, DiagramLayerSpread } from '../document/diagramDocument';
 
@@ -1036,11 +1037,12 @@ describe('a step with a layer order, posed (H7)', () => {
   });
 
   it.each([
-    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
-    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
-    // The engine's own "did not start" may be a defect: no connection to check.
-    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
-  ] as const)('writes nothing when the host engine is lost (%s): no undo step, not dirty, said', async (cause, said) => {
+    // Only a reload retries a load that failed: Reload, the toast's one action.
+    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.', 'Reload'],
+    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined],
+    // The engine's own "did not start" may be a defect: nothing to reload for.
+    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined],
+  ] as const)('writes nothing when the host engine is lost (%s): no undo step, not dirty, said', async (cause, said, action) => {
     const stepId = await constrainedStep();
     hostEngine.resolveLayerOrder.mockImplementation(async () => fakeLayerOrderResolutions.lost(inSource, cause));
     const controller = createPoseController(stepId, listener());
@@ -1051,7 +1053,10 @@ describe('a step with a layer order, posed (H7)', () => {
     expect(stepsIn(state().diagram!).find((step) => step.id === stepId)).toEqual(before);
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(state().dirty).toBe(false);
-    expect(toasts.error).toHaveBeenCalledWith(said);
+    expect(toasts.error).toHaveBeenCalledOnce();
+    const [text, options] = toasts.error.mock.calls[0]! as [string, { action?: { label: string } } | undefined];
+    expect(text).toBe(said);
+    expect(options?.action?.label).toBe(action);
     expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
     controller.dispose();
   });
@@ -1182,6 +1187,9 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(request.name).toBe('Step 1');
     // Pose asked, for the dialog's events (H3's `surface`).
     expect(request.surface).toBe('pose');
+    // The step's sheet alone: the left square's paper and its aux line (10), nothing of the right square.
+    expect(ringsBounds(request.region!.paper)).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 });
+    expect(request.region!.auxSegments).toEqual([document.crease_pattern.line_segments[9]]);
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(state().diagramCaptures).toEqual({});
     expect(foldedFigureHandleRefCount(7)).toBe(1);

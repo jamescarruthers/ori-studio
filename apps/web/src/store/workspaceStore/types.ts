@@ -120,10 +120,7 @@ import type { LayerOrderApplied, LayerOrderSource } from '../../lib/layerOrder/l
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { PaperStyleOverrides } from '../../lib/paper/paperStyle';
 import type { FoldPress } from '../../cp-workspace/folded/foldPress';
-import type {
-  LayerOrderLossCause,
-  LayerOrderSolutionsUnrestored,
-} from '../../layer-order/host/hostEngineGateway';
+import type { LayerOrderSolutionPress } from '../../layer-order/host/solutionCursorTable';
 import type { FoldedFigureLayerOrderRefold } from '../../cp-workspace/folded/foldedFigureLayerOrderState';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
@@ -893,34 +890,13 @@ export interface OristudioCpFigureLayerOrderRefold {
 
 /**
  * How a press of Another solution or ‹ on a constrained Edit figure ended
- * (row H6): only `moved` changed the figure, as one undo entry.
- *
- * - `end`: no solution lies that way, proved (E9), so asking again gains
- *   nothing; the figure shows it is at its end, and that verb waits there;
- * - `timed_out`: the restore of the record (D10's "couldn't check in time"),
- *   or the search for the next solution, ran out of time; another press
- *   with more `tries` keeps trying, longer, from what the step proved;
- * - `unrestored`: the record restores to no order to step from (D10): its
- *   constraints clash, or the engine refused it;
- * - `too-large`: the next solution's record is past what a figure can save;
- * - `lost`: the Layer order engine went away or never came (`load` for the
- *   browser failing to fetch it, offline);
- * - `not-drawn`: the kernel could not draw the order, and said so through
- *   `oristudioCpError`;
- * - `stopped`: a Stop, or the figure moved on (an undo, a Delete) while it ran;
- * - `blocked`: the figure can't step now (`foldedFigureLayerOrderBlock`, or
- *   its saved constraints clash).
+ * (row H6), as every host's press ends (`LayerOrderSolutionPress`): only
+ * `moved` changed the figure, as one undo entry. Edit's `not-drawn` is the
+ * kernel refusing the order, said through `oristudioCpError`; `blocked`, a
+ * figure that can't step now (`foldedFigureLayerOrderBlock`, or its
+ * constraints need review).
  */
-export type OristudioCpFigureSolutionStep =
-  | { status: 'moved' }
-  | { status: 'end' }
-  | { status: 'timed_out'; stage: 'restore' | 'step' }
-  | { status: 'unrestored'; why: LayerOrderSolutionsUnrestored }
-  | { status: 'too-large' }
-  | { status: 'lost'; cause: LayerOrderLossCause }
-  | { status: 'not-drawn' }
-  | { status: 'stopped' }
-  | { status: 'blocked' };
+export type OristudioCpFigureSolutionStep = LayerOrderSolutionPress;
 
 /**
  * What "Fold with layer order…" opens the Layer order dialog on, for an Edit
@@ -959,7 +935,10 @@ export type OristudioCpSelectionLayerOrderOpening =
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
    * - `cancelled`: stopped while it folded.
    *
-   * Every one but `busy` and `cancelled` has said why, or needs to say nothing.
+   * `blocked` and `failed` have said why, as an error; `spatial`,
+   * `undetermined` and `moved` are no fault and say nothing here, for the
+   * press says them as a message (`layerOrderPressToasts.ts`); the rest need
+   * say nothing.
    */
   | {
       status: 'unavailable';
@@ -1380,8 +1359,9 @@ export interface CreasePatternSliceActions {
    * Callers bracket it as one undo entry (`applyFoldedFigureLayerOrder`,
    * `openFoldedFigureLayerOrder.ts`); the bracket holds the fold it replaces
    * until the entry has taken it. When the crease pattern changed or was
-   * replaced since `press` (`foldPress.ts`), it writes nothing and says so:
-   * figure `id` may then be another document's.
+   * replaced since `press` (`foldPress.ts`), it writes nothing, and its
+   * caller says so as a message (`layerOrderPressToasts.ts`): figure `id` may
+   * then be another document's.
    *
    * With `refold` (the opening's, D12), the dialog was opened on the
    * figure's creases as they are now: the Apply is its refold too, and the

@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { onEngineLost } from '../../engines/engineHost';
 import i18n from '../../i18n';
+import { layerOrderOffline, layerOrderReloadAction } from '../../layer-order/engine/layerOrderLoadFailure';
 import { openLayerOrderResolveBatch, type LayerOrderResolveBatch } from '../../layer-order/host/hostEngineGateway';
 import { requestConfirmation } from '../../store/commandDialogStore';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -170,20 +171,30 @@ export async function refreshAllDiagramSteps(): Promise<number> {
 
 /**
  * The steps Refresh all left as they were because the host engine was not
- * there, counted: one toast for those the browser did not load it for, which a
- * connection may settle, and one, neutral, for those it stopped or did not
- * start for, which may be a defect.
+ * there, counted: one toast for those the browser did not load it for, with
+ * Reload, the only retry there is (`layerOrderReloadAction`; offline, to
+ * reconnect first), and one, neutral, for those it stopped or did not start
+ * for, which may be a defect.
  */
 function sayLayerOrderLostSteps(lost: { load: number; other: number }): void {
   const t = i18n.t;
   if (lost.load > 0) {
     toast.error(
-      t('toasts:diagram.refreshAllLayerOrderLostLoad', {
-        count: lost.load,
-        defaultValue_one: 'Layer order couldn’t load, so 1 step wasn’t changed. Check your connection, then try again.',
-        defaultValue_other:
-          'Layer order couldn’t load, so {{count}} steps weren’t changed. Check your connection, then try again.',
-      })
+      layerOrderOffline()
+        ? t('toasts:diagram.refreshAllLayerOrderLostLoadOffline', {
+            count: lost.load,
+            defaultValue_one:
+              'Layer order couldn’t load while offline, so 1 step wasn’t changed. Reconnect, then reload Ori Studio to try again.',
+            defaultValue_other:
+              'Layer order couldn’t load while offline, so {{count}} steps weren’t changed. Reconnect, then reload Ori Studio to try again.',
+          })
+        : t('toasts:diagram.refreshAllLayerOrderLostLoadReload', {
+            count: lost.load,
+            defaultValue_one: 'Layer order couldn’t load, so 1 step wasn’t changed. Reload Ori Studio to try again.',
+            defaultValue_other:
+              'Layer order couldn’t load, so {{count}} steps weren’t changed. Reload Ori Studio to try again.',
+          }),
+      { action: layerOrderReloadAction(t) }
     );
   }
   if (lost.other > 0) {

@@ -1130,7 +1130,9 @@ function diagramStepOfflineCases(theme) {
     await record(`diagram-${tag}-offline-refresh-all`, { page: await pageShot(page) });
     await page.context().setOffline(false);
     console.log(`[${tag}] offline Refresh All: ${JSON.stringify(result)}`);
-    const said = 'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.';
+    // Offline, with Reload: only a reload retries a load that failed.
+    const said =
+      'Layer order couldn’t load while offline, so 5 steps weren’t changed. Reconnect, then reload Ori Studio to try again.';
     if (result.refreshed !== 1) throw new Error('offline Refresh All did not refresh the unconstrained step alone');
     if (result.layerOrderWorkers > 1) throw new Error(`offline Refresh All spawned ${result.layerOrderWorkers} workers`);
     if (!result.toasts.some((toast) => toast?.includes(said))) throw new Error('offline Refresh All did not count its steps');
@@ -1370,8 +1372,8 @@ async function poseNow(page) {
  * and Edit order… after them; each held at its end; Edit order… opening the
  * dialog on the fold Pose holds — at the step's own layer order, past the
  * first — with Pose's keys standing down while it is open, and Cancel
- * writing nothing; then the same step constrained: ‹ › held (D9), and Edit
- * order… opening on its record.
+ * writing nothing; then the same step constrained: ‹ › offered at rest (H9),
+ * and Edit order… opening on its record.
  */
 function poseToolbarCases(theme) {
   const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
@@ -1510,13 +1512,14 @@ function poseToolbarCases(theme) {
     console.log(`[${tag}] Apply, Turn Over, undo after ${raced.map((round) => `${round.delay}ms`).join(', ')}: ${JSON.stringify(raced.flatMap((round) => round.errors))}`);
     if (raced.some((round) => round.errors.length > 0 || round.record)) throw new Error('an undo under a turn failed it');
 
-    // Constrained: D9's hold on ‹ ›, and Edit order… opening on the record.
+    // Constrained: ‹ › offered at rest, from saved data (H9 lifted D9's hold; `diagramSolutionCases` steps
+    // them), and Edit order… opening on the record.
     const applied = await applyConstraintToStep(page);
     await captured(page);
     if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
     const constrained = await poseToolbarState(page);
     console.log(`[${tag}] constrained toolbar: ${JSON.stringify({ previous: constrained.previous, next: constrained.next, edit: constrained.edit })}`);
-    if (!constrained.previous || !constrained.next || constrained.edit) throw new Error('constrained: ‹ › held, Edit order… free');
+    if (constrained.previous || constrained.next || constrained.edit) throw new Error('constrained: ‹ › offered at rest, Edit order… free');
     await record(`pose-${tag}-toolbar-constrained`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
     const constrainedBefore = await poseNow(page);
     await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
@@ -1536,6 +1539,305 @@ function poseToolbarCases(theme) {
     }
     console.log(`[${tag}] constrained: Cancel wrote nothing`);
     await record(`pose-${tag}-constrained`, { page: await pageShot(page) });
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The Diagram's ‹ › within constraints (H9)
+
+/**
+ * A constraint on kabuto's step that leaves several pictures from its side,
+ * worked out on the host engine as the dialog would (open on the order shown,
+ * each open pair either way, counted to the end), and applied as the
+ * dialog's Apply is: through the Diagram's capture, as one undo step. How
+ * many pictures it leaves, and how the capture went.
+ */
+async function severalSolutionsStepOrder(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const stepId = window.__layerOrderStep;
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { chooseStepCreases, knownCreasesOf } = await import('/src/diagram/capture/captureCreases.ts');
+    const { resolveFoldRoute } = await import('/src/cp-workspace/folded/foldRoute.ts');
+    const { peekCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { captureModel } = await import('/src/diagram/capture/captureFolded.ts');
+    const { stepFoldSource } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const { createCpCaptureRuntime } = await import('/src/store/workspaceStore/cpFoldRuntimeBindings.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS, constraintSeen } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+    const state = store.getState();
+    const source = stepById(state.diagram, stepId).source;
+    const document = state.oristudioCpDocument.document;
+    const side = source.render.side;
+    const choice = chooseStepCreases(document, source.scope, peekCpSheetIndex(document), knownCreasesOf(source));
+    const route = resolveFoldRoute(document, choice.creases.foldLineIds);
+    const folded = await stepFoldSource(createCpCaptureRuntime(0, null), route.lineIds, captureModel(document, side));
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    try {
+      const { engine } = runtime;
+      const opened = await engine.openShowing(folded.source, layerOrderSceneRelations(folded.scene), LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`open: ${JSON.stringify(opened)}`);
+      let best = null;
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        const [lo, hi] = [opened.open_pairs[i], opened.open_pairs[i + 1]];
+        for (const verb of ['in_front_of', 'behind']) {
+          const constraint = constraintSeen(lo, verb, hi, side, opened.front_up[hi] === 1);
+          const committed = await engine.commit([constraint], LAYER_ORDER_LIMITS.commit);
+          if (committed.verdict !== 'committed') continue;
+          const counted = await engine.countSlice(LAYER_ORDER_LIMITS.restore);
+          const n = counted.count[side].n;
+          // The fewest of three or more: enough to step on and back, few enough to walk end to end.
+          if (counted.count.done && n >= 3 && n < (best?.pictures ?? Infinity)) best = { constraint, pictures: n };
+        }
+      }
+      if (!best) throw new Error('no one constraint on kabuto’s step leaves three pictures or more');
+      const committed = await engine.commit([best.constraint], LAYER_ORDER_LIMITS.commit);
+      if (committed.verdict !== 'committed') throw new Error('the best constraint no longer commits');
+      const saved = await engine.save();
+      if (saved.status !== 'ok') throw new Error(`save: ${JSON.stringify(saved)}`);
+      const relations = await engine.relations();
+      const applied = { record: saved.record, relations, source: folded.source };
+      const outcome = await store.getState().captureDiagramStep(stepId, {
+        scope: source.scope,
+        known: knownCreasesOf(source),
+        render: source.render,
+        kind: 'diagram-capture',
+        label: 'Change layer order',
+        layerOrderApplied: { applied, frame: folded.frame },
+      });
+      return { outcome: outcome.status, pictures: best.pictures };
+    } finally {
+      runtime.dispose();
+    }
+  });
+}
+
+/** The Step pane's Layer order row on the step open in Pose: its readout, its ‹ and ›. */
+function stepPanePager(page) {
+  const row = page.locator('[data-field-row]', { hasText: 'Layer order' });
+  const group = row.getByRole('group', { name: 'Layer order' });
+  return {
+    row,
+    // A record's place is kept hidden at rest (`visibility: hidden`), which innerText leaves out.
+    readout: async () => (await group.locator('[aria-live="polite"]').innerText()).trim(),
+    next: group.getByRole('button', { name: 'Next Layer Order' }),
+    previous: group.getByRole('button', { name: 'Previous Layer Order' }),
+  };
+}
+
+/** Press a pager's verb and let what it starts land: the step done capturing. */
+async function pressPager(page, verb) {
+  await verb.click();
+  await page.waitForTimeout(200);
+  await captured(page);
+}
+
+/** The step's record, read: its text, its order and how many constraints it keeps. */
+async function stepRecord(page) {
+  return page.evaluate(async () => {
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { stepLayerOrderOf } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const source = stepById(window.__treemakerWorkspaceStore.getState().diagram, window.__layerOrderStep).source;
+    const read = stepLayerOrderOf(source.layerOrder);
+    return {
+      json: source.layerOrder ?? null,
+      order: read ? JSON.stringify(read.record.order) : null,
+      constraints: read ? read.record.constraints.length : null,
+      side: source.render.side,
+    };
+  });
+}
+
+/** How many undo steps the Diagram holds, and their labels from `from`. */
+function diagramHistory(page, from = 0) {
+  return page.evaluate((from) => {
+    const past = window.__treemakerWorkspaceStore.getState().diagramHistory.past;
+    return { depth: past.length, labels: past.slice(from).map((entry) => entry.label) };
+  }, from);
+}
+
+/**
+ * H9 on kabuto's step, in one theme: a constraint that leaves several
+ * pictures, applied; reopening the step and drawing its Step pane starts no
+ * worker, and the pager reads nothing; the first ‹ makes the host engine's
+ * cursor (one worker), and ‹ › then step through the solutions that fit,
+ * one undo step each, the readout counting them, each end waiting once
+ * reached — Pose's toolbar's too, which steps on the same worker; an undo
+ * shows the order before and lets the cursor (and its worker) go; a
+ * Refresh after a press keeps the order and lets it go too; and a reload
+ * keeps the order the step was left on, with no worker until the next press.
+ */
+function diagramSolutionCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    await linkKabutoStep(page);
+    await captured(page);
+    await reopenDetail(page);
+    const applied = await severalSolutionsStepOrder(page);
+    await captured(page);
+    if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
+    const { pictures } = applied;
+    console.log(`[${tag}] applied one constraint that leaves ${pictures} pictures from the step's side`);
+
+    // The step opened again (as another step and back would) and its pane drawn, from saved data: no worker.
+    const watch = watchLayerOrderLoads(page);
+    const closed = [];
+    page.on('worker', (worker) => worker.on('close', () => closed.push(worker.url())));
+    await reopenDetail(page);
+    const pane = stepPanePager(page);
+    await pane.row.waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(1000);
+    if (watch.workers().length > 0) throw new Error(`opening the step spawned ${watch.workers().join(', ')}`);
+    if ((await pane.readout()) !== '' || (await waits(pane.next)) || (await waits(pane.previous))) {
+      throw new Error(`at rest the pager reads "${await pane.readout()}", or a verb waits`);
+    }
+    await record(`diagram-solutions-${tag}-at-rest`, { page: await pageShot(page) });
+    console.log(`[${tag}] opened, its pane drawn: no worker; ‹ › live, no readout`);
+
+    // Back to the first, from the Step pane: the first press makes the cursor, one worker.
+    const { depth } = await diagramHistory(page);
+    const back = [];
+    for (let guard = 0; guard < 8 && !(await waits(pane.previous)); guard += 1) {
+      await pressPager(page, pane.previous);
+      back.push(await pane.readout());
+    }
+    if (watch.workers().length !== 1) throw new Error(`the presses spawned ${watch.workers().length} workers, not one`);
+    if (!/^1 of \d+\+?$/.test(await pane.readout())) throw new Error(`at the first it reads "${await pane.readout()}"`);
+    console.log(`[${tag}] ‹ to the first: ${back.join(' → ') || '(already there)'}, on one worker; ‹ waits`);
+    const firstStage = await stageShot(page);
+    await record(`diagram-solutions-${tag}-first`, { page: await pageShot(page), stage: firstStage });
+
+    // On to the last: each press a new record and an undo step; the readout counts on; › waits there.
+    const onward = [];
+    for (let guard = 0; guard < 8 && !(await waits(pane.next)); guard += 1) {
+      const before = await stepRecord(page);
+      await pressPager(page, pane.next);
+      const after = await stepRecord(page);
+      if (after.json === before.json || after.constraints !== before.constraints) {
+        throw new Error('› wrote no new order, or changed the constraints');
+      }
+      onward.push(await pane.readout());
+    }
+    const expected = Array.from({ length: pictures - 1 }, (_, i) => `${i + 2} of ${pictures}`);
+    if (onward.join() !== expected.join()) throw new Error(`› read ${onward.join(', ')}, not ${expected.join(', ')}`);
+    if (!(await waits(pane.next))) throw new Error('› never waited at the last solution');
+    // Pose's toolbar's › waits there too: the stepper has ends, and neither wraps.
+    if (!(await waits(poseToolbar(page).getByRole('button', { name: 'Next Layer Order' })))) {
+      throw new Error('the toolbar’s › does not wait at the last solution');
+    }
+    const lastStage = await stageShot(page);
+    const moved = await pixelDiff(page, firstStage, lastStage);
+    console.log(`[${tag}] › to the last: ${onward.join(' → ')}; both › wait; ${moved.differing} of ${moved.pixels} pixels from the first`);
+    if (moved.differing === 0) throw new Error('the first and the last solutions draw alike');
+    await record(`diagram-solutions-${tag}-last`, { page: await pageShot(page), stage: lastStage });
+    await record(`diagram-solutions-${tag}-last-toolbar`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
+
+    // ‹ back one from Pose's toolbar: one session, the same worker; the pane reads where it went.
+    await toolbarVerb(page, 'Previous Layer Order');
+    const backOne = await pane.readout();
+    if (backOne !== `${pictures - 1} of ${pictures}` || watch.workers().length !== 1) {
+      throw new Error(`the toolbar's ‹ read "${backOne}" on ${watch.workers().length} workers`);
+    }
+    const history = await diagramHistory(page, depth);
+    const want = [...back.map(() => 'Show previous solution'), ...onward.map(() => 'Show another solution'), 'Show previous solution'];
+    if (history.labels.join() !== want.join()) throw new Error(`undo steps: ${history.labels.join(', ')}`);
+    const leftOn = await stepRecord(page);
+    console.log(`[${tag}] toolbar ‹ back one: ${backOne}; ${history.labels.length} undo steps, one a press`);
+
+    // Undo: the order before; the cursor goes with its worker; nothing reads out.
+    const beforeUndo = closed.length;
+    await page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.undo');
+    });
+    await captured(page);
+    const undone = await stepRecord(page);
+    if (undone.json === leftOn.json) throw new Error('undo did not put the order before back');
+    for (let waited = 0; closed.length === beforeUndo && waited < 5000; waited += 100) await page.waitForTimeout(100);
+    if (closed.length === beforeUndo) throw new Error('the cursor’s worker outlived the undo');
+    if ((await pane.readout()) !== '') throw new Error(`after undo it reads "${await pane.readout()}"`);
+    await record(`diagram-solutions-${tag}-undone`, { page: await pageShot(page) });
+    await page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.redo');
+    });
+    await captured(page);
+    if ((await stepRecord(page)).json !== leftOn.json) throw new Error('redo did not bring the step back');
+    console.log(`[${tag}] undo: the order before; the cursor's worker closed; no readout; redo brought the step back`);
+
+    // A press, then Refresh: the order stepped to is kept, and the cursor goes with its worker.
+    await pressPager(page, pane.previous);
+    const stepped = await stepRecord(page);
+    const workersBefore = watch.workers().length;
+    const closedBefore = closed.length;
+    // The step is current, so its Picture section offers no Refresh: the verb its card's menu and Refresh All run.
+    const didRefresh = await page.evaluate(async () => {
+      const { refreshDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      return refreshDiagramStep(window.__layerOrderStep);
+    });
+    if (!didRefresh) throw new Error('Refresh did not capture');
+    await captured(page);
+    const refreshed = await stepRecord(page);
+    for (let waited = 0; closed.length === closedBefore && waited < 5000; waited += 100) await page.waitForTimeout(100);
+    console.log(
+      `[${tag}] a press (worker ${workersBefore}), then Refresh: order ${refreshed.order === stepped.order ? 'kept' : 'changed'}, ` +
+        `constraints ${refreshed.constraints}, readout "${await pane.readout()}", ${closed.length - closedBefore} worker closed`
+    );
+    if (refreshed.order !== stepped.order || refreshed.constraints !== stepped.constraints) throw new Error('Refresh lost the stepped order');
+    if (closed.length === closedBefore || (await pane.readout()) !== '') throw new Error('Refresh kept the cursor');
+    watch.stop();
+
+    // Saved, and opened again in a fresh page: the order it was left on, no worker until a press.
+    const saved = await page.evaluate(async () => {
+      let text = null;
+      const files = {
+        saveTextFile: async (options) => {
+          text = options.contents;
+          return { name: 'kabuto-diagram.osf', path: null };
+        },
+      };
+      if (!(await window.__treemakerWorkspaceStore.getState().saveProjectAs(files))) throw new Error('save failed');
+      return { text, stepId: window.__layerOrderStep };
+    });
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    const reopenWatch = watchLayerOrderLoads(page);
+    await page.evaluate(
+      async ({ osf, stepId, theme }) => {
+        const store = window.__treemakerWorkspaceStore;
+        const files = { openTextFile: async () => ({ text: osf, name: 'kabuto-diagram.osf', path: null }) };
+        if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error('the diagram did not open');
+        if (theme) {
+          const { useThemeStore } = await import('/src/store/themeStore.ts');
+          useThemeStore.getState().setThemeByName(theme);
+        }
+        const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+        useLayoutStore.getState().activateWorkspace('diagram');
+        store.getState().selectDiagramStep(stepId);
+        store.getState().openDiagramStep(stepId);
+        window.__layerOrderStep = stepId;
+      },
+      { osf: saved.text, stepId: saved.stepId, theme }
+    );
+    await reopenDetail(page);
+    const reopenedPane = stepPanePager(page);
+    await reopenedPane.row.waitFor({ state: 'visible', timeout: 60000 });
+    await page.waitForTimeout(1000);
+    const reopened = await stepRecord(page);
+    if (reopened.order !== refreshed.order) throw new Error('the file did not keep the order the step was left on');
+    if (reopenWatch.workers().length > 0) throw new Error(`opening the diagram spawned ${reopenWatch.workers().join(', ')}`);
+    if ((await reopenedPane.readout()) !== '') throw new Error(`reopened, it reads "${await reopenedPane.readout()}"`);
+    await record(`diagram-solutions-${tag}-reopened`, { page: await pageShot(page) });
+    await pressPager(page, reopenedPane.next);
+    const afterReload = await reopenedPane.readout();
+    if (!/^\d+ of \d+\+?$/.test(afterReload) || reopenWatch.workers().length !== 1) {
+      throw new Error(`after the reload › read "${afterReload}" on ${reopenWatch.workers().length} workers`);
+    }
+    reopenWatch.stop();
+    console.log(`[${tag}] reloaded: left on its order, no readout, no worker; › makes one cursor and reads ${afterReload}`);
+    await record(`diagram-solutions-${tag}-reopened-stepped`, { page: await pageShot(page) });
   };
 }
 
@@ -1985,14 +2287,8 @@ function paneCases(theme) {
       const dialog = await openPanesDialog(page, figure.title);
       const facts = await inspectorFacts(page);
       const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
-      // At Fit both panes take one scale (Round3's fitAll): their readouts agree.
-      const readouts = await Promise.all(
-        ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
-      );
-      console.log(`[${tag}] ${figure.name} at Fit: ${readouts.join(' and ')}`);
-      if (Math.abs(Number.parseFloat(readouts[0]) - Number.parseFloat(readouts[1])) > 1) {
-        throw new Error(`${figure.name}: the panes' readouts disagree at Fit (${readouts.join(', ')})`);
-      }
+      // At Fit each pane fills itself with its own content, about 70% (your call, 2026-10-26).
+      await fitFills(page, dialog, `[${tag}] ${figure.name}`);
       console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'subjects'))}`);
       await record(shot('front'), await panesShot(page));
       await viewTool(dialog, 'Back');
@@ -4246,19 +4542,30 @@ function patternChangedToast(page) {
   return page.locator('[data-sonner-toast]').filter({ hasText: PATTERN_CHANGED });
 }
 
-/** Forget the last error, so the next one is known to be new. */
+/** Forget the last error, and close every toast, so the next one is known to be new. */
 async function clearCpError(page) {
-  await page.evaluate(() => window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null }));
+  await page.evaluate(() => {
+    window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null });
+    for (const close of document.querySelectorAll('[data-sonner-toast] [data-close-button]')) close.click();
+  });
+  await page.waitForFunction(
+    (text) => ![...document.querySelectorAll('[data-sonner-toast]')].some((toast) => toast.textContent.includes(text)),
+    PATTERN_CHANGED,
+    { timeout: 10000 }
+  );
 }
 
-/** The press said its crease pattern changed: in the store, and on a toast. */
+/**
+ * The press said its crease pattern changed, on a toast, as the app's
+ * ordinary message: no fault, so neither an error toast nor an error in the
+ * store for `GlobalToasts` to show as one.
+ */
 async function saidPatternChanged(page) {
-  await page.waitForFunction(
-    (text) => window.__treemakerWorkspaceStore.getState().oristudioCpError === text,
-    PATTERN_CHANGED,
-    { timeout: 30000 }
-  );
-  await patternChangedToast(page).first().waitFor({ state: 'visible', timeout: 30000 });
+  const toast = patternChangedToast(page).first();
+  await toast.waitFor({ state: 'visible', timeout: 30000 });
+  const kind = await toast.getAttribute('data-type');
+  const error = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().error);
+  if (kind === 'error' || error) throw new Error(`the press said its crease pattern changed as an error (${kind}, ${JSON.stringify(error)})`);
 }
 
 /** One crease deleted, as Delete does on a selected crease. */
@@ -4490,6 +4797,297 @@ function editSelectionCases(theme) {
     if (!(await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).isDisabled())) throw new Error('not held on 3D creases');
     await record(`selection-${tag}-3d`, await selectionToolbarShots(page));
   };
+}
+
+// ---------------------------------------------------------------------------
+// A document of many crease patterns: the dialog shows the one the fold came from
+
+/**
+ * A document of many small crease patterns, as `.cp` text: kabuto
+ * (`tests/fixtures/flat-folder/kabuto.fold`) laid out `columns` by `rows`,
+ * 40 units each, 60 apart, each with an aux line across it, as a sheet of a
+ * designer's patterns is. Built here: nobody's file.
+ */
+async function manyKabutosCp(columns, rows) {
+  const fold = JSON.parse(await readFile(path.join(repoRoot, 'tests/fixtures/flat-folder/kabuto.fold'), 'utf8'));
+  const TYPE = { B: 1, M: 2, V: 3, F: 4 };
+  const lines = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const ox = (column - columns / 2) * 60;
+      const oy = (row - rows / 2) * 60;
+      const at = ([x, y]) => [ox + x * 40, oy + y * 40];
+      fold.edges_vertices.forEach(([a, b], edge) => {
+        const type = TYPE[fold.edges_assignment[edge]];
+        if (!type) return;
+        lines.push(`${type} ${at(fold.vertices_coords[a]).join(' ')} ${at(fold.vertices_coords[b]).join(' ')}`);
+      });
+      lines.push(`4 ${ox} ${oy + 12} ${ox + 40} ${oy + 12}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+/** Edit on {@link manyKabutosCp}, in `theme`; the sheet nearest the middle of the canvas, and how many there are. */
+async function openManyPatterns(page, url, theme, { columns = 10, rows = 10 } = {}) {
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+  await openTextInEdit(page, await manyKabutosCp(columns, rows), 'many-kabutos.cp', theme);
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+    const regions = sheetRegions(await ensureCpSheetIndex(store.getState().oristudioCpDocument.document));
+    const centre = ({ bounds }) => ({ x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 });
+    const middle = regions.map(centre).reduce((sum, c) => ({ x: sum.x + c.x / regions.length, y: sum.y + c.y / regions.length }), { x: 0, y: 0 });
+    const away = (region) => Math.hypot(centre(region).x - middle.x, centre(region).y - middle.y);
+    const sheet = regions.reduce((best, region) => (away(region) < away(best) ? region : best));
+    window.__layerOrderCheck = { ...(window.__layerOrderCheck ?? {}), sheet: sheet.id };
+    return { sheets: regions.length, sheet: sheet.id, lineIds: [...sheet.lineIds], bounds: sheet.bounds };
+  });
+}
+
+/** The region the open dialog was asked with, against its source: how much of the document it draws. */
+function openedRegion(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const { ringsBounds } = await import('/src/layer-order/panes/layerPaneFigure.ts');
+    const request = useLayerOrderDialogStore.getState().opening?.request;
+    if (!request) return null;
+    return {
+      surface: request.surface,
+      paper: request.region ? ringsBounds(request.region.paper) : null,
+      regionAux: request.region?.auxSegments.length ?? null,
+      documentAux: request.source.auxSegments.length,
+      creases: request.source.segments.length,
+    };
+  });
+}
+
+/**
+ * How much of a pane its content fills, in the pane's own pixels, across the
+ * side that limits it: Fit fills 70% of it. Fit centres the content,
+ * so its extent is the pane less twice its margin, read where nothing floats
+ * over it: from the top, and from the nearer side, over the rows the zoom bar
+ * along the foot leaves clear (a tall figure runs on under the bar). Ink is
+ * any pixel unlike the pane's ground, read off its corner.
+ */
+async function paneFill(page, dialog, pane) {
+  const canvas = dialog.locator(`[data-testid="layer-order-${pane}-canvas"]`);
+  const bar = dialog.getByRole('toolbar', { name: pane === 'pattern' ? 'Crease pattern view' : 'Folded figure view' });
+  await page.mouse.move(1, 1);
+  const shot = await steadyShot(page, canvas, { masked: false });
+  const [box, barBox] = [await canvas.boundingBox(), await bar.boundingBox()];
+  // The bar's rows, and its shadow's, in the shot's pixels.
+  const clear = barBox ? { from: barBox.y - box.y - 24, to: barBox.y + barBox.height - box.y + 24 } : { from: Infinity, to: -Infinity };
+  return page.evaluate(
+    async ({ data, clear }) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const context = Object.assign(document.createElement('canvas'), { width: image.width, height: image.height }).getContext('2d');
+      context.drawImage(image, 0, 0);
+      const { data: rgba } = context.getImageData(0, 0, image.width, image.height);
+      // Not the pane's own rim: the rule between the panes runs along one side.
+      const RIM = 3;
+      const ground = (RIM + 3) * image.width * 4 + (RIM + 3) * 4;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      for (let y = RIM; y < image.height - RIM; y += 1) {
+        if (y >= clear.from && y <= clear.to) continue;
+        for (let x = RIM; x < image.width - RIM; x += 1) {
+          const k = (y * image.width + x) * 4;
+          const unlike = Math.abs(rgba[k] - rgba[ground]) + Math.abs(rgba[k + 1] - rgba[ground + 1]) + Math.abs(rgba[k + 2] - rgba[ground + 2]);
+          if (unlike < 30) continue;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+        }
+      }
+      const side = Math.min(minX, image.width - 1 - maxX);
+      const width = image.width - 2 * side;
+      const height = image.height - 2 * minY;
+      const fill = Math.max(width / image.width, height / image.height);
+      return { pane: [image.width, image.height], content: [width, height], fill: Math.round(fill * 1000) / 1000 };
+    },
+    { data: shot.toString('base64'), clear }
+  );
+}
+
+/** What Fit fills of a pane: `PaperPane`'s share, as every surface fits (`DEFAULT_FIT_SHARE`). */
+const FIT_FILL = 0.7;
+
+/** Fit both panes, then how much each fills; throws unless each fills about {@link FIT_FILL}. */
+async function fitFills(page, dialog, what) {
+  await dialog.getByRole('button', { name: 'Fit both views' }).first().click();
+  const fills = { pattern: await paneFill(page, dialog, 'pattern'), folded: await paneFill(page, dialog, 'folded') };
+  const readouts = await Promise.all(
+    ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
+  );
+  console.log(`  ${what} at Fit: crease pattern ${JSON.stringify(fills.pattern)} at ${readouts[0]}, folded ${JSON.stringify(fills.folded)} at ${readouts[1]}`);
+  for (const [pane, { fill }] of Object.entries(fills)) {
+    if (Math.abs(fill - FIT_FILL) > 0.03 && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+      throw new Error(`${what}: the ${pane} pane fills ${fill} of itself at Fit, not about ${FIT_FILL}`);
+    }
+  }
+  return fills;
+}
+
+/**
+ * A face picked on the crease-pattern pane lights the same face on the
+ * folded pane: the first subject on offer, from its menu, then cleared and
+ * picked again by a click inside its ring on the crease pattern. Its face.
+ */
+async function patternPickLightsFolded(page, dialog, what) {
+  await subjectSlot(dialog).focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu', { name: 'Subjects' });
+  await menu.waitFor({ state: 'visible', timeout: 10000 });
+  await menu.getByRole('menuitemradio').first().click();
+  await menu.waitFor({ state: 'detached', timeout: 10000 });
+  const letter = (await subjectSlot(dialog).getAttribute('aria-label'))?.match(/face ([^.\s]+)\./)?.[1];
+  const face = Number(await dialog.locator('[data-layer-order-marks="pattern"] [data-layer-order-ring]').first().getAttribute('data-layer-order-ring'));
+  if (!letter || !Number.isInteger(face)) throw new Error(`${what}: no subject to pick`);
+  await pickSubjectOnPane(page, dialog, 'pattern', letter, face);
+  const lit = await dialog.locator(`[data-layer-order-marks="folded"] [data-layer-order-ring="${face}"]`).count();
+  if (lit === 0) throw new Error(`${what}: ${letter} picked on the crease pattern lights nothing on the folded figure`);
+  console.log(`  ${what}: ${letter} (face ${face}) picked on the crease pattern, ringed on the folded figure`);
+  return { letter, face };
+}
+
+/** The dialog's request and panes for one host: its region, a shot, Fit's fill, a pick's alignment; then Cancel. */
+async function checkRegionDialog(page, record, shot, what) {
+  const dialog = await readyDialog(page);
+  const region = await openedRegion(page);
+  console.log(`  ${what}: ${JSON.stringify(region)}`);
+  if (!region?.paper && !process.env.LAYER_ORDER_CHECK_LENIENT) throw new Error(`${what}: the request names no region`);
+  await page.waitForTimeout(500);
+  await record(shot, await panesShot(page));
+  await fitFills(page, dialog, what);
+  const picked = await patternPickLightsFolded(page, dialog, what);
+  await record(`${shot}-picked`, await panesShot(page));
+  await dialog.getByRole('button', { name: `Clear ${picked.letter} from the subject` }).click();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialog.waitFor({ state: 'detached', timeout: 30000 });
+}
+
+/**
+ * A document of a hundred patterns (panes-fit), in one theme: each host opens
+ * the dialog on the pattern in the middle, and the crease-pattern pane shows
+ * that pattern alone, framed on its paper, the folded pane the figure, each
+ * filling about 70% at Fit; a face picked on the crease pattern lights the
+ * same face on the folded figure. Fold with layer order… on the selection
+ * (H5); Layer order… on a figure folded from it (H3); a Diagram step linked
+ * to it (H7); and Pose on that step (H8).
+ */
+function manyPatternCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    const middle = await openManyPatterns(page, url, theme);
+    console.log(`[${tag}] ${middle.sheets} patterns; the middle one is sheet ${middle.sheet}, ${middle.lineIds.length} lines`);
+    if (middle.sheets !== 100) throw new Error(`the document holds ${middle.sheets} patterns, not 100`);
+
+    // Fold with layer order… on the middle pattern, selected (H5).
+    await page.evaluate(async (lines) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { emptyOristudioCpSelection } = await import('/src/lib/creasePatternViewport.ts');
+      store.getState().setOristudioCpSelection({ ...emptyOristudioCpSelection(), lines });
+    }, middle.lineIds);
+    const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+    await toolbar.waitFor({ state: 'visible', timeout: 30000 });
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    await checkRegionDialog(page, record, `many-${tag}-selection`, `[${tag}] Fold with layer order… (H5)`);
+
+    // A figure folded from it, then its Layer order… (H3).
+    const figureId = await page.evaluate(async (lineIds) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+      await foldedFigureGesture.run('verb', 'Fold model', () => store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds }));
+      const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+      if (!figure || figure.status !== 'ready') throw new Error('the fold made no figure');
+      store.getState().setOristudioCpActiveFoldedFigure(figure.id);
+      return figure.id;
+    }, middle.lineIds);
+    await page.evaluate(async (id) => {
+      const { openFoldedFigureLayerOrder } = await import('/src/cp-workspace/folded/openFoldedFigureLayerOrder.ts');
+      const { default: i18n } = await import('/src/i18n/index.ts');
+      void openFoldedFigureLayerOrder(id, i18n.t);
+    }, figureId);
+    await checkRegionDialog(page, record, `many-${tag}-figure`, `[${tag}] Layer order… on a figure (H3)`);
+
+    // A Diagram step linked to it, folded flat: the Step pane's Edit… (H7).
+    await page.evaluate(async (sheetId) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+      const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+      const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+      const { linkDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      useLayoutStore.getState().activateWorkspace('diagram');
+      const sheet = sheetRegions(await ensureCpSheetIndex(store.getState().oristudioCpDocument.document))[sheetId];
+      const stepId = store.getState().addDiagramStep();
+      if (!(await linkDiagramStep(stepId, sheet, 'folded'))) throw new Error('the pattern did not link');
+      store.getState().openDiagramStep(stepId);
+      window.__layerOrderStep = stepId;
+    }, middle.sheet);
+    await captured(page);
+    await page.evaluate(async () => {
+      const { openDiagramStepLayerOrder } = await import('/src/diagram/capture/stepLayerOrderActions.ts');
+      void openDiagramStepLayerOrder(window.__layerOrderStep);
+    });
+    await checkRegionDialog(page, record, `many-${tag}-step`, `[${tag}] a Diagram step (H7)`);
+
+    // Pose on that step: its toolbar's Edit order… (H8).
+    await reopenDetail(page);
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await checkRegionDialog(page, record, `many-${tag}-pose`, `[${tag}] Pose (H8)`);
+  };
+}
+
+/**
+ * Creases Oriedita's search can't order (`oriedita/failing_global_flat_fold.ori`):
+ * a plain Fold draws them see-through, and Fold with layer order… refuses
+ * them in D3's words, not as creases with no flat folded form, and as the
+ * app's ordinary message, not an "Ori Studio error": no fault. The toasts
+ * each leaves, read and shot.
+ */
+async function unorderedCreasesToast(page, url, record) {
+  await openFileInEdit(page, url, 'tests/fixtures/oriedita/failing_global_flat_fold.ori', null);
+  await selectWholeSheet(page);
+  const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+  await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+  const toast = page.locator('[data-sonner-toast]').first();
+  await toast.waitFor({ state: 'visible', timeout: 120000 });
+  const pressed = (await toast.innerText()).replace(/\s+/g, ' ').trim();
+  const kind = await toast.getAttribute('data-type');
+  const storeError = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().error);
+  console.log(`Fold with layer order… on them: “${pressed}”, a ${kind} toast; the store's error: ${JSON.stringify(storeError)}`);
+  if ((kind === 'error' || storeError || !/couldn’t be determined/.test(pressed)) && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+    throw new Error('the press refuses unordered creases as an error, or in other words than D3’s');
+  }
+  await record('unordered-press', { page: await page.screenshot({ animations: 'disabled' }) });
+  await page.evaluate(() => {
+    for (const close of document.querySelectorAll('[data-sonner-toast] [data-close-button]')) close.click();
+    window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null });
+  });
+  await page.waitForTimeout(600);
+  // The same creases, plainly folded.
+  const plain = await page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const count = store.getState().oristudioCpDocument.summary.line_segments;
+    const lineIds = Array.from({ length: count }, (_, i) => i + 1);
+    const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+    await foldedFigureGesture.run('verb', 'Fold model', () => store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds }));
+    const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+    return { figure: figure?.status ?? null, style: figure?.displayStyle ?? null, outcome: figure?.snapshot?.outcome ?? null, error: store.getState().oristudioCpError };
+  });
+  await page.waitForTimeout(600);
+  const toasts = await page.locator('[data-sonner-toast]').allInnerTexts();
+  console.log(`plain Fold on them: ${JSON.stringify(plain)}; toasts: ${JSON.stringify(toasts)}`);
+  await record('unordered-plain-fold', { page: await page.screenshot({ animations: 'disabled' }) });
+  if (/no flat folded form/.test(pressed) && !process.env.LAYER_ORDER_CHECK_LENIENT) {
+    throw new Error('the press says “no flat folded form” of creases a plain Fold draws');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -4766,6 +5364,11 @@ const CASES = [
   { name: 'edit-figure-solutions-horizon', run: editFigureSolutionCases('Horizon') },
   { name: 'pose-toolbar', run: poseToolbarCases(null) },
   { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
+  { name: 'diagram-solutions', run: diagramSolutionCases(null) },
+  { name: 'diagram-solutions-horizon', run: diagramSolutionCases('Horizon') },
+  { name: 'many-patterns', run: manyPatternCases(null) },
+  { name: 'many-patterns-horizon', run: manyPatternCases('Horizon') },
+  { name: 'unordered-toast', run: unorderedCreasesToast },
 ];
 
 // ---------------------------------------------------------------------------
