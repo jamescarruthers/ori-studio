@@ -35,14 +35,13 @@ import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { reportError } from '../../monitoring';
 import {
-  LAYER_ORDER_CALL_FAILURES,
   LAYER_ORDER_LIMITS,
   type LayerOrderLimits,
   type LayerOrderRestoreOutcome,
   type LayerOrderRestored,
 } from '../engine/layerOrderEngine';
-import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
-import { createLayerOrderRuntime, isLayerOrderEngineLost, type LayerOrderRuntime } from '../engine/layerOrderRuntime';
+import { createLayerOrderRuntime, type LayerOrderRuntime } from '../engine/layerOrderRuntime';
+import { layerOrderLossOf } from './layerOrderLoss';
 import {
   LAYER_ORDER_CANCELLED,
   keptLayerOrder,
@@ -50,9 +49,19 @@ import {
   withLayerOrderAttention,
   layerOrderAttentionOf,
   type LayerOrderFound,
-  type LayerOrderLossCause,
   type LayerOrderResolution,
 } from './layerOrderResolution';
+
+// A host's cursor through the solutions that fit (H6), loaded with the rest of the host engine.
+export {
+  createLayerOrderSolutionCursor,
+  type LayerOrderSolutionCursor,
+  type LayerOrderSolutionCursorOptions,
+  type LayerOrderSolutionPlace,
+  type LayerOrderSolutionStep,
+  type LayerOrderSolutionStepOptions,
+  type LayerOrderSolutionsUnrestored,
+} from './layerOrderSolutionCursor';
 
 /** What one resolve may do beyond its limits. */
 export interface LayerOrderResolveOptions {
@@ -102,21 +111,6 @@ function foundOf(restored: LayerOrderRestored): LayerOrderFound {
 function timedOut(restored: LayerOrderRestoreOutcome): 'record' | 'open' | null {
   if (restored.status === 'refused') return restored.refusal.code === 'session_timed_out' ? 'open' : null;
   return restored.outcome.kind === 'timed_out' ? 'record' : null;
-}
-
-/**
- * Why a rejection that is not a Stop left the resolve with no answer, and
- * whether this module reports it: the dialog's rule (`layerOrderLoadFailure.ts`).
- * The browser failing to load the worker or the Fold wasm (offline) is `load`
- * and reported to no one; a crash the runtime has reported; an engine that did
- * not start for another reason (`unavailable`), or any other failure, is
- * reported here.
- */
-function lossOf(error: unknown): { cause: LayerOrderLossCause; report: boolean } {
-  if (isLayerOrderLoadFailure(error)) return { cause: 'load', report: false };
-  if (isLayerOrderEngineLost(error)) return { cause: 'crashed', report: false };
-  const code = (error as { code?: unknown } | null)?.code;
-  return { cause: code === LAYER_ORDER_CALL_FAILURES.unavailable ? 'unavailable' : 'failed', report: true };
 }
 
 /** One resolve on `runtime`'s worker; `halted` says whether it was stopped since its last call. */
@@ -215,7 +209,7 @@ export function createLayerOrderResolveBatch(options: LayerOrderResolveBatchOpti
       return stopped || closed ? LAYER_ORDER_CANCELLED : answer;
     } catch (error) {
       if (stopped || closed || error === STOPPED) return LAYER_ORDER_CANCELLED;
-      const { cause, report } = lossOf(error);
+      const { cause, report } = layerOrderLossOf(error);
       if (report) reportError(error, { surface: 'layer-order:host', tags: { cause } });
       return lostLayerOrder(cause, record);
     } finally {

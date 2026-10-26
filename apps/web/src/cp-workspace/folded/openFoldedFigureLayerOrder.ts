@@ -9,7 +9,7 @@
  *   (`layerOrderDialogGateway.ts`). When the fold can't be made, the dialog
  *   still opens, on the source and the record: it restores the record itself
  *   and says why in its own frames. Only an engine that never loaded at all
- *   is a toast, the gateway's.
+ *   is a toast, the one the gateway says (`sayLayerOrderUnavailable`).
  * - **One door.** The dialog is reached through its gateway alone, which
  *   answers every open; only `applied` writes. `unchanged`, `cancelled`,
  *   `busy` and `unavailable` leave the figure and the history as they were.
@@ -31,6 +31,7 @@ import {
   prefetchLayerOrderDialog,
   type LayerOrderDialogOutcome,
 } from '../../layer-order/dialog/layerOrderDialogGateway';
+import { sayLayerOrderUnavailable } from '../../layer-order/engine/layerOrderLoadFailure';
 import { EDIT_PAPER_FRAME, layerOrderRecordToSource } from '../../lib/layerOrder/paperFrame';
 import type {
   LayerOrderApplied,
@@ -201,9 +202,7 @@ export async function openFoldedFigureLayerOrder(
     // An engine that never loaded is said once, as the dialog's gateway says
     // it, an error; a kernel failure has said itself, an error too. Every
     // other way out is no fault, and is a message or nothing.
-    if (opening.reason === 'unavailable') {
-      toast.error(t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
-    }
+    if (opening.reason === 'unavailable') sayLayerOrderUnavailable(t);
     // Its creases changed, and fold in 3D now: there is no flat order to open on (D13).
     if (opening.reason === 'spatial') {
       toast.message(

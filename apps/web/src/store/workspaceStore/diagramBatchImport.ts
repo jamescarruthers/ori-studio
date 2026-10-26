@@ -24,6 +24,7 @@ import {
   retainFoldedFigureHandles,
   releaseFoldedFigureHandles,
 } from "../../cp-workspace/folded/foldedFigureHandles";
+import { foldedFiguresAtRest, foldedSelectionAtRest } from "../../cp-workspace/folded/foldedFiguresAtRest";
 import { staleFoldArtifactResourceState } from "./foldArtifactResource";
 import {
   snapshotEntry,
@@ -89,8 +90,9 @@ function captureCp(
   label: string,
   compoundId: string,
 ): OristudioCpHistoryEntry {
-  retainFoldedFigureHandles(s.oristudioCpFoldedFigures);
-  return cpEntryOf(s, label, compoundId);
+  const entry = cpEntryOf(s, label, compoundId);
+  retainFoldedFigureHandles(entry.foldedFigures ?? []);
+  return entry;
 }
 /**
  * What is live, as the entry an undo or redo pushes while it puts another
@@ -107,8 +109,9 @@ function cpEntryOf(
     document: cpHistoryDocumentOf(s.oristudioCpDocument!),
     selection: s.oristudioCpSelection,
     annotations: s.oristudioCpAnnotations,
-    foldedFigures: s.oristudioCpFoldedFigures,
-    activeFoldedFigureId: s.oristudioCpActiveFoldedFigureId,
+    // Never a figure mid-press (`foldedFiguresAtRest.ts`).
+    foldedFigures: foldedFiguresAtRest(s.oristudioCpFoldedFigures),
+    activeFoldedFigureId: foldedSelectionAtRest(s.oristudioCpActiveFoldedFigureId, s.oristudioCpFoldedFigures),
     inlineSimulations: s.oristudioCpInlineSimulations,
     label,
     timestamp: new Date().toISOString(),

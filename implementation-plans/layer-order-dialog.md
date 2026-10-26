@@ -1072,7 +1072,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] H3: Edit display and Apply (#520)
 - [x] H4: Edit refold with constraints (#529)
 - [x] H5: Fold with layer order… (#526)
-- [ ] H6: Edit "Another solution" within constraints
+- [x] H6: Edit "Another solution" within constraints (#528)
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
 - [ ] H9: the Diagram's ‹ › within constraints

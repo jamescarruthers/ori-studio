@@ -11804,7 +11804,10 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       });
       try {
         await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('not-opened');
-        expect(error).toHaveBeenCalledWith('Layer order didn’t load. Check your connection and try again.');
+        // With the reload that alone retries a load that failed (`layerOrderReloadAction`).
+        expect(error).toHaveBeenCalledWith('Layer order didn’t load. Reload Ori Studio to try again.', {
+          action: { label: 'Reload', onClick: expect.any(Function) },
+        });
       } finally {
         error.mockRestore();
       }
