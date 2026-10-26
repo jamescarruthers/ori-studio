@@ -335,6 +335,7 @@ is built.
 | H4 | **Edit: refold with constraints.** Resolve through H2, then a seeded fold; D10; `attention`; a "Review…" action opens the dialog on the flagged rows (D14); a stale figure (D12); a switch to 3D keeps the record (D13), and the idle 3D rehydrate ignores records; `layer constraints need attention` | M | H3 | Attention | Store tests per status; parity guard; Playwright: add two constraints, split a face with a crease, refold, reopen, remove a row, Apply |
 | H5 | **Edit: Fold with layer order….** An icon button beside Fold in the selection toolbar only, never the viewport bar (Fold's glyph with a layers badge); a shortcut-registry entry with no default chord (`null`, as `cp.makeUnassigned` is), in the Fold category beside Fold (G), listed in Settings ▸ Shortcuts as "Unassigned" until someone binds it, with a translated label in `i18n/shortcutLabels.ts`; the selection toolbar's Fold through a gesture (taking over the standalone undo fix); `prepareOristudioCpLayerOrderFold` (a private handle, freed on Cancel); the selection's `look` (the display style, no pins); one undo entry; `fold attempted`/`completed` with `via: 'layer_order'` | M | H3 | Entry points | Catalog and store tests (Cancel leaves no entry, Apply adds one); Playwright |
 | H6 | **Edit: "Another solution" within constraints** (D9). An in-memory cursor on the host engine, created on the first press, never on selection; the enabled state comes from saved data; `fold solution cycled` with `constrained`. Completes Phase 1 as the spec defines it | M | E6, H3 | – | Store and action tests; Playwright |
+| H10 | **Fold: Import CP chooses its order in the dialog** (added 2026-10-26, your ask after trying the branch: "when importing a CP in the fold workspace, the modal should open and i should choose a layer order that way"). This was spec decision 6, held out of v1; it comes in now. Fold's Import CP opens the Layer order dialog on the imported crease pattern; Apply imports in the chosen order, Cancel cancels the import. With a single layer order there is nothing to choose, so the import goes straight through (my call). `surface: 'fold_import'` | M | U10, H2 | – | Import tests per outcome; the imported state's order equals the dialog's; parity: an import with one order, or with the dialog unavailable, behaves as today; Playwright through the real dialog |
 | **Phase 2: Diagram and Pose** |
 | H7 | **Diagram step.** Capture with a record through H2 and `fold_with_order` (Refresh, Refresh All, Show as, Duplicate, paperFaces); the Diagram's `look` (`diagramScenePaintStyle`, the step's rotation and side, no spread); the Step-pane entry, shown disabled with its reason on a 3D step; the pager stop-gap until H9; the readout and link status show the record's state from saved data, never the engine (not #475's `useFoldLinkContext` pattern); the annotation-carry rule; the `needs-attention` outcome and event | L | E2, H1, H2, U4; U10 for its browser gates | Entry points, attention | `captureFolded` and action tests with the parity guard; a `Worker`-constructor spy: opening a Diagram with constrained steps spawns no worker; Playwright on a linked diagram (Apply, undo, Refresh after an edit, Show as round trip), and the dialog drawn in the Diagram's style |
 | H8 | **Pose.** Pose's `look` (as H7); the source comes from Pose's held fold; Apply replaces the held fold with a `fold_with_order` handle; `FoldKey` and `linkedFoldKey` include the record's digest, and `historyMoved` releases a held fold whose record no longer matches; the `layer-order` pose request (one "Adjust pose"); the toolbar's ‹ › with no readout, each disabled at its end, and "Edit order…"; Pose's keys stand down; Reset Pose keeps the constraints | M | H7 | Entry points | `linkedPose` and `poseController` tests, including Apply → undo → turn over draws the pre-Apply order; Playwright |
@@ -525,6 +526,11 @@ disagrees, the artboard wins):
 - A row click puts its subject in the builder; when it has nothing left to
   choose, the hint line says so in the quiet tone, and the subject slot stays
   active (Round3:1007-1008).
+- ⌘Z undoes any inspector action, not only commits: picking or clearing the
+  subject, picking or removing an object, changing the verb, Clear, Add (one
+  step, however many objects), a row's removal, Clear all, a solution step
+  (your words, 2026-10-26: "cmd + z should undo adding a single constraint or
+  setting the subject (so basically any action)").
 - Undo, redo, remove and Clear all re-solve for the fitting order closest to
   the one on screen, and flash the spots that changed (Round3:1150-1190).
 
@@ -562,8 +568,6 @@ disagrees, the artboard wins):
   `fold solution cycled` with `constrained`.
 
 **What stays out.** These come later:
-- Fold workspace adoption (spec decision 6): its order chooser opens the
-  dialog;
 - copying constraints from the previous Diagram step (spec decision 5);
 - more verbs (spec §6.10);
 - 3D;
@@ -765,9 +769,10 @@ notice has no board of its own; U10 builds it from the approved copy.
     later Add for that subject and verb joins its row. (Not by the stored
     sign: one verb gives objects facing different ways different signs, so
     sign would split your own example.) The row's trash removes
-    the whole row, as one undo step. Each object in a row of two or more has
-    its own remove (×), shown on hover or focus, and always on a coarse
-    pointer. Carried rows group the same way, within one status, so a row
+    the whole row, as one undo step. A row has no per-object remove: in your
+    words after trying it (2026-10-26), "I don't want individual xs in the
+    constraints list if there are multiple objects, they can delete the whole
+    constraint if they want." Carried rows group the same way, within one status, so a row
     never mixes statuses; intact and clashing count as one there, since both
     still apply and a clash is marked per object, as on committed rows. A
     row keeps its place and identity when one of its objects is removed.
@@ -1056,6 +1061,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] U9b: compound constraints in the model (#515)
 - [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
+- [ ] H10: Fold's Import CP chooses its order in the dialog
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
