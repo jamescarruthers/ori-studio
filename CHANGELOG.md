@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-10-25
+
+Drawing on the Diagram's Annotate canvas lands under the pointer in the Mac app and Safari.
+
+### Fixed
+
+- In the Mac app and Safari, draw on the Diagram's Annotate canvas where you press. A line started away from the pointer: above and to the left at the usual fit zoom, below and to the right when zoomed in, and off the picture at high zoom. How far a press reached to pick or snap to a mark also grew and shrank with the zoom. Chrome and the Windows app were not affected.
+
 ## [0.7.0] - 2026-10-25
 
 A new Fold workspace that folds a sheet step by step and sends the steps to the Diagram, rotations by any angle in the Diagram, and large crease patterns that delete, select, undo and simulate without stalls.
