@@ -48,7 +48,10 @@ jobs:
     name: Web client lint, typecheck, tests
     # Pinned: Playwright has no browsers for ubuntu-latest's 26.04 image yet.
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # A green run takes 28-29 min since the Fold workspace (#475), most of it
+    # the unit tests (~16 min) and a wasm build that runs ~10 min on a cold
+    # sccache; 30 cancelled both of main's runs after #475 merged.
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
