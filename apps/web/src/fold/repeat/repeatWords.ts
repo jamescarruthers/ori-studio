@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { FoldModelLine, FoldOpKind } from '../document/foldSequenceDocument';
 import { FOLD_VERTEX_OP_KINDS } from '../document/foldSequenceDocument';
-import type { FoldRefusalBody, FoldRefusalCode } from '../engine/foldEngineWire';
+import type { FoldRefusalBody, FoldRefusalCode, FoldView } from '../engine/foldEngineWire';
 import type { FoldSinkToolId } from '../tools/foldToolCatalog';
 import { foldRefusalWords, type FoldRefusalContext } from '../tools/refusalNotice';
 
@@ -37,16 +37,20 @@ const NO_REMEDIES: RepeatRemedies = { otherAxis: false, laterStart: false };
 const AXIS_TOLERANCE_DEG = 0.01;
 
 /**
- * A symmetry axis by where it runs on the paper, as the crease pattern pane
- * shows the sheet (front up, y up, never turned with the view): a diagonal
- * from corner to corner, a center line from edge to edge, or else the line
- * through the center at its angle from the horizontal, counter-clockwise. A
- * sheet's axes all cross its middle, so no two run the same way and each
- * name is the one axis.
+ * A symmetry axis by where it runs as the folded pane shows it, through the
+ * view of the step on screen (`view`): turned over, the sheet's diagonal from
+ * its bottom left corner to its top right runs from top left to bottom right,
+ * and rotated a quarter turn, its center lines trade names. A diagonal from
+ * corner to corner, a center line from edge to edge, or else the line through
+ * the center at its angle from the horizontal, counter-clockwise. A sheet's
+ * axes all cross its middle, so no two run the same way and each name is the
+ * one axis. With no view, as the crease pattern pane shows the sheet: front
+ * up, y up.
  */
-export function repeatAxisName(t: TFunction, line: FoldModelLine): string {
-  // The line runs along (−n.y, n.x); its angle is taken modulo a half turn.
-  const raw = (Math.atan2(line.n[0], -line.n[1]) * 180) / Math.PI;
+export function repeatAxisName(t: TFunction, line: FoldModelLine, view: FoldView | null): string {
+  const [x, y] = seenAlong(line, view);
+  // Its angle is taken modulo a half turn.
+  const raw = (Math.atan2(y, x) * 180) / Math.PI;
   const angle = ((raw % 180) + 180) % 180;
   const near = (target: number) => Math.abs(angle - target) <= AXIS_TOLERANCE_DEG || Math.abs(angle - target - 180) <= AXIS_TOLERANCE_DEG;
   if (near(45)) return t('panels:fold.repeat.axisName.rising', 'Diagonal, bottom left to top right');
@@ -54,6 +58,17 @@ export function repeatAxisName(t: TFunction, line: FoldModelLine): string {
   if (near(90)) return t('panels:fold.repeat.axisName.vertical', 'Center line, top to bottom');
   if (near(0)) return t('panels:fold.repeat.axisName.horizontal', 'Center line, left to right');
   return t('panels:fold.repeat.axisName.angle', 'Line through the center at {{degrees}}°', { degrees: Math.round(angle) });
+}
+
+/**
+ * The way a sheet line runs, (−n.y, n.x), as `view` shows the model: mirrored
+ * x ↦ −x when turned over, then rotated (the engine's `View::transform`).
+ */
+function seenAlong(line: FoldModelLine, view: FoldView | null): [number, number] {
+  const x = view?.flipped ? line.n[1] : -line.n[1];
+  const y = line.n[0];
+  const [cos, sin] = [Math.cos(view?.rotation ?? 0), Math.sin(view?.rotation ?? 0)];
+  return [cos * x - sin * y, sin * x + cos * y];
 }
 
 /** What a refused step's words are read against: the fold family of the step whose mirror was refused. */

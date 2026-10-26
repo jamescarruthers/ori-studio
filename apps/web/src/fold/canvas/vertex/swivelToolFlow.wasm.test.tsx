@@ -1,12 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearHeldModifiers, syncHeldModifiersFromEvent } from '../../../keyboard/heldModifiers';
+import { parseNativeProjectFile } from '../../../lib/nativeProjectFile';
 import { foldSessionDocumentSource } from '../../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
 import { sequenceOf } from '../../document/foldSequence.fixtures';
 import { initialFoldReaderState, withFoldCursor } from '../../document/foldReaderState';
-import type { FoldDirection, FoldOp, FoldStep, FoldSwivelKind, SheetPoint } from '../../document/foldSequenceDocument';
+import { isLockedStep, type FoldDirection, type FoldOp, type FoldStep, type FoldSwivelKind, type SheetPoint } from '../../document/foldSequenceDocument';
+import { readFoldSequences } from '../../document/foldSequenceFile';
 import { createFoldSession, type FoldSession } from '../../session/foldSession';
 import { settle } from '../../session/foldSession.fixtures';
 import { selectFoldCursorNode } from '../../session/foldSessionState';
@@ -253,6 +257,52 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
       act(() => root.unmount());
       root = createRoot(host);
     }
+  });
+
+  it('makes the swivel whose lines meet where a flap’s edge crosses the folded edge, as swivel-at-flap-edge.osf stores it', async () => {
+    // The fixture's first two steps: the square folded in half, and its bottom left corner folded up past the folded edge.
+    const project = parseNativeProjectFile(readFileSync(resolve(process.cwd(), '../../tests/fixtures/fold-regressions/swivel-at-flap-edge.osf'), 'utf8'));
+    const [held] = readFoldSequences(project.workspace.foldSequences);
+    const fixture = (held?.document.steps ?? []).filter((node): node is FoldStep => !isLockedStep(node));
+    const stored = fixture[2];
+    if (!stored) throw new Error('the fixture’s third step is the swivel');
+    const document = sequenceOf([]);
+    useWorkspaceStore.getState().installFoldSequences([{ document, readOnlyRaw: null }], initialFoldReaderState(document.id));
+    await until(() => cursor().status === 'ok', 'the sheet');
+    for (const step of fixture.slice(0, 2)) {
+      await session.commitStep(step.op);
+      await until(() => cursor().status === 'ok' && cursor().fingerprint === step.expect, step.note ?? step.id);
+    }
+    const index = await shownPickIndex(session);
+    const tools = createFoldTools(); tools.selectTool('swivel');
+    const seen: { current: Seen | null } = { current: null };
+    await act(async () => { root.render(<Canvas session={session} tools={tools} view={{ index } as FoldStateView} seenRef={seen} />); await settle(); });
+    await act(async () => { seen.current!.verbs.setSwivelInput('valley-mountain'); await settle(); });
+    await act(async () => { seen.current!.verbs.selectLineMode('axiom-1'); await settle(); });
+    // Where the flap's edge crosses the folded edge: a point the folded pane offers.
+    const CROSSING = { x: 0.5, y: 0.375 };
+    const crossing = await clickPane(seen, CROSSING);
+    expect(crossing?.pick).toMatchObject({ kind: 'point', provenance: 'crossing' });
+    // The valley, on to (0.185, 0.9) on the layer in front: the sheet's right half, turned over, so (0.815, 0.9) on the crease pattern.
+    syncHeldModifiersFromEvent({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false });
+    await clickPane(seen, { x: 0.815, y: 0.9 }, 'crease-pattern');
+    clearHeldModifiers();
+    await until(() => seen.current?.preview.locatedLine, 'the valley line');
+    await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
+    // The mountain from the crossing again — near it, a click takes it exactly — on to (0.395, 0.9).
+    const meeting = await clickPane(seen, { x: CROSSING.x + 0.004, y: CROSSING.y - 0.003 });
+    const scene = meeting?.pick?.kind === 'point' ? meeting.pick.scene : null;
+    expect(Math.hypot((scene?.x ?? NaN) - CROSSING.x, (scene?.y ?? NaN) - CROSSING.y)).toBeLessThan(1e-12);
+    syncHeldModifiersFromEvent({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false });
+    await clickPane(seen, { x: 0.605, y: 0.9 }, 'crease-pattern');
+    clearHeldModifiers();
+    // It used to be refused here: "The lines do not meet on a folded edge".
+    const step = await until(() => previewed(seen, 'open') ?? (seen.current?.preview.refused ? 'refused' : null), 'the swivel preview');
+    expect(step).not.toBe('refused');
+    if (step === 'refused') return;
+    expect(step.op).toMatchObject({ kind: 'swivel', via: 'valley-mountain', valley: { line: { via: 'axiom', axiom: 1 } }, mountain: { line: { via: 'axiom', axiom: 1 } } });
+    const committed = await commit(seen);
+    expect(committed.fingerprint).toBe(stored.expect);
   });
 
   it('requires a saved order for a matching swivel and cycles before committing', async () => {

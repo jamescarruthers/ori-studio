@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,6 +48,9 @@ const { openDiagramStepInFold, refreshDiagramFoldStep, showFoldStepAs } = await 
 const { foldLinkContextNow } = await import('./useFoldLinkContext');
 const { foldStepLinkStatus } = await import('./foldStepLink');
 const { foldPrecreaseMerges, forgetPrecreaseMirrorsForTest } = await import('./foldPrecreaseMirrors');
+// A pull loads Fold's lazy chunk, most of Fold's code, cold the first time. Loaded here, so
+// that is not inside whichever test happens to pull first, and its 5 s timeout.
+await (await import('../../workspaces/foldGateway')).loadFold();
 
 const T = Math.tan(Math.PI / 8);
 /** The diagonal the kite folds to, across which its two halves mirror. */

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoldDocument } from '../../engine/types';
 import { DEFAULT_CREASE_EXPORT_OPTIONS, type CreaseExportOptions } from '../../lib/creaseExport';

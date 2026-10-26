@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleShortcutRuntimeKeyDown, registerConditionalScopeExecutor } from '../../keyboard/shortcutRuntime';
 import { getResolvedShortcuts, shortcutLabelForAction, SHORTCUT_DEFINITIONS } from '../../keyboard/shortcuts';

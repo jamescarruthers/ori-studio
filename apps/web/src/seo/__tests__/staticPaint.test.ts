@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { storageKey, STORAGE_KEYS } from '../../lib/storage';
 import { PHONE_MEDIA_QUERY } from '../../platform/phoneLayoutQuery';

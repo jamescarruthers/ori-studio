@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { parseCssRgb, resolveRenderSettings, resolveSimulatorPaint } from './simulatorPalette';
 import { ORIEDITA_DASH_ONE_DOT } from '../lib/oristudioCpLineStyle';

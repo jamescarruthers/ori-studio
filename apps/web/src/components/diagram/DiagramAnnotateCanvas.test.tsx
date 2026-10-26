@@ -97,7 +97,8 @@ vi.mock('../../hooks/useViewportSurface', async (importOriginal) => {
 /**
  * The Annotate canvas's presses, through the store: what a drag, a click, a
  * second finger and a cancel each commit, and what they count. The overlay's
- * screen matrix is the identity, so a client point is a world point.
+ * box on screen is at the client's corner at 100% unless a test moves the
+ * camera (`screen`), so a client point is a world point.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -106,17 +107,16 @@ const state = () => useWorkspaceStore.getState();
 let host: HTMLDivElement;
 let root: Root;
 
-const identity = {
-  a: 1,
-  b: 0,
-  c: 0,
-  d: 1,
-  e: 0,
-  f: 0,
-  inverse() {
-    return identity;
-  },
-};
+/** Where the camera shows the overlay: its corner on the client, and screen px per world px. */
+let screen = { left: 0, top: 0, zoom: 1 };
+const elementBox = Element.prototype.getBoundingClientRect;
+/** The overlay's box as the camera paints it, through `screen`; any other element's as jsdom has it. */
+function boxOnScreen(this: Element): DOMRect {
+  if (!this.hasAttribute('data-annotate-overlay')) return elementBox.call(this);
+  const width = Number(this.getAttribute('width')) * screen.zoom;
+  const height = Number(this.getAttribute('height')) * screen.zoom;
+  return DOMRect.fromRect({ x: screen.left, y: screen.top, width, height });
+}
 
 // Every enlarged step's frame where its imprint lands, after every verb the canvas runs (Revision 2).
 let frames: ReturnType<typeof watchFrames> | null = null;
@@ -137,19 +137,8 @@ beforeEach(() => {
     }
   );
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-  vi.stubGlobal(
-    'DOMPoint',
-    class {
-      constructor(
-        public x: number,
-        public y: number
-      ) {}
-      matrixTransform() {
-        return { x: this.x, y: this.y };
-      }
-    }
-  );
-  (SVGElement.prototype as unknown as { getScreenCTM: () => typeof identity }).getScreenCTM = () => identity;
+  screen = { left: 0, top: 0, zoom: 1 };
+  Element.prototype.getBoundingClientRect = boxOnScreen;
   Element.prototype.setPointerCapture = () => undefined;
   tracked.trackDiagramAnnotationAdded.mockClear();
   tracked.trackDiagramArrowShaped.mockClear();
@@ -164,6 +153,8 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.unstubAllGlobals();
+  Element.prototype.getBoundingClientRect = elementBox;
+  Reflect.deleteProperty(SVGElement.prototype, 'getScreenCTM');
 });
 
 /** A step with a 400 × 300 picture, open in Annotate, and the canvas on it. */
@@ -197,10 +188,10 @@ const overlay = () => host.querySelector('svg[data-annotate-overlay]') as SVGSVG
 const stage = () => overlay().closest('.react-transform-wrapper') as HTMLDivElement;
 const view = () => host.querySelector('[data-tool]') as HTMLDivElement;
 
-/** Picture units to the client: the frame's group is translated, one unit 1000 world px. */
+/** Picture units to the client: the frame's group is translated, one unit 1000 world px, shown as `screen` says. */
 function at(u: number, v: number): [number, number] {
   const [, x, y] = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(overlay().querySelector(':scope > g')!.getAttribute('transform')!)!.map(Number);
-  return [x! + u * 1000, y! + v * 1000];
+  return [screen.left + (x! + u * 1000) * screen.zoom, screen.top + (y! + v * 1000) * screen.zoom];
 }
 
 /**
@@ -399,6 +390,37 @@ describe('DiagramAnnotateCanvas', () => {
       'hidden_line',
     ]);
     expect(state().diagramAnnotateTool).toBe('line');
+  });
+
+  it('draws a line under the pointer at a fit below 100%, whatever the overlay’s screen matrix says', () => {
+    mount();
+    tool('line');
+    // A 73% fit, the overlay's corner past the stage's top left; and the screen matrix Safari 26 gives the overlay
+    // there: its corner at a scale of 1 (WebKit bug 308970), which put the line above and left of the pointer.
+    screen = { left: 148, top: -63, zoom: 0.732 };
+    vi.stubGlobal(
+      'DOMPoint',
+      class {
+        constructor(
+          public x: number,
+          public y: number
+        ) {}
+        matrixTransform({ a, d, e, f }: { a: number; d: number; e: number; f: number }) {
+          return { x: a * this.x + e, y: d * this.y + f };
+        }
+      }
+    );
+    const back = { a: 1, d: 1, e: -screen.left, f: -screen.top };
+    (SVGElement.prototype as unknown as { getScreenCTM: () => unknown }).getScreenCTM = () => ({
+      a: 1,
+      d: 1,
+      e: screen.left,
+      f: screen.top,
+      inverse: () => back,
+    });
+    drag(at(0.31, 0.44), at(0.63, 0.52));
+    expect(annotations()[0]!.from).toEqual([expect.closeTo(0.31, 6), expect.closeTo(0.44, 6)]);
+    expect(annotations()[0]!.to).toEqual([expect.closeTo(0.63, 6), expect.closeTo(0.52, 6)]);
   });
 
   it('draws a solid line in the colour beside the rail’s Line Type, counted by its name, never its value (17a)', () => {
@@ -1389,7 +1411,7 @@ describe('DiagramAnnotateCanvas snapping (decision 9)', () => {
   it('puts a callout clicked beside a point on it, its box beside it, not at the pointer', () => {
     drawn([line], 'callout');
     // Zoomed out to half: the snap radius is 0.029 of the frame, more than a slip's length.
-    (SVGElement.prototype as unknown as { getScreenCTM: () => typeof identity }).getScreenCTM = () => ({ ...identity, a: 0.5, d: 0.5 });
+    screen = { ...screen, zoom: 0.5 };
     // 0.025 off the line's end: the press lands on the end.
     click(at(0.625, 0.5));
     expect(last()).toMatchObject({ kind: 'callout', from: [0.6, 0.5] });
@@ -1411,7 +1433,7 @@ describe('DiagramAnnotateCanvas snapping (decision 9)', () => {
   it('reaches as far on screen at any zoom: fewer picture units zoomed in, more for a wider setting', () => {
     drawn([line], 'circle');
     // Zoomed in twice over: 0.012 from the end is 24 screen px, past 14.7.
-    (SVGElement.prototype as unknown as { getScreenCTM: () => typeof identity }).getScreenCTM = () => ({ ...identity, a: 2, d: 2 });
+    screen = { ...screen, zoom: 2 };
     click(at(0.612, 0.5));
     expect(last().from[0]).toBeCloseTo(0.612, 6);
     // 0.0058 from the end: 11.7 screen px.
@@ -1456,10 +1478,11 @@ describe('DiagramAnnotateCanvas snapping (decision 9)', () => {
   it('shows what a still pointer would land on once the camera moves under it', () => {
     drawn([line], 'circle');
     // 12 px off the end at the zoom the picture opens at: the end shows.
-    pointer('pointermove', at(0.612, 0.5));
+    const [x, y] = at(0.612, 0.5);
+    pointer('pointermove', [x, y]);
     expect(targets()).toEqual(['annotation']);
-    // The camera zooms in twice over under the pointer, which does not move: 24 px off, past the radius.
-    (SVGElement.prototype as unknown as { getScreenCTM: () => typeof identity }).getScreenCTM = () => ({ ...identity, a: 2, d: 2 });
+    // The camera zooms in twice over about the pointer, which does not move: 24 px off, past the radius.
+    screen = { left: x - 2 * (x - screen.left), top: y - 2 * (y - screen.top), zoom: 2 };
     act(() => {
       stage().dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 612, clientY: 500, bubbles: true, cancelable: true }));
     });
@@ -3011,14 +3034,12 @@ describe('DiagramAnnotateCanvas stars (Revision 3)', () => {
   /**
    * By a finger (18b review): its 18 px reach is more than a corner's 17 px
    * from the middle of a box at its 24 px floor, so a drag meant to move a
-   * selected star scaled it. The overlay's screen matrix says the zoom; a
-   * client point is still a world point.
+   * selected star scaled it. The camera shows the overlay at `zoom`.
    */
   describe('by a finger', () => {
     function fingerAt(zoom: number) {
       vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(pointer: coarse)', addEventListener() {}, removeEventListener() {} }));
-      const scaled = { ...identity, a: zoom, d: zoom, inverse: () => scaled };
-      (SVGElement.prototype as unknown as { getScreenCTM: () => typeof scaled }).getScreenCTM = () => scaled;
+      screen = { ...screen, zoom };
     }
     /** A point most of the way out along the star's arm `degrees` clockwise from its top tip, on the client. */
     const arm = (degrees: number): [number, number] => {
@@ -3039,9 +3060,10 @@ describe('DiagramAnnotateCanvas stars (Revision 3)', () => {
         for (const press of [() => at(...theStar().from), () => arm(144), () => arm(216)]) {
           const was = theStar().from;
           const from = press();
+          // 40 screen px: 40 / zoom world px.
           drag(from, [from[0] + 40, from[1]], 1, 'touch');
           expect(label()).toBe('Move annotation');
-          expect(theStar().from[0]).toBeCloseTo(was[0] + 0.04, 6);
+          expect(theStar().from[0]).toBeCloseTo(was[0] + 0.04 / zoom, 6);
           expect('scale' in theStar()).toBe(false);
           rerender();
         }

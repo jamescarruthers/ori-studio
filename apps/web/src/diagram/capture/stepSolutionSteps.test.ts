@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';

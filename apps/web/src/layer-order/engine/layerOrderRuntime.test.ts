@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The Layer order engine's worker lifetime, against a fake worker that runs
  * the real worker shell over a fake backend through comlink

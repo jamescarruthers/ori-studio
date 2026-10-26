@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The Layer order dialog's store: one opening at a time, each settled once,
  * and never a host left waiting on a dialog nobody mounts.

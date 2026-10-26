@@ -419,6 +419,7 @@
     "diagram": "图解工作区",
     "edit": "编辑工作区",
     "fold": "折叠工作区",
+    "foldBeta": "折叠工作区（测试版）",
     "label": "工作区",
     "references": "参考工作区",
     "simulate": "模拟工作区",

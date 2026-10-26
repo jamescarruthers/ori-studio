@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { startTreeDrag } from './dragController';
 import { reflectPointAcrossSymmetryAxis } from '../lib/symmetryGeometry';

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * A host's solutions cursor (row H6) against fake workers that run the real
  * worker shell over the fake backend (`engine/layerOrderEngine.fixtures.ts`):

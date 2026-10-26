@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The Fold engine worker's lifetime and the preview channel, against a fake
  * Worker.
