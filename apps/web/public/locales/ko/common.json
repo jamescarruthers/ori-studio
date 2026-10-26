@@ -419,6 +419,7 @@
     "diagram": "도해 작업 공간",
     "edit": "편집 작업 공간",
     "fold": "접기 작업 공간",
+    "foldBeta": "접기 작업 공간 (베타)",
     "label": "작업 공간",
     "references": "참조 작업 공간",
     "simulate": "시뮬레이션 작업 공간",

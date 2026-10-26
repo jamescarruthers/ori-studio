@@ -60,7 +60,7 @@ use crate::fold::Within;
 use crate::numerics::{MIN_FEATURE, TOL};
 use crate::{
     ActionKind, CompletionLimits, CreaseKind, Direction, FaceId, FoldActionGeometry, FoldAnalysis,
-    FoldRefusal, Letter, Refused, Side, Snap, State,
+    FoldRefusal, Landmarks, Letter, Refused, Side, Snap, State,
 };
 use oristudio_geometry::{Line, convex};
 use serde::{Deserialize, Serialize};
@@ -118,13 +118,40 @@ fn fold_support(state: &State, point: Point) -> Option<(usize, Point)> {
     found.map(|(k, p, _)| (k, p))
 }
 
+/// How far past the end of a visible part of a folded edge a point is still
+/// in view. The landmarks measure a visible part on the edge moved a probe
+/// into its face, so where the edge of a layer on top crosses the folded edge
+/// at the angle θ, the part ends `PROBE·cot θ` short of the crossing. They
+/// see the crossing itself, the corner the two make, within the half minimum
+/// feature the parts are resolved to (`landmarks::crossing_seen`), so a tool
+/// offers it as a point to pick; the swivel meets there within the same.
+const SEEN_SLACK: f64 = MIN_FEATURE / 2.0;
+
 /// The sheet point of the folded edge the viewer sees at the model point
 /// `v`: a bend segment through `v`, away from its ends (or at one exactly, a
 /// flat precrease's subdivision), visible there. Several stacked edges that
-/// name different paper are refused, never one silently picked.
+/// name different paper are refused, never one silently picked. A point on
+/// no visible part is taken where one ends within [`SEEN_SLACK`] of it: a
+/// layer's edge crossing the folded edge there, the corner in view.
 fn seen_fold_at(state: &State, v: Point) -> Result<Point, Refused> {
-    let refused = || Refused::from(FoldRefusal::SwivelLineMeeting);
     let landmarks = state.landmarks(&[]);
+    match seen_fold_within(&landmarks, v, |_| TOL)? {
+        Some(fold) => Ok(fold),
+        None => seen_fold_within(&landmarks, v, |length| SEEN_SLACK / length)?
+            .ok_or_else(|| Refused::from(FoldRefusal::SwivelLineMeeting)),
+    }
+}
+
+/// [`seen_fold_at`] with a visible part reaching `slack(length)` past its
+/// ends, as a fraction of the edge's length: the folded edge's sheet point,
+/// none when no visible one passes through `v`, or a refusal when several
+/// that name different paper do.
+fn seen_fold_within(
+    landmarks: &Landmarks,
+    v: Point,
+    slack: impl Fn(f64) -> f64,
+) -> Result<Option<Point>, Refused> {
+    let refused = || Refused::from(FoldRefusal::SwivelLineMeeting);
     let mut fold: Option<Point> = None;
     for edge in &landmarks.segments {
         if edge.kind != crate::SegmentKind::Bend {
@@ -141,10 +168,11 @@ fn seen_fold_at(state: &State, v: Point) -> Result<Point, Refused> {
         let q = [a[0] + t * d[0], a[1] + t * d[1]];
         let inside = t * len > MIN_FEATURE && (1.0 - t) * len > MIN_FEATURE;
         let at_end = (t * len).abs() <= TOL || ((1.0 - t) * len).abs() <= TOL;
+        let slack = slack(len);
         let seen = edge
             .visible
             .iter()
-            .any(|[lo, hi]| t >= *lo - TOL && t <= *hi + TOL);
+            .any(|[lo, hi]| t >= *lo - slack && t <= *hi + slack);
         if sub(v, q)[0].hypot(sub(v, q)[1]) > TOL || !(inside || at_end) || !seen {
             continue;
         }
@@ -157,7 +185,7 @@ fn seen_fold_at(state: &State, v: Point) -> Result<Point, Refused> {
             None => fold = Some(candidate),
         }
     }
-    fold.ok_or_else(refused)
+    Ok(fold)
 }
 
 /// How far from `from` along the unit direction `u` the layer of face

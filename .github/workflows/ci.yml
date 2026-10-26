@@ -46,11 +46,11 @@ env:
 jobs:
   web-client:
     name: Web client lint, typecheck, tests
-    # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.60 can't install
-    # its browsers ("does not support chromium-headless-shell on ubuntu26.04").
+    # Pinned: Playwright has no browsers for ubuntu-latest's 26.04 image yet.
     runs-on: ubuntu-24.04
-    # The wasm bridges take ~10 minutes and the unit tests ~15, so 30 cancelled
-    # runs in "Build web client" with every test already green.
+    # A green run takes 28-29 min since the Fold workspace (#475), most of it
+    # the unit tests (~16 min) and a wasm build that runs ~10 min on a cold
+    # sccache; 30 cancelled both of main's runs after #475 merged.
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -111,12 +111,81 @@ jobs:
 
       # Build the simulator + wasm crates once. The typecheck/test steps below
       # skip their pre-hooks (which would rebuild these) via --ignore-scripts.
-      - name: Build web assets (simulator + wasm)
-        run: npm --workspace @treemaker/web run build:simulator && npm --workspace @treemaker/web run build:wasm
+      - name: Build simulator
+        run: npm --workspace @treemaker/web run build:simulator
+
+      # The wasm build is five to ten minutes of this job, and sccache cannot cut
+      # most of it: cargo finishes in seconds when warm, and the rest is wasm-opt
+      # and wasm-bindgen, which run on every build. On a change that touches no
+      # Rust or C++ that time produces the same bytes as the last run did, so the
+      # outputs are cached whole and the build is skipped on an exact hit.
+      #
+      # A stale `.wasm` passes every check in this job (see "No tracked build
+      # outputs"), so a hit must mean "built from exactly these inputs". The key
+      # therefore errs wide: a change to any of these misses.
+      #   - every file under crates/ (all bridges and their path dependencies;
+      #     `include_str!`/`include_bytes!` never reach outside it), Cargo.toml,
+      #     Cargo.lock, the Tauri crate's Cargo.toml, rust-toolchain.toml;
+      #   - the ReferenceFinder sources, its build script and its emsdk pin;
+      #   - this workflow (the build commands and their env) and the wasm-pack
+      #     and emsdk install actions;
+      #   - what the toolchain says it is: `rustc -Vv` (version, commit, LLVM),
+      #     `cargo -V`, `wasm-pack --version` (which also fixes the wasm-opt it
+      #     downloads; wasm-bindgen's version comes from Cargo.lock), em++'s
+      #     version line and `node --version`;
+      #   - every script in apps/web/package.json, since `build:wasm` is a chain
+      #     of them.
+      # No restore-keys, on purpose: a partial match is a stale build.
+      #
+      # Only this job reads the cache. The deploy workflows, release.yml and
+      # Tauri's beforeBuildCommand all still build from source.
+      - name: Fingerprint the wasm toolchain
+        id: wasm-toolchain
+        run: |
+          set -euo pipefail
+          {
+            rustc -Vv
+            cargo -V
+            wasm-pack --version
+            em++ --version | sed -n 1p
+            node --version
+            node -p "JSON.stringify(require('./apps/web/package.json').scripts, null, 2)"
+          } | tee "$RUNNER_TEMP/wasm-toolchain.txt"
+          echo "hash=$(sha256sum "$RUNNER_TEMP/wasm-toolchain.txt" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore wasm build
+        id: wasm-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/web/src/generated
+            artifacts/reference-finder-node
+          key: wasm-${{ runner.os }}-${{ runner.arch }}-${{ steps.wasm-toolchain.outputs.hash }}-${{ hashFiles('crates/**', 'Cargo.toml', 'Cargo.lock', 'apps/tauri/src-tauri/Cargo.toml', 'rust-toolchain.toml', 'third_party/reference-finder/**', 'scripts/build-reference-finder.mjs', 'scripts/reference-finder-emsdk.json', '.github/workflows/ci.yml', '.github/actions/install-wasm-pack/**', '.github/actions/install-emsdk/**') }}
+
+      # The `--node` variant is ReferenceFinder linked for Node, which the
+      # cross-check below runs. It is built here so a cache hit restores it too:
+      # left to the cross-check, its mtime check would find the restored web
+      # build older than the checkout and recompile both.
+      - name: Build wasm
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        run: |
+          npm --workspace @treemaker/web run build:wasm
+          node scripts/build-reference-finder.mjs --node
         env:
           # The ReferenceFinder build may fall back to upstream's committed binary
           # when em++ is missing locally; a CI build must never accept that.
           REFERENCE_FINDER_FORCE_SOURCE: '1'
+
+      # Saved straight after the build rather than at the end of the job, so a
+      # failing test later on does not throw away a good build.
+      - name: Save wasm build
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/web/src/generated
+            artifacts/reference-finder-node
+          key: ${{ steps.wasm-cache.outputs.cache-primary-key }}
 
       # Same C++ as upstream, but our compiler and flags: the from-source wasm must
       # answer every query exactly like the artifact upstream committed at the
@@ -130,15 +199,11 @@ jobs:
       # MIT OR Apache-2.0 inside a GPL whole. This is the evidence: every line
       # its closure folds, whose witnesses pass ReferenceFinder's own
       # legibility rules, must be exact in ReferenceFinder too
-      # (tools/precrease-rf-crosscheck/README.md). The `--node` link reuses the
-      # objects `build:wasm` just compiled, so it only relinks; the planner
-      # side is a native `cargo run` of an example.
+      # (tools/precrease-rf-crosscheck/README.md). The ReferenceFinder side is
+      # the `--node` build from "Build wasm"; the planner side is a native
+      # `cargo run` of an example.
       - name: Precrease planner vs ReferenceFinder cross-check
-        run: |
-          node scripts/build-reference-finder.mjs --node
-          node tools/precrease-rf-crosscheck/crosscheck.mjs --strict
-        env:
-          REFERENCE_FINDER_FORCE_SOURCE: '1'
+        run: node tools/precrease-rf-crosscheck/crosscheck.mjs --strict
 
       - name: Lint web client
         run: npm run lint:web

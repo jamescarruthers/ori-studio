@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The dialog's gateway when the dialog's code doesn't load: the host hears
  * `unavailable`, the user hears it once, with Reload (the only retry there

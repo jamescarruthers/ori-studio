@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { handleShortcutKeyDown } from '../keyboard/shortcutDispatcher';
 import { SHORTCUT_DEFINITIONS, type SimulatorShortcutId } from '../keyboard/shortcuts';

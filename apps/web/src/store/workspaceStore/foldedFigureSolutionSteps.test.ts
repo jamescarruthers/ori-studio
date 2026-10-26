@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { TFunction } from 'i18next';
 import type {

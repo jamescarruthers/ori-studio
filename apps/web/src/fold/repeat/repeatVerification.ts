@@ -1,6 +1,6 @@
 /** Compare material effects, including flat precreases and internal layer order. */
 import type { Point } from '../../lib/geometry';
-import { applyIsometry, polygonArea, polygonCentroid, toPair } from '../canvas/foldCanvasGeometry';
+import { applyIsometry, invertIsometry, polygonArea, polygonCentroid, toPair } from '../canvas/foldCanvasGeometry';
 import type { FoldModelLine } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldScene } from '../engine/foldEngineWire';
 import {
@@ -15,8 +15,10 @@ import {
   REPEAT_TOL,
   RepeatFailure,
   sameImages,
+  sameIsometry,
   sheetRing,
   sideSign,
+  turnsOver,
   verifiedSymmetry,
   type RepeatSide,
   type RepeatSymmetry,
@@ -50,7 +52,9 @@ export function changedFaces(before: FoldScene, after: FoldScene): number[] {
  *   the axis, each with the same assignment on the paper, and it changes no
  *   other crease.
  *
- * A mirrored step that lands any other way is refused.
+ * A mirrored step that lands any other way is refused — unless, refused for
+ * where its paper lies, it lands as the mirror says measured against other
+ * paper the source moved alike (`heldGauge`). Which it passed is returned.
  */
 export function verifyMaterial(
   before: FoldScene,
@@ -59,8 +63,58 @@ export function verifyMaterial(
   ta: FoldScene,
   map: FoldIsometry,
   side: RepeatSide = 'same',
+): RepeatMeasure {
+  try {
+    verifyMirrored(before, after, tb, ta, map, side, null);
+    return 'unmoved';
+  } catch (error) {
+    if (!(error instanceof RepeatFailure) || !MISPLACED.has(error.code)) throw error;
+    const gauge = heldGauge(before, after, tb, ta, map);
+    if (!gauge) throw error;
+    try {
+      verifyMirrored(before, after, tb, ta, map, side, gauge);
+    } catch (again) {
+      // Refused again, the step is refused as it first was.
+      throw again instanceof RepeatFailure ? error : again;
+    }
+    return 'held';
+  }
+}
+
+/**
+ * What a mirrored step passed measured against: the paper the source step
+ * left in place, or other paper it moved all alike (`heldGauge`).
+ */
+export type RepeatMeasure = 'unmoved' | 'held';
+
+/** The refusals of paper landed, or moved, other than the source's mirror says: those a gauge can answer. */
+const MISPLACED = new Set(['repeat_material', 'repeat_extra_material']);
+
+/**
+ * Two steps measured against paper each moved alike, put back where it lay
+ * before its step (`heldGauge`): `after` and `ta` so placed, and how the
+ * target's pairs of layers read against the source's — reversed where both
+ * turned that paper over: the target then folds paper the source left seen
+ * from its back.
+ */
+interface HeldGauge {
+  after: FoldScene;
+  ta: FoldScene;
+  order: 1 | -1;
+}
+
+function verifyMirrored(
+  before: FoldScene,
+  after: FoldScene,
+  tb: FoldScene,
+  ta: FoldScene,
+  map: FoldIsometry,
+  side: RepeatSide,
+  gauge: HeldGauge | null,
 ): void {
-  const changed = new Set(changedFaces(before, after));
+  // A gauge changes only where each face lies: its pose and what moved.
+  const [moved, landed] = gauge ? [gauge.after, gauge.ta] : [after, ta];
+  const changed = new Set(changedFaces(before, moved));
   for (const i of changed) {
     const ring = sheetRing(after, i);
     for (let old = 0; old < before.faces.length; old++) {
@@ -71,16 +125,16 @@ export function verifyMaterial(
         const targetPart = overlap(mapped, sheetRing(tb, t));
         if (polygonArea(targetPart) < AREA) continue;
         const at = mappedPoint(map, toPair(polygonCentroid(targetPart)));
-        const expected = compose(correspondingFrame(before, tb, map, at), compose(modelMap(after, i), map));
+        const expected = compose(correspondingFrame(before, tb, map, at), compose(modelMap(moved, i), map));
         for (let j = 0; j < ta.faces.length; j++) {
           const part = overlap(targetPart, sheetRing(ta, j));
-          if (polygonArea(part) > AREA && !sameImages(expected, modelMap(ta, j), part))
+          if (polygonArea(part) > AREA && !sameImages(expected, modelMap(landed, j), part))
             throw new RepeatFailure('repeat_material');
         }
       }
     }
   }
-  for (const j of changedFaces(tb, ta)) {
+  for (const j of changedFaces(tb, landed)) {
     const inverse = sheetRing(ta, j).map((p) => applyIsometry(map, p));
     for (let i = 0; i < after.faces.length; i++) {
       if (!changed.has(i) && polygonArea(overlap(inverse, sheetRing(after, i))) > AREA)
@@ -93,7 +147,7 @@ export function verifyMaterial(
     const polygon = sheetRing(after, i).map((p) => applyIsometry(map, p));
     return ta.faces.flatMap((__, j) => (polygonArea(overlap(polygon, sheetRing(ta, j))) > AREA ? [j] : []));
   });
-  const flip = (after.view.flipped === ta.view.flipped ? 1 : -1) * sideSign(side);
+  const flip = (after.view.flipped === ta.view.flipped ? 1 : -1) * sideSign(side) * (gauge?.order ?? 1);
   for (const [key, sign] of orderPairs(after)) {
     const [a, b] = key.split(':').map(Number) as [number, number];
     if (!changed.has(a) && !changed.has(b)) continue;
@@ -105,6 +159,93 @@ export function verifyMaterial(
       }
   }
   verifyCreases(before, after, tb, ta, map);
+}
+
+/**
+ * The source step seen holding other paper still. The side a fold moves is
+ * the engine's to say (a pleat moves the side of its line that holds its
+ * second line), and it is often the big side, across the axis. Its mirror
+ * then moves paper the source moved too, and measured against the paper the
+ * source left in place (the frame is read point by point,
+ * `correspondingFrame`), no rigid fold lands it. Held still instead, one of
+ * the source's motions can leave the paper that moves on one side of the
+ * axis: both steps are then measured so, the target holding the mirror of
+ * that paper where `tb` had it. Turns and slides are tried before
+ * turn-overs; null when none qualifies, or the source's moved paper lies
+ * clear of its own mirror.
+ */
+function heldGauge(before: FoldScene, after: FoldScene, tb: FoldScene, ta: FoldScene, map: FoldIsometry): HeldGauge | null {
+  const changed = changedFaces(before, after);
+  if (onOneSide(after, changed, map) || !overliesItsMirror(after, changed, map)) return null;
+  for (const { motion, paper } of motions(before, after, changed)) {
+    const held = regauged(after, invertIsometry(motion));
+    const moving = changedFaces(before, held);
+    // All the moved paper held still leaves nothing to measure: any rigid motion would pass.
+    if (!moving.length || !onOneSide(held, moving, map)) continue;
+    const back = putBack(tb, ta, paper.map((p) => applyIsometry(map, p)));
+    // A mirror turns that paper over as the source did; one that holds it
+    // still instead is the same shape turned over, and no mirror of the step.
+    if (!back || turnsOver(back) !== turnsOver(motion)) return null;
+    return { after: held, ta: regauged(ta, back), order: turnsOver(back) ? -1 : 1 };
+  }
+  return null;
+}
+
+/** The distinct motions of the paper a step moved, each with a piece it moved so: turns and slides first. */
+function motions(before: FoldScene, after: FoldScene, changed: readonly number[]) {
+  const found: { motion: FoldIsometry; paper: Point[] }[] = [];
+  for (const i of changed) {
+    const ring = sheetRing(after, i);
+    for (let old = 0; old < before.faces.length; old++) {
+      const paper = overlap(ring, sheetRing(before, old));
+      if (polygonArea(paper) < AREA || sameImages(modelMap(after, i), modelMap(before, old), paper)) continue;
+      const motion = compose(modelMap(after, i), invertIsometry(modelMap(before, old)));
+      if (!found.some((each) => sameIsometry(each.motion, motion))) found.push({ motion, paper });
+    }
+  }
+  return [...found.filter((each) => !turnsOver(each.motion)), ...found.filter((each) => turnsOver(each.motion))];
+}
+
+/** `scene` with every face moved by `g` in the model frame: the same state, other paper held still. */
+function regauged(scene: FoldScene, g: FoldIsometry): FoldScene {
+  return {
+    ...scene,
+    face_transforms: scene.faces.map((_, i) => compose(scene.view_transform, compose(g, modelMap(scene, i)))),
+  };
+}
+
+/** The motion putting `ta`'s paper over the sheet polygon `paper` back where `tb` had it, read through one face of each. */
+function putBack(tb: FoldScene, ta: FoldScene, paper: readonly Point[]): FoldIsometry | null {
+  for (let j = 0; j < ta.faces.length; j++) {
+    const part = overlap(paper, sheetRing(ta, j));
+    if (polygonArea(part) < AREA) continue;
+    const t = tb.faces.findIndex((_, k) => polygonArea(overlap(part, sheetRing(tb, k))) > AREA);
+    if (t >= 0) return compose(modelMap(tb, t), invertIsometry(modelMap(ta, j)));
+  }
+  return null;
+}
+
+/** Whether every one of `faces` lies on one side of the axis `map` reflects across, touching it at most. */
+function onOneSide(scene: FoldScene, faces: readonly number[], map: FoldIsometry): boolean {
+  let side: Point | null = null;
+  for (const i of faces)
+    for (const p of sheetRing(scene, i)) {
+      const q = applyIsometry(map, p);
+      const across = { x: p.x - q.x, y: p.y - q.y };
+      if (Math.hypot(across.x, across.y) < REPEAT_TOL) continue;
+      if (!side) side = across;
+      else if (side.x * across.x + side.y * across.y < 0) return false;
+    }
+  return true;
+}
+
+/** Whether paper of `faces` lies over the mirror of paper of theirs. */
+function overliesItsMirror(scene: FoldScene, faces: readonly number[], map: FoldIsometry): boolean {
+  const rings = faces.map((i) => sheetRing(scene, i));
+  return rings.some((ring) => {
+    const mirrored = ring.map((p) => applyIsometry(map, p));
+    return rings.some((other) => polygonArea(overlap(mirrored, other)) > AREA);
+  });
 }
 
 interface Segment {

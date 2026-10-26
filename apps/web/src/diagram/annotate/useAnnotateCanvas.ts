@@ -105,6 +105,7 @@ import { cancelFieldFocus, pendingFieldFocus, requestFieldFocus } from './fieldF
 import { draggedDivisions } from './divisionsPlacement';
 import { hasTransformBox, transformDragged } from './transformGrips';
 import { nearestLine } from './nearestLine';
+import { overlayScreen } from './overlayScreen';
 import { setToolNotice } from './pickProgress';
 import type { PickedLine } from './angleBisector';
 import { isViewportInteractiveTarget } from '../../components/panels/ViewportToolbar';
@@ -501,7 +502,12 @@ export function useAnnotateCanvas({
   /** The last pointer over the stage, for a key that changes what it would snap to without a move. */
   const lastPointer = useRef<PointerInput | null>(null);
   const [draft, setDraft] = useState<KnownDiagramAnnotation | null>(null);
-  const snap = useAnnotateSnap({ step, assets, style, overlay, unit: layout?.unit ?? null });
+  /** Screen px per picture unit at the zoom the canvas is at now; 0 before the picture is laid out. */
+  const screenPerUnit = useCallback(() => {
+    const screen = layout && overlayScreen(overlay.current, layout.world.width);
+    return screen && layout ? screen.scale * layout.unit : 0;
+  }, [layout]);
+  const snap = useAnnotateSnap({ step, assets, style, screenPerUnit });
   const { context: snapContext, show: showSnap } = snap;
   const [rightAngle, setRightAngle] = useState<RightAnglePreview | null>(null);
   /** Show the right angle a click would put down — none to clear it — re-rendering only for a change. */
@@ -585,27 +591,26 @@ export function useAnnotateCanvas({
 
 
   /**
-   * A client point in picture units, through the overlay's matrix wherever on
-   * the stage it is. Not clamped to reach: the model keeps what a press makes
-   * or moves within it (`createAnnotation`, `moveAnnotationEnd`,
+   * A client point in picture units, through the overlay's box on screen
+   * wherever on the stage it is. Not clamped to reach: the model keeps what a
+   * press makes or moves within it (`createAnnotation`, `moveAnnotationEnd`,
    * `moveAnnotation`), and a press past the edge must not hit the mark at the
    * edge as if it were on it.
    */
   const toPicture = useCallback(
     (clientX: number, clientY: number): PicturePoint | null => {
-      const svg = overlay.current;
-      const matrix = svg?.getScreenCTM();
-      if (!svg || !matrix || !layout) return null;
-      const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
-      return [(point.x - layout.frame.x) / layout.unit, (point.y - layout.frame.y) / layout.unit];
+      const screen = layout && overlayScreen(overlay.current, layout.world.width);
+      if (!screen || !layout) return null;
+      const x = (clientX - screen.left) / screen.scale;
+      const y = (clientY - screen.top) / screen.scale;
+      return [(x - layout.frame.x) / layout.unit, (y - layout.frame.y) / layout.unit];
     },
     [layout]
   );
 
   /** How near a press must be, in picture units, at the zoom it is made at; and one screen px there. */
   const hitSizes = useCallback((): HitSizes => {
-    const screenPerWorld = overlay.current?.getScreenCTM()?.a ?? 1;
-    const px = 1 / (screenPerWorld * (layout?.unit ?? 1));
+    const px = 1 / (screenPerUnit() || (layout?.unit ?? 1));
     const reach = (coarse ? REACH_PX.coarse : REACH_PX.fine) * px;
     return {
       tolerance: reach,
@@ -616,7 +621,7 @@ export function useAnnotateCanvas({
       px,
       handles: transformHandleSizes(coarse),
     };
-  }, [coarse, layout, style]);
+  }, [coarse, layout, screenPerUnit, style]);
 
   /** The Angle Bisector's and the equal-angle mark's picks (15b), while one of them is in hand. */
   const picker = usePickTool({

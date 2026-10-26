@@ -419,6 +419,7 @@
     "diagram": "Diagram workspace",
     "edit": "Edit workspace",
     "fold": "Fold workspace",
+    "foldBeta": "Fold workspace (Beta)",
     "label": "Workspaces",
     "references": "References workspace",
     "simulate": "Simulate workspace",

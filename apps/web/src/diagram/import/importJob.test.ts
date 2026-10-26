@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, expect, it, vi } from 'vitest';
 import { createStep } from '../document/diagramDocument';
 import type { PickedFile } from '../../platform/fileService';

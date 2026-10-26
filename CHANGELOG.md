@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-10-25
+
+Drawing on the Diagram's Annotate canvas lands under the pointer in the Mac app and Safari.
+
+### Fixed
+
+- In the Mac app and Safari, draw on the Diagram's Annotate canvas where you press. A line started away from the pointer: above and to the left at the usual fit zoom, below and to the right when zoomed in, and off the picture at high zoom. How far a press reached to pick or snap to a mark also grew and shrank with the zoom. Chrome and the Windows app were not affected.
+
+## [0.7.0] - 2026-10-25
+
+A new Fold workspace that folds a sheet step by step and sends the steps to the Diagram, rotations by any angle in the Diagram, and large crease patterns that delete, select, undo and simulate without stalls.
+
+### Added
+
+- Fold a sheet step by step in the new **Fold** workspace, the way you would by hand. Locate a line with the Huzita–Justin axioms, a free line or an existing crease, or mark equal parts or a ratio with **Divide line**. Then fold through the layers you pick (the top flap by default): valley, mountain, precrease (the whole line, a segment or a pinch), inside and outside reverse, crimp, pleat, squash, petal, rabbit ear, swivel, open and closed sink and unsink; turn the paper over or rotate it. Every step keeps its flat folded form, crease pattern and layer order. The step strip branches, with undo and redo; unfold the last step or go back to any step; **Repeat on the other side** replays a run of steps across the sheet's symmetry axis. **Import CP** starts from a crease pattern file, a sample, or Edit's sheet or folded figure. A project that holds Fold steps needs Ori Studio 0.7.0 or later; earlier versions ask for an update instead of opening it.
+- Send Fold steps to the Diagram as illustrated steps, or pick them in the Diagram's **From Fold** browser. Send a step to Edit, export it as FOLD with a frame per step, or export step pictures.
+- Rotate by any angle in the Diagram. A turn between steps and a rotate mark offer **Custom** beside 1/8, 1/4 and 1/2 of a turn, with an angle from 0.1° to 359.9°, such as 135°.
+
+### Improved
+
+- Delete creases from a very large crease pattern in under a second. On a project of 489,093 creases in 204 sheets (measured in the web app), deleting 20 selected sheets took 30 seconds and Select All then Delete nearly three minutes, and nothing else on the canvas responded until it finished.
+- Select, undo and redo in very large crease patterns faster, with less memory. On the same project, selecting a sheet takes about a third of a second where it took two thirds, and Undo or Redo of an edit about half a second where it took two and a half. Each edit kept a full copy of the pattern for undo; the browser tab ran out of memory after 39 edits, and now holds the full 100 steps of history.
+- Play and scrub a simulation of a very large crease pattern smoothly. On the same project, Play ran at 3–4 frames a second and reached about 30% folded in 10 seconds; it now runs at full frame rate and folds completely in that time. Opening Simulate from the selection toolbar is ready in under 4 seconds, where it kept the app busy for minutes after it appeared.
+
+### Fixed
+
+- Open the paper export dialog and select large parts of a large crease pattern without a crash. The dialog could crash while drawing the page, and a large selection could crash the selection toolbar and take the canvas down with it, most often in the Windows app.
+- Reflect a selection over a line without creating broken creases when both points of the axis are the same point. Two angle-restricted crease tools had the same problem with a one-point pick. References now skips broken creases already in a pattern, instead of refusing to open.
+- Say "The search timed out." when an ExplOri search runs out of time while its results download, instead of reporting an unknown error.
+- Stop showing "Something went wrong in the background" for harmless browser notices, which caused most of these messages.
+- On the web, keep a tab opened before an update working. A feature first used after the update, such as **Export all steps**, could fail to load until the page was reloaded.
+
 ## [0.6.2] - 2026-10-20
 
 Diagram steps imported from Defox projects and from batches of crease patterns and pictures, an example crane to start from, a redesigned Layers pane, very large crease patterns that open, select and simulate in seconds instead of minutes, and external links that open from the desktop app.
