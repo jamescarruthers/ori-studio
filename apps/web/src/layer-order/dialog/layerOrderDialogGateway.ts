@@ -40,7 +40,11 @@ export { registerLayerOrderDialogMount } from './layerOrderDialogStore';
 /** The dialog's chunk, as the mount renders it. */
 export type LayerOrderDialogModule = typeof LayerOrderDialogChunk;
 
-const dialog = lazyModule<LayerOrderDialogModule>(() => import('../../components/layer-order/LayerOrderDialog'));
+// A plain `import()`: an open offline must not reload the page under the user's
+// work; its failure is the `unavailable` outcome and the connection toast below.
+const dialog = lazyModule<LayerOrderDialogModule>(() => import('../../components/layer-order/LayerOrderDialog'), {
+  reload: false,
+});
 
 /**
  * Open the Layer order dialog on `request`, and answer how it ended.
@@ -57,9 +61,9 @@ export function openLayerOrderDialog(request: LayerOrderRequest): Promise<LayerO
   if (!('opening' in begun)) return Promise.resolve(begun);
   const { id } = begun.opening;
   dialog.load().catch((error: unknown) => {
-    // A stale deploy reloads the page (`importOrReload`); what is left is mostly a load that
-    // can't reach the server, which is the browser's, not a defect (`layerOrderLoadFailure.ts`):
-    // said once, here, so no host has to, and reported only when it is something else.
+    // Never a reload (deploys keep the last builds' chunks): a load that can't reach the server
+    // is the browser's, not a defect (`layerOrderLoadFailure.ts`): said once, here, so no host
+    // has to, and reported only when it is something else.
     if (!settleLayerOrderDialog(id, { kind: 'unavailable' })) return;
     if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:dialog', tags: { call: 'load' } });
     toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
@@ -75,6 +79,18 @@ export function prefetchLayerOrderDialog(): void {
 /** The dialog's code once it has loaded, for the mount's render; never asks for it. */
 export function useLoadedLayerOrderDialog(): LayerOrderDialogModule | null {
   return dialog.useLoaded();
+}
+
+/**
+ * Call `listener` whenever a Layer order dialog opens, from any host, so that
+ * engine work a host keeps between presses (Edit's solutions cursor, H6) can
+ * let go of its worker rather than sit beside the dialog's. Returns the
+ * unsubscribe. Loads nothing.
+ */
+export function onLayerOrderDialogOpen(listener: () => void): () => void {
+  return useLayerOrderDialogStore.subscribe((state, previous) => {
+    if (state.opening && state.opening !== previous.opening) listener();
+  });
 }
 
 /** The opening the app root's mount shows: null until a host opens the dialog, and again once it settles. */

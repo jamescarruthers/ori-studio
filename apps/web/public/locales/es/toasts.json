@@ -171,10 +171,10 @@
     "solvingLong": "Sigue resolviendo: esto puede tardar un rato"
   },
   "layerOrder": {
+    "stepCheckTimedOut": "No se pudieron comprobar a tiempo las restricciones de capas de este modelo, así que no cambió.",
     "stepLost": "El orden de capas se detuvo inesperadamente, así que el modelo no cambió.",
     "stepLostLoad": "No se pudo cargar el orden de capas, así que el modelo no cambió. Comprueba tu conexión y vuelve a intentarlo.",
-    "stepNotFoundYet": "Aún no se encontró otra solución. Vuelve a intentarlo para seguir buscando.",
-    "stepTimedOut": "No se pudo encontrar otra solución a tiempo, así que el modelo no cambió.",
+    "stepNotFoundInTime": "No se pudo encontrar otra solución a tiempo, así que el modelo no cambió.",
     "stepUnrestored": "Las restricciones de capas de este modelo necesitan atención, así que no puede recorrer sus soluciones. Abre «Orden de capas…» para revisarlas.",
     "unavailable": "Orden de capas no se cargó. Comprueba tu conexión y vuelve a intentarlo."
   },

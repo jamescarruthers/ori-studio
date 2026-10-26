@@ -18,9 +18,15 @@
  * - **A step that moved answers what the host folds**, as a resolve does: the
  *   full relations of the order now shown, to seed `fold_with_order`, and
  *   the record of that order, its summary kept from the restore.
+ * - **Running out of time is an answer, and the cursor stays** (D10, "couldn't
+ *   check in time"): the restore, or the search for the next solution, ran
+ *   past its deadline, and the next step asked with more `tries` gets
+ *   {@link keepTrying}'s longer limits on the same worker — a restore of the
+ *   session already open when it got that far.
  * - **A Stop terminates,** as for a resolve: the step answers `cancelled`,
  *   and the cursor is gone with its worker ({@link LayerOrderSolutionCursor.alive}).
- *   So is it after any loss; the host makes a new one on the next press.
+ *   So is it after any loss, a record that doesn't restore, or an order too
+ *   large to save; the host makes a new one on the next press.
  *
  * Store-free and host-free (`layerOrderBoundary.test.ts`).
  */
@@ -28,7 +34,14 @@ import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderApplied, LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { reportError } from '../../monitoring';
 import { layerOrderCountStarts } from '../layerOrderBudgets';
-import { LAYER_ORDER_LIMITS, type LayerPosition, type LayerStepBy } from '../engine/layerOrderEngine';
+import {
+  KEEP_TRYING_FACTOR,
+  LAYER_ORDER_LIMITS,
+  keepTrying,
+  type LayerOrderLimits,
+  type LayerPosition,
+  type LayerStepBy,
+} from '../engine/layerOrderEngine';
 import { createLayerOrderRuntime } from '../engine/layerOrderRuntime';
 import { layerOrderLossOf } from './layerOrderLoss';
 import {
@@ -46,18 +59,23 @@ export interface LayerOrderSolutionPlace {
   readonly counted: boolean;
 }
 
-/** Why the record gave the cursor nothing to step from: its restore clashed, ran out of time, or was refused. */
-export type LayerOrderSolutionsUnrestored = 'clash' | 'timed_out' | 'refused';
+/** Why the record gave the cursor nothing to step from: its constraints clash, or the engine refused it. */
+export type LayerOrderSolutionsUnrestored = 'clash' | 'refused';
 
 export type LayerOrderSolutionStep =
   /** On to another solution: what the host folds and commits, as it commits an Apply. */
   | (LayerOrderSolutionPlace & { readonly outcome: 'moved'; readonly applied: LayerOrderApplied })
   /** No solution lies that way among those counted; final once `position.total.exact`. Nothing changed. */
   | (LayerOrderSolutionPlace & { readonly outcome: 'end' })
-  /** The check within the next solution ran out of time. Nothing changed. */
-  | { readonly outcome: 'timed_out' }
+  /**
+   * Out of time: the restore of the record, or the search for the next
+   * solution. Nothing changed, and the cursor stays for a step with more tries.
+   */
+  | { readonly outcome: 'timed_out'; readonly stage: 'restore' | 'step' }
   /** The record restores to no order to step from (D10): nothing changed, and the cursor is spent. */
   | { readonly outcome: 'unrestored'; readonly why: LayerOrderSolutionsUnrestored }
+  /** The next solution's record is past the budget a figure can save (`record_over_budget`): nothing changed, spent. */
+  | { readonly outcome: 'too_large' }
   /** The engine went away or never came (`load` for offline): reported as a resolve's loss is. */
   | { readonly outcome: 'lost'; readonly cause: LayerOrderLossCause }
   /** A Stop. */
@@ -66,6 +84,12 @@ export type LayerOrderSolutionStep =
 export interface LayerOrderSolutionStepOptions {
   /** A Stop: aborting it terminates the cursor's worker, and the step answers `cancelled`. */
   readonly signal?: AbortSignal;
+  /**
+   * How many times the user has asked to keep trying: the restore and the
+   * step get {@link keepTrying}'s limits, `KEEP_TRYING_FACTOR` longer per
+   * try. 0, the default, is the engine's own limits.
+   */
+  readonly tries?: number;
 }
 
 export interface LayerOrderSolutionCursor {
@@ -75,7 +99,7 @@ export interface LayerOrderSolutionCursor {
     by: LayerStepBy,
     options?: LayerOrderSolutionStepOptions
   ): Promise<LayerOrderSolutionStep>;
-  /** Where the order shown lies by `by` (a side turned, X-ray toggled); null before the first step, or once gone. */
+  /** Where the order shown lies by `by` (a side turned, X-ray toggled); null before a restore, or once gone. */
   place(by: LayerStepBy): Promise<LayerOrderSolutionPlace | null>;
   /** Whether it can still step from where it is: false once closed, stopped, spent or lost. */
   alive(): boolean;
@@ -86,12 +110,19 @@ export interface LayerOrderSolutionCursor {
 export interface LayerOrderSolutionCursorOptions {
   /** Starts a worker. The default spawns `workers/layerOrderWorker.ts`; tests pass a fake. */
   readonly spawn?: () => Worker;
+  /** The limits a step's restore and search start from, before any try: `LAYER_ORDER_LIMITS`' by default. */
+  readonly limits?: { readonly restore: LayerOrderLimits; readonly step: LayerOrderLimits };
 }
 
 /** Thrown between calls once a step is stopped, so nothing more is asked of a worker that is gone. */
 const STOPPED = Symbol('layer order step stopped');
 
 const CANCELLED: LayerOrderSolutionStep = Object.freeze({ outcome: 'cancelled' });
+
+/** `limits`, longer by {@link keepTrying} once per try. */
+function tried(limits: LayerOrderLimits, tries: number): LayerOrderLimits {
+  return tries > 0 ? keepTrying(limits, KEEP_TRYING_FACTOR ** tries) : limits;
+}
 
 /**
  * A cursor over `record` (its points in the crease pattern's coordinates) on
@@ -103,8 +134,16 @@ export function createLayerOrderSolutionCursor(
   options: LayerOrderSolutionCursorOptions = {}
 ): LayerOrderSolutionCursor {
   const runtime = createLayerOrderRuntime({ role: 'host', ...(options.spawn ? { spawn: options.spawn } : {}) });
-  /** The session the first step restored: what the record kept, and whether its solutions are counted. */
+  const base = options.limits ?? { restore: LAYER_ORDER_LIMITS.restore, step: LAYER_ORDER_LIMITS.step };
+  /** The session the record restored onto: what it kept, and whether its solutions are counted. */
   let opened: { found: LayerOrderFound; counted: boolean } | null = null;
+  /**
+   * What a restore that ran out of time left: no session (the open ran out),
+   * so the next restores from the source; or a session open on the source
+   * whose restore of the record ran out, so the next restores the record
+   * again on it.
+   */
+  let restoring: 'open' | 'record' = 'open';
   let closed = false;
   /** Gone for good: closed, stopped, spent or lost. Its worker is terminated. */
   let spent = false;
@@ -123,7 +162,7 @@ export function createLayerOrderSolutionCursor(
   const turn = async (
     direction: 'next' | 'previous',
     by: LayerStepBy,
-    { signal }: LayerOrderSolutionStepOptions
+    { signal, tries = 0 }: LayerOrderSolutionStepOptions
   ): Promise<LayerOrderSolutionStep> => {
     if (closed || spent || signal?.aborted) return CANCELLED;
     let stopped = false;
@@ -136,14 +175,25 @@ export function createLayerOrderSolutionCursor(
     const ask = <T>(call: () => Promise<T>): Promise<T> => (stopped || spent ? Promise.reject(STOPPED) : call());
     try {
       if (!opened) {
-        const restored = await ask(() => engine.restore(source, record, LAYER_ORDER_LIMITS.restore));
+        const limits = tried(base.restore, tries);
+        const restored = await ask(() =>
+          restoring === 'record' ? engine.restoreRecord(record, limits) : engine.restore(source, record, limits)
+        );
         if (restored.status === 'refused') {
+          if (restored.refusal.code === 'session_timed_out') {
+            restoring = 'open';
+            return { outcome: 'timed_out', stage: 'restore' };
+          }
           spend();
-          return { outcome: 'unrestored', why: restored.refusal.code === 'session_timed_out' ? 'timed_out' : 'refused' };
+          return { outcome: 'unrestored', why: 'refused' };
         }
-        if (restored.outcome.kind !== 'applied') {
+        if (restored.outcome.kind === 'timed_out') {
+          restoring = 'record';
+          return { outcome: 'timed_out', stage: 'restore' };
+        }
+        if (restored.outcome.kind === 'clash') {
           spend();
-          return { outcome: 'unrestored', why: restored.outcome.kind };
+          return { outcome: 'unrestored', why: 'clash' };
         }
         opened = {
           found: { saved_constraints: restored.saved_constraints, carried: restored.carried, opened_on: restored.opened_on },
@@ -151,10 +201,10 @@ export function createLayerOrderSolutionCursor(
         };
       }
       const { found, counted } = opened;
-      const stepped = await ask(() => engine.step(by, direction, LAYER_ORDER_LIMITS.step));
+      const stepped = await ask(() => engine.step(by, direction, tried(base.step, tries)));
       switch (stepped.verdict) {
         case 'timed_out':
-          return { outcome: 'timed_out' };
+          return { outcome: 'timed_out', stage: 'step' };
         case 'end': {
           const position = await ask(() => engine.position(by));
           return { outcome: 'end', position, counted };
@@ -162,10 +212,12 @@ export function createLayerOrderSolutionCursor(
         case 'moved': {
           const relations = await ask(() => engine.relations());
           const saved = await ask(() => engine.save());
-          // An order past the record's budget can't be kept: nothing is folded, and the cursor goes.
+          // Its session now shows an order the host can't keep: nothing is folded, and the cursor goes.
           if (saved.status !== 'ok') {
             spend();
-            return { outcome: 'unrestored', why: 'refused' };
+            return saved.refusal.code === 'record_over_budget'
+              ? { outcome: 'too_large' }
+              : { outcome: 'unrestored', why: 'refused' };
           }
           // The constraints never change in a step, so neither does what the restore found of them.
           const kept = withLayerOrderAttention(saved.record, layerOrderAttentionOf({ outcome: 'applied', found }, record));

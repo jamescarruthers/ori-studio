@@ -19,14 +19,25 @@ export interface LazyModule<T> {
   resetForTest(): void;
 }
 
-export function lazyModule<T>(importer: () => Promise<T>): LazyModule<T> {
+export interface LazyModuleOptions {
+  /**
+   * Whether a chunk that is not there reloads the page (`importOrReload`), as
+   * a tab opened before a deploy needs. True by default. A chunk asked for by
+   * a verb in the middle of the user's work passes false: offline, a reload
+   * there would throw the page away, so its load fails like any other and
+   * its owner says so (the Layer order gateways, `layerOrderLoadFailure.ts`).
+   */
+  readonly reload?: boolean;
+}
+
+export function lazyModule<T>(importer: () => Promise<T>, options: LazyModuleOptions = {}): LazyModule<T> {
   let loading: Promise<T> | null = null;
   let loaded: T | null = null;
   const listeners = new Set<() => void>();
 
   const load = (): Promise<T> => {
     if (loading) return loading;
-    const pending = importOrReload(importer).then((module) => {
+    const pending = (options.reload === false ? importer() : importOrReload(importer)).then((module) => {
       loaded = module;
       for (const listener of listeners) listener();
       return module;

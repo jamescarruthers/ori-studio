@@ -64,7 +64,9 @@ export type {
 
 export type LayerOrderHostEngine = typeof HostEngine;
 
-const hostEngine = lazyModule<LayerOrderHostEngine>(() => import('./layerOrderHostEngine'));
+// A plain `import()`: a press offline must not reload the page under the user's
+// work; its failure is a `lost` engine with the cause `load` (`layerOrderLoadFailure.ts`).
+const hostEngine = lazyModule<LayerOrderHostEngine>(() => import('./layerOrderHostEngine'), { reload: false });
 
 /** Load the host engine's code, once, whoever asks; a failed load is forgotten. Spawns nothing. */
 export function loadLayerOrderHostEngine(): Promise<LayerOrderHostEngine> {

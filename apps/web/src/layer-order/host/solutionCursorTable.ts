@@ -17,9 +17,14 @@
  *   the cursor ({@link SolutionCursorTable.begin}), which spawns its worker
  *   and restores the record. What a pager offers at rest comes from saved
  *   data.
- * - **One at a time.** Stepping another thing lets the first one's go, in
- *   this table and in every other host's, so at most one worker is kept
- *   between presses in the whole app.
+ * - **One at a time, and only while it is being used.** Its worker holds the
+ *   thing's whole session (about 18 MB on kabuto, 110 MB on iguana-c0), so it
+ *   is kept only between presses on the thing in hand: stepping another
+ *   thing, in this host or any other, selecting anything else, leaving the
+ *   workspace (the host's {@link SolutionCursorHost.whileKept}), opening a
+ *   Layer order dialog, or a minute with no press
+ *   ({@link SOLUTION_CURSOR_IDLE_MS}) closes it, and the next press restores
+ *   the record again.
  * - **In step with its thing, or gone.** The cursor's session shows one
  *   order: the one its last step landed, which the thing then holds. Whenever
  *   it holds anything else, or is gone, or what it was folded from changed,
@@ -27,6 +32,8 @@
  *   which the host calls on every change to its state). So a cursor never
  *   steps from, or draws, an order that is not the thing's record; the next
  *   press makes a fresh one from the record it holds then.
+ * - **Running out of time keeps it,** for Keep trying: the next press with
+ *   more `tries` asks the same worker with longer limits.
  * - **A stepper through a fixed order has ends** ({@link solutionPlaceEnds}):
  *   ‹ waits on the first, › on the last once the count is final, rather than
  *   wrapping round. A press past an end the count has not settled yet may
@@ -35,6 +42,7 @@
  * Store-free and host-free: the host hands it its things and its world.
  */
 import type { LayerPosition, LayerStepBy } from '../engine/layerOrderEngine';
+import { onLayerOrderDialogOpen } from '../dialog/layerOrderDialogGateway';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import {
@@ -45,6 +53,16 @@ import {
   type LayerOrderSolutionStep,
   type LayerOrderSolutionsUnrestored,
 } from './hostEngineGateway';
+
+/**
+ * How long a cursor is kept with no press. A press while it is kept costs one
+ * step; once it is gone, the next press restores the record first, which
+ * takes up to 2–3 s on the largest figures measured (iguana-c0's restore,
+ * census 2). A minute covers stepping back and forth through the solutions,
+ * with pauses to look at each, and lets go of the worker's memory soon after
+ * the user has moved on to something else on the same thing.
+ */
+export const SOLUTION_CURSOR_IDLE_MS = 60_000;
 
 /** What a cursor is made from: the fold the host shows, and its record, in the crease pattern's coordinates. */
 export interface SolutionCursorOpening {
@@ -69,6 +87,11 @@ export interface SolutionCursorHost<Target, World, Mark, Opened extends Solution
   readonly heldIn: (mark: Mark, target: Target, world: World) => boolean;
   /** What its stepper steps through now (D5): every layer order, or the distinct pictures of one side. */
   readonly stepBy: (target: Target) => LayerStepBy;
+  /**
+   * While a cursor is kept: watch what else lets it go that the host's state
+   * does not hold — the workspace switching. Returns the unwatch.
+   */
+  readonly whileKept?: (drop: () => void) => () => void;
 }
 
 /** What a press asks of the cursor. */
@@ -78,6 +101,8 @@ export interface SolutionStepAsk<Opened extends SolutionCursorOpening> {
   readonly open: () => Promise<Opened>;
   /** A Stop: it terminates the cursor's worker. */
   readonly signal?: AbortSignal;
+  /** How many times the user has asked to keep trying after running out of time (the cursor's `tries`). */
+  readonly tries?: number;
 }
 
 /** One press, from its start to its end, however it ends. */
@@ -107,11 +132,12 @@ export interface SolutionCursorTable<Target, World, Mark, Opened extends Solutio
   place(target: Target): LayerOrderSolutionPlace | null;
   /**
    * Keep the cursor in step with the host as it is now: closed when its thing
-   * holds another order, has gone, or what it was folded from changed; asked
+   * holds another order, has gone, is no longer the one selected
+   * (`selected`, when given), or what it was folded from changed; asked
    * where it stands again when the thing changed what it steps by. Nothing
    * while a press runs: that press settles it when it ends.
    */
-  settle(find: (id: string) => Target | undefined, world: World): void;
+  settle(find: (id: string) => Target | undefined, world: World, selected?: string | null): void;
   /**
    * A press of › or ‹ on `target`, with `world` as it stands. A cursor out
    * of step with it goes first; one in step is kept, and steps on.
@@ -147,9 +173,12 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
     asking: string | null;
     /** A press is running: the thing is waiting on it, and holds the new order only once it lands. */
     stepping: boolean;
+    /** Stops watching the workspace and the dialog for it. */
+    readonly unwatch: () => void;
   }
 
   let held: Held | null = null;
+  let idle: ReturnType<typeof setTimeout> | null = null;
   let version = 0;
   const listeners = new Set<() => void>();
 
@@ -158,34 +187,69 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
     for (const listener of [...listeners]) listener();
   };
 
+  const stopIdleClock = () => {
+    if (idle !== null) clearTimeout(idle);
+    idle = null;
+  };
+
   /** Whether the cursor's session shows what `target` holds. */
   const inStep = (cursor: Held, target: Target | undefined): target is Target =>
     target !== undefined && host.idOf(target) === cursor.id && host.inStep(cursor.mark, target) && cursor.cursor.alive();
 
   const drop = (id?: string) => {
-    if (!held || (id !== undefined && held.id !== id)) return;
+    if (id !== undefined && held?.id !== id) return;
+    stopIdleClock();
+    if (!held) return;
     const gone = held;
     held = null;
+    gone.unwatch();
     gone.cursor.close();
     notify();
   };
 
-  const settle = (find: (id: string) => Target | undefined, world: World) => {
+  /** Start the minute again: a press, or an answer, just used the cursor. */
+  const startIdleClock = () => {
+    stopIdleClock();
+    idle = setTimeout(() => {
+      idle = null;
+      if (held && !held.stepping) drop();
+    }, SOLUTION_CURSOR_IDLE_MS);
+  };
+
+  /** While a cursor is kept: let it go when a Layer order dialog opens, or as its host says. */
+  const watchWhileKept = (): (() => void) => {
+    const stops = [onLayerOrderDialogOpen(() => drop()), ...(host.whileKept ? [host.whileKept(() => drop())] : [])];
+    return () => {
+      for (const stop of stops) stop();
+    };
+  };
+
+  const settle = (find: (id: string) => Target | undefined, world: World, selected?: string | null) => {
     const cursor = held;
     if (!cursor || cursor.stepping) return;
     const target = find(cursor.id);
-    if (!inStep(cursor, target) || !host.heldIn(cursor.mark, target, world)) {
+    if (
+      !inStep(cursor, target) ||
+      !host.heldIn(cursor.mark, target, world) ||
+      (selected !== undefined && selected !== cursor.id)
+    ) {
       drop();
       return;
     }
     const by = host.stepBy(target);
     const key = stepByKey(by);
-    if (!cursor.place || cursor.place.by === key || cursor.asking === key) return;
+    if (!cursor.place || cursor.place.by === key) {
+      // Turned over and straight back: an answer still on its way is for a side no longer shown.
+      cursor.asking = null;
+      return;
+    }
+    if (cursor.asking === key) return;
     cursor.asking = key;
     void cursor.cursor.place(by).then((place) => {
       if (held !== cursor || cursor.asking !== key) return;
       cursor.asking = null;
       if (place) cursor.place = { by: key, value: place };
+      startIdleClock();
       notify();
     });
   };
@@ -203,13 +267,14 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
       if (held && (held.id !== id || !inStep(held, target) || !host.heldIn(held.mark, target, world))) drop();
       let mine: Held | null = held;
       if (mine) mine.stepping = true;
+      stopIdleClock();
       /** Where a step that moved lands, once the thing shows it. */
       let landing: { by: string; value: LayerOrderSolutionPlace } | null = null;
       let moved = false;
       let over = false;
 
       return {
-        async step({ direction, open, signal }) {
+        async step({ direction, open, signal, tries = 0 }) {
           if (!mine) {
             const opened = await open();
             const made = openLayerOrderSolutionCursor(opened.source, opened.record);
@@ -226,12 +291,13 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
               place: null,
               asking: null,
               stepping: true,
+              unwatch: watchWhileKept(),
             };
             held = mine;
           }
           const cursor = mine;
           const by = host.stepBy(target);
-          const answer = await cursor.cursor.step(direction, by, signal ? { signal } : {});
+          const answer = await cursor.cursor.step(direction, by, { ...(signal ? { signal } : {}), tries });
           // The press was given up on while the engine answered (its host's engine lost under it):
           // a session that moved shows an order its thing will never take.
           if (over && answer.outcome === 'moved') {
@@ -248,6 +314,7 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
               cursor.place = { by: stepByKey(by), value: { position: answer.position, counted: answer.counted } };
               break;
             case 'timed_out':
+              // Kept, for Keep trying on the same session.
               break;
             default:
               // Spent, stopped or lost: its session is gone.
@@ -272,6 +339,7 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
             drop();
             return;
           }
+          startIdleClock();
           notify();
           settle(find, now);
         },
@@ -310,8 +378,8 @@ export function solutionPlaceEnds(place: LayerOrderSolutionPlace): { first: bool
 /**
  * Whether a press that found no solution its way is at that end for good:
  * nothing lies before the first, counted or not, and nothing after the last
- * once the count is final. An end that is not final may find one on the next
- * press, as the count goes on.
+ * once the count is final. An end that is not final means the search for the
+ * next ran out within its deadline: Keep trying may find one.
  */
 export function solutionEndFinal(direction: 'next' | 'previous', position: LayerPosition): boolean {
   return position.total.exact || (direction === 'previous' && position.index <= 1);
@@ -322,21 +390,26 @@ export function solutionEndFinal(direction: 'next' | 'previous', position: Layer
  * only `moved` changed the thing, as one undo entry.
  *
  * - `end`: no solution lies that way among those counted, `final` once the
- *   count is ({@link solutionEndFinal}); the pager shows it is at its end;
- * - `timed_out`: the check within the next solution ran out of time;
+ *   count is ({@link solutionEndFinal}); the pager shows it is at its end.
+ *   Not final, the search for the next ran out within its deadline;
+ * - `timed_out`: the restore of the record (D10's "couldn't check in time"),
+ *   or the search for the next solution, ran out of time; another press
+ *   with more `tries` keeps trying, longer, on the same worker;
  * - `unrestored`: the record restores to no order to step from (D10): its
- *   constraints clash, it ran out of time, or the engine refused it;
+ *   constraints clash, or the engine refused it;
+ * - `too-large`: the next solution's record is past what the host can save;
  * - `lost`: the Layer order engine went away or never came (`load` for the
  *   browser failing to fetch it, offline);
  * - `not-drawn`: the host could not draw the order, and said so;
  * - `stopped`: a Stop, or the thing moved on (an undo, a Delete) while it ran;
- * - `blocked`: the thing can't step now.
+ * - `blocked`: the thing can't step now (its saved constraints clash, say).
  */
 export type LayerOrderSolutionPress =
   | { status: 'moved' }
   | { status: 'end'; final: boolean }
-  | { status: 'timed_out' }
+  | { status: 'timed_out'; stage: 'restore' | 'step' }
   | { status: 'unrestored'; why: LayerOrderSolutionsUnrestored }
+  | { status: 'too-large' }
   | { status: 'lost'; cause: LayerOrderLossCause }
   | { status: 'not-drawn' }
   | { status: 'stopped' }
@@ -351,9 +424,11 @@ export function solutionPressOf(
     case 'end':
       return { status: 'end', final: solutionEndFinal(direction, answer.position) };
     case 'timed_out':
-      return { status: 'timed_out' };
+      return { status: 'timed_out', stage: answer.stage };
     case 'unrestored':
       return { status: 'unrestored', why: answer.why };
+    case 'too_large':
+      return { status: 'too-large' };
     case 'lost':
       return { status: 'lost', cause: answer.cause };
     case 'cancelled':

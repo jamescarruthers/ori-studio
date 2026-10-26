@@ -3019,6 +3019,7 @@
     "lastSolutionShown": "This is its last solution",
     "layerOrder": "Layer order…",
     "layerOrder3d": "Layer order works on flat figures",
+    "layerOrderConflict": "Its layer constraints clash. Review… them first",
     "layerOrderCreasesChanged": "Its creases changed since it was folded",
     "layerOrderNewer": "Made with a newer Ori Studio: its layer constraints can’t be changed here.",
     "layerOrderNoSource": "This folded model has no source creases to work from",

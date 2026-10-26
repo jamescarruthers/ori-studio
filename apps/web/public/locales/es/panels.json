@@ -3305,6 +3305,7 @@
     "lastSolutionShown": "Es su última solución",
     "layerOrder": "Orden de capas…",
     "layerOrder3d": "El orden de capas funciona en modelos planos",
+    "layerOrderConflict": "Sus restricciones de capas chocan. Revísalas primero con «Revisar…»",
     "layerOrderCreasesChanged": "Sus pliegues cambiaron desde que se plegó",
     "layerOrderNewer": "Hecho con una versión más reciente de Ori Studio: sus restricciones de capas no se pueden cambiar aquí.",
     "layerOrderNoSource": "Este modelo plegado no tiene pliegues de origen con los que trabajar",

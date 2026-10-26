@@ -872,7 +872,8 @@ export type OristudioCpFigureLayerOrderOpening =
  * (row H6), as every host's press ends (`LayerOrderSolutionPress`): only
  * `moved` changed the figure, as one undo entry. Edit's `not-drawn` is the
  * kernel refusing the order, said through `oristudioCpError`; `blocked`, a
- * figure that can't step now (`foldedFigureLayerOrderBlock`).
+ * figure that can't step now (`foldedFigureLayerOrderBlock`, or its saved
+ * constraints clash).
  */
 export type OristudioCpFigureSolutionStep = LayerOrderSolutionPress;
 
@@ -1236,11 +1237,13 @@ export interface CreasePatternSliceActions {
    * the step's order into a **new** handle, as an Apply does, with the
    * step's record. The old handle stays with history. Every outcome but
    * `moved` leaves the figure as it was. Callers bracket it as one undo
-   * entry (`foldedFigureVerbs.ts`).
+   * entry (`foldedFigureVerbs.ts`). `tries` counts the user's Keep trying
+   * after running out of time: each gives the engine longer.
    */
   stepOristudioCpFigureLayerOrder: (
     id: string,
-    direction: 'next' | 'previous'
+    direction: 'next' | 'previous',
+    options?: { tries?: number }
   ) => Promise<OristudioCpFigureSolutionStep>;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;

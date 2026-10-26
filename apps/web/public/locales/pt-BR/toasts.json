@@ -171,10 +171,10 @@
     "solvingLong": "Ainda resolvendo — isso pode demorar um pouco"
   },
   "layerOrder": {
+    "stepCheckTimedOut": "Não foi possível verificar a tempo as restrições de camadas deste modelo, então ele não foi alterado.",
     "stepLost": "A ordem das camadas parou inesperadamente, então o modelo não foi alterado.",
     "stepLostLoad": "Não foi possível carregar a ordem das camadas, então o modelo não foi alterado. Verifique sua conexão e tente novamente.",
-    "stepNotFoundYet": "Nenhuma outra solução encontrada ainda. Tente de novo para continuar procurando.",
-    "stepTimedOut": "Não foi possível encontrar outra solução a tempo, então o modelo não foi alterado.",
+    "stepNotFoundInTime": "Não foi possível encontrar outra solução a tempo, então o modelo não foi alterado.",
     "stepUnrestored": "As restrições de camadas deste modelo precisam de atenção, então ele não pode percorrer as soluções. Abra “Ordem das camadas…” para revisá-las.",
     "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
   },

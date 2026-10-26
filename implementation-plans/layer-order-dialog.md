@@ -981,5 +981,5 @@ H3's new rehydrate, so it can only follow H3.
 - [ ] H5: Fold with layer order…
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)
-- [ ] H8: Pose
+- [x] H8: Pose (#523)
 - [ ] H9: the Diagram's ‹ › within constraints

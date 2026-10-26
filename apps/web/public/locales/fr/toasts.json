@@ -171,10 +171,10 @@
     "solvingLong": "Résolution toujours en cours — cela peut prendre du temps"
   },
   "layerOrder": {
+    "stepCheckTimedOut": "Les contraintes de couches de ce modèle n’ont pas pu être vérifiées à temps, il n’a donc pas été modifié.",
     "stepLost": "L’ordre des couches s’est arrêté de façon inattendue, le modèle n’a donc pas été modifié.",
     "stepLostLoad": "L’ordre des couches n’a pas pu se charger, le modèle n’a donc pas été modifié. Vérifiez votre connexion, puis réessayez.",
-    "stepNotFoundYet": "Aucune autre solution trouvée pour l’instant. Réessayez pour continuer à chercher.",
-    "stepTimedOut": "Aucune autre solution n’a pu être trouvée à temps, le modèle n’a donc pas été modifié.",
+    "stepNotFoundInTime": "Aucune autre solution n’a pu être trouvée à temps, le modèle n’a donc pas été modifié.",
     "stepUnrestored": "Les contraintes de couches de ce modèle demandent votre attention, il ne peut donc pas parcourir ses solutions. Ouvrez « Ordre des couches… » pour les vérifier.",
     "unavailable": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion et réessayez."
   },

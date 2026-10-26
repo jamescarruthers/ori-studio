@@ -6,17 +6,23 @@
  *
  * Edit's binding of the hosts' shared table
  * (`layer-order/host/solutionCursorTable.ts`), which keeps the lifecycle: made
- * on the first press, one at a time, let go once out of step. A side table
- * beside the figures, as the search's frontier is
- * (`foldedSolutionFrontiers.ts`), and for the same reasons: what the engine
- * has counted is not undo state, and it is never in the file. Edit says:
+ * on the first press, one at a time, kept only while it is being used, let go
+ * once out of step. A side table beside the figures, as the search's frontier
+ * is (`foldedSolutionFrontiers.ts`), and for the same reasons: what the
+ * engine has counted is not undo state, and it is never in the file. Edit
+ * says:
  *
  * - **What a figure holds that the cursor shows:** its fold (the handle, of
  *   this generation of handles) and its record as saved. Whenever the figure
  *   holds anything else — an undo or a redo, an Apply, a refold, a Delete —
  *   or the creases it was folded from change, or the document closes, the
  *   cursor is closed with its worker ({@link settleFoldedSolutionCursor},
- *   which the store calls on every change to the figures or the document).
+ *   which the store calls on every change to the figures, the selection or
+ *   the document).
+ * - **While it is in hand:** selecting anything else, leaving Edit for
+ *   another workspace, opening the Layer order dialog, or a minute with no
+ *   press ({@link FOLDED_SOLUTION_CURSOR_IDLE_MS}) closes it too, and the next
+ *   press restores the record again.
  * - **What it steps by** ({@link foldedFigureStepBy}): every layer order in
  *   X-ray, else the pictures of the side it shows (D5).
  *
@@ -25,7 +31,8 @@
  * ({@link beginFoldedSolutionStep}). What the verbs offer at rest comes from
  * saved data (`foldedFigureLayerOrderState.ts`).
  *
- * Store-free: the store hands it the figures and the document.
+ * Store-free: the store hands it the figures, the selection and the document
+ * ({@link watchFoldedSolutionCursor}).
  */
 import type { OristudioCpDocumentSnapshot, OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import type { LayerStepBy } from '../../layer-order/engine/layerOrderEngine';
@@ -33,13 +40,21 @@ import type {
   LayerOrderSolutionPlace,
   LayerOrderSolutionStep,
 } from '../../layer-order/host/hostEngineGateway';
-import { createSolutionCursorTable, type SolutionCursorOpening } from '../../layer-order/host/solutionCursorTable';
+import {
+  createSolutionCursorTable,
+  SOLUTION_CURSOR_IDLE_MS,
+  type SolutionCursorOpening,
+} from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
+import { onWorkspaceSwitch } from '../../store/layoutStore';
 import { foldedFigureHandleEpoch } from './foldedFigureHandles';
 import { currentSourceFingerprint } from './foldedFigureStaleness';
 
 export type { LayerOrderSolutionPlace };
+
+/** How long a cursor is kept with no press: every host's minute (`solutionCursorTable.ts`). */
+export const FOLDED_SOLUTION_CURSOR_IDLE_MS = SOLUTION_CURSOR_IDLE_MS;
 
 /**
  * What a figure's stepper steps through (D5): every layer order when it is
@@ -94,6 +109,8 @@ const table = createSolutionCursorTable<
     return creasesOf(document, figure) === mark.creases;
   },
   stepBy: foldedFigureStepBy,
+  // Edit's to keep only while Edit is on screen.
+  whileKept: onWorkspaceSwitch,
 });
 
 /** The figures as a table looks them up. */
@@ -117,17 +134,55 @@ export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): Layer
 }
 
 /**
- * Keep the cursor in step with the figures and the document as they are now:
- * closed when its figure holds another fold or record, has gone, or its
- * creases changed; asked where it stands again when the figure turned over or
- * changed its X-ray. Nothing while a press runs: that press settles it when
- * it ends. The store calls this on every change to either.
+ * Keep the cursor in step with the figures, the selection and the document
+ * as they are now: closed when its figure holds another fold or record, has
+ * gone, is no longer the one selected (`selected`, when given), or its
+ * creases changed; asked where it stands again when the figure turned over
+ * or changed its X-ray. Nothing while a press runs: that press settles it
+ * when it ends.
  */
 export function settleFoldedSolutionCursor(
   figures: readonly OristudioCpFoldedFigureEntry[],
-  document: OristudioCpDocumentSnapshot | null
+  document: OristudioCpDocumentSnapshot | null,
+  selected?: string | null
 ): void {
-  table.settle(lookup(figures), document);
+  table.settle(lookup(figures), document, selected);
+}
+
+/** What the store is, as far as the cursor needs: its figures, its selection and its document. */
+export interface FoldedSolutionCursorStore {
+  subscribe(
+    listener: (state: FoldedSolutionCursorScene, previous: FoldedSolutionCursorScene) => void
+  ): () => void;
+}
+
+export interface FoldedSolutionCursorScene {
+  readonly oristudioCpFoldedFigures: readonly OristudioCpFoldedFigureEntry[];
+  readonly oristudioCpActiveFoldedFigureId: string | null;
+  readonly oristudioCpDocument: { readonly document: OristudioCpDocumentSnapshot } | null;
+}
+
+/**
+ * Keep the cursor to the figure in hand, for as long as `store` lives:
+ * settled on every change to the figures, the selection or the document.
+ * Returns the unsubscribe. The store calls it once, as it is made; a cursor
+ * watches the workspace and the Layer order dialog itself, while it is kept.
+ */
+export function watchFoldedSolutionCursor(store: FoldedSolutionCursorStore): () => void {
+  return store.subscribe((state, previous) => {
+    if (
+      state.oristudioCpFoldedFigures === previous.oristudioCpFoldedFigures &&
+      state.oristudioCpDocument === previous.oristudioCpDocument &&
+      state.oristudioCpActiveFoldedFigureId === previous.oristudioCpActiveFoldedFigureId
+    ) {
+      return;
+    }
+    settleFoldedSolutionCursor(
+      state.oristudioCpFoldedFigures,
+      state.oristudioCpDocument?.document ?? null,
+      state.oristudioCpActiveFoldedFigureId
+    );
+  });
 }
 
 /** What a press asks of the cursor, from the figure as the press found it. */
@@ -139,6 +194,8 @@ export interface FoldedSolutionStepAsk {
   readonly record: LayerOrderRecord;
   /** A Stop: it terminates the cursor's worker. */
   readonly signal?: AbortSignal;
+  /** How many times the user has asked to keep trying after running out of time (the cursor's `tries`). */
+  readonly tries?: number;
 }
 
 /** One press, from its start to its end, however it ends. */
@@ -166,11 +223,12 @@ export function beginFoldedSolutionStep(
 ): FoldedSolutionTurn {
   const turn = table.begin(figure, document);
   return {
-    step: ({ direction, source, record, signal }) =>
+    step: ({ direction, source, record, signal, tries }) =>
       turn.step({
         direction,
         open: async () => ({ source: await source(), record }),
         ...(signal ? { signal } : {}),
+        ...(tries !== undefined ? { tries } : {}),
       }),
     landed: (handle, json) => turn.landed((mark) => ({ ...mark, handle, json })),
     end: (figures, now) => turn.end(lookup(figures), now),

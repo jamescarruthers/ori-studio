@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FAKE_LAYER_ORDER_SOURCE } from '../engine/layerOrderEngine.fixtures';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import { useLayerOrderDialogStore } from '../dialog/layerOrderDialogStore';
 import {
   createSolutionCursorTable,
+  SOLUTION_CURSOR_IDLE_MS,
   solutionEndFinal,
   solutionPlaceEnds,
   solutionPressOf,
@@ -94,6 +96,117 @@ describe('the hosts’ solutions-cursor table', () => {
     expect(kept.closed).toBe(false);
   });
 
+  it('lets it go when the selection moves off its thing, and keeps it while its thing is the one selected', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    const cursor = await seat(table, thing);
+    table.settle(() => thing, 0, 'step');
+    expect(cursor.closed).toBe(false);
+    table.settle(() => thing, 0, 'another');
+    expect(cursor.closed).toBe(true);
+  });
+
+  it('lets it go when a Layer order dialog opens, and as its host says (the workspace switching)', async () => {
+    let hostDrop: (() => void) | null = null;
+    const unwatched = vi.fn();
+    const watched = createSolutionCursorTable<Thing, number, { holds: string }, SolutionCursorOpening>({
+      idOf: (thing) => thing.id,
+      markOf: (thing) => ({ holds: thing.holds }),
+      inStep: (mark, thing) => mark.holds === thing.holds,
+      heldIn: () => true,
+      stepBy: () => ({ picture: 'front' }),
+      whileKept: (drop) => {
+        hostDrop = drop;
+        return unwatched;
+      },
+    });
+    try {
+      const thing = { id: 'step', holds: 'a' };
+      const viaHost = await seat(watched as never, thing);
+      hostDrop!();
+      expect(viaHost.closed).toBe(true);
+      expect(unwatched).toHaveBeenCalledOnce();
+      const viaDialog = await seat(watched as never, thing);
+      useLayerOrderDialogStore.setState({ opening: { id: 99 } as never });
+      expect(viaDialog.closed).toBe(true);
+    } finally {
+      useLayerOrderDialogStore.setState({ opening: null });
+      watched.drop();
+    }
+  });
+
+  it('lets it go after a minute with no press, and keeps it through presses', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const [table] = tables;
+      const thing = { id: 'step', holds: 'a' };
+      const cursor = scriptedSolutionCursor([END, END]);
+      gateway.open.mockReturnValueOnce(cursor);
+      const press = async () => {
+        const turn = table.begin(thing, 0);
+        await turn.step(ask);
+        turn.end(() => thing, 0);
+      };
+      await press();
+      vi.advanceTimersByTime(SOLUTION_CURSOR_IDLE_MS - 1000);
+      await press();
+      vi.advanceTimersByTime(SOLUTION_CURSOR_IDLE_MS - 1000);
+      expect(cursor.closed).toBe(false);
+      vi.advanceTimersByTime(1000);
+      expect(cursor.closed).toBe(true);
+      expect(table.heldId()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps the readout of the side shown when its thing turns over and straight back', async () => {
+    const answers: ((place: { position: ReturnType<typeof solutionPosition>; counted: boolean } | null) => void)[] = [];
+    const sided = createSolutionCursorTable<Thing & { side: 'front' | 'back' }, number, null, SolutionCursorOpening>({
+      idOf: (thing) => thing.id,
+      markOf: () => null,
+      inStep: () => true,
+      heldIn: () => true,
+      stepBy: (thing) => ({ picture: thing.side }),
+    });
+    gateway.open.mockReturnValueOnce({
+      step: async () => END,
+      place: () => new Promise((resolve) => answers.push(resolve)),
+      alive: () => true,
+      close: () => {},
+    });
+    try {
+      const front = { id: 'step', holds: 'a', side: 'front' } as const;
+      const turn = sided.begin(front, 0);
+      await turn.step(ask);
+      turn.end(() => front, 0);
+      sided.settle(() => ({ ...front, side: 'back' }), 0);
+      expect(answers).toHaveLength(1);
+      sided.settle(() => front, 0);
+      answers[0]!({ position: solutionPosition(1, 1), counted: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(sided.place(front)).toEqual({ position: END.position, counted: true });
+    } finally {
+      sided.drop();
+    }
+  });
+
+  it('asks a step with the user’s tries, and keeps the cursor when it ran out of time, for Keep trying', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    const cursor = scriptedSolutionCursor([{ outcome: 'timed_out', stage: 'step' }, END]);
+    gateway.open.mockReturnValueOnce(cursor);
+    const first = table.begin(thing, 0);
+    expect((await first.step(ask)).outcome).toBe('timed_out');
+    first.end(() => thing, 0);
+    expect(cursor.closed).toBe(false);
+    const again = table.begin(thing, 0);
+    await again.step({ ...ask, tries: 1 });
+    again.end(() => thing, 0);
+    expect(cursor.triesAsked).toEqual([0, 1]);
+    expect(gateway.open).toHaveBeenCalledOnce();
+  });
+
   it('lets the cursor go when the press was given up on before its step moved (the host’s engine lost under it)', async () => {
     const [table] = tables;
     let answer: (step: { outcome: 'moved' } & Record<string, unknown>) => void = () => {};
@@ -155,8 +268,9 @@ describe('what every host’s pager and press read', () => {
       status: 'end',
       final: false,
     });
-    expect(solutionPressOf({ outcome: 'timed_out' }, 'next')).toEqual({ status: 'timed_out' });
+    expect(solutionPressOf({ outcome: 'timed_out', stage: 'restore' }, 'next')).toEqual({ status: 'timed_out', stage: 'restore' });
     expect(solutionPressOf({ outcome: 'unrestored', why: 'clash' }, 'next')).toEqual({ status: 'unrestored', why: 'clash' });
+    expect(solutionPressOf({ outcome: 'too_large' }, 'next')).toEqual({ status: 'too-large' });
     expect(solutionPressOf({ outcome: 'lost', cause: 'load' }, 'previous')).toEqual({ status: 'lost', cause: 'load' });
     expect(solutionPressOf({ outcome: 'cancelled' }, 'next')).toEqual({ status: 'stopped' });
   });

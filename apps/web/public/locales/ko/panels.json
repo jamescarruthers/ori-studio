@@ -2737,6 +2737,7 @@
     "lastSolutionShown": "마지막 해입니다",
     "layerOrder": "겹침 순서…",
     "layerOrder3d": "겹침 순서는 평평한 모델에서 쓸 수 있습니다",
+    "layerOrderConflict": "겹침 제약이 서로 충돌합니다. 먼저 ‘검토…’로 확인하세요",
     "layerOrderCreasesChanged": "접은 뒤에 접는 선이 바뀌었습니다",
     "layerOrderNewer": "더 새로운 Ori Studio로 만들어졌습니다. 여기서는 겹침 제약을 바꿀 수 없습니다.",
     "layerOrderNoSource": "이 접힌 모델에는 작업할 원래 접는 선이 없습니다",

@@ -3019,6 +3019,7 @@
     "lastSolutionShown": "Das ist die letzte Lösung",
     "layerOrder": "Lagenreihenfolge…",
     "layerOrder3d": "Die Lagenreihenfolge funktioniert bei flachen Modellen",
+    "layerOrderConflict": "Seine Lagenvorgaben widersprechen sich. Zuerst mit „Prüfen…“ klären",
     "layerOrderCreasesChanged": "Seine Faltlinien haben sich seit dem Falten geändert",
     "layerOrderNewer": "Mit einem neueren Ori Studio erstellt: Seine Lagenvorgaben können hier nicht geändert werden.",
     "layerOrderNoSource": "Dieses gefaltete Modell hat keine Ausgangsfalten, mit denen sich arbeiten ließe",

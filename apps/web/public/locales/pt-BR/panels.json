@@ -3305,6 +3305,7 @@
     "lastSolutionShown": "Esta é a última solução",
     "layerOrder": "Ordem das camadas…",
     "layerOrder3d": "A ordem das camadas funciona em modelos planos",
+    "layerOrderConflict": "Suas restrições de camadas entram em conflito. Revise-as primeiro em “Revisar…”",
     "layerOrderCreasesChanged": "Os vincos mudaram desde que ele foi dobrado",
     "layerOrderNewer": "Feito com uma versão mais recente do Ori Studio: suas restrições de camadas não podem ser alteradas aqui.",
     "layerOrderNoSource": "Este modelo dobrado não tem vincos de origem para trabalhar",
