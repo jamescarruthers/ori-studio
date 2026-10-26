@@ -2519,7 +2519,9 @@ function inspectorCases(theme) {
         // The grouped row's trash: the whole row, as one step.
         await dialog.getByRole('button', { name: `Remove ${sentence}`, exact: true }).click();
         await untilRows(page, dialog, [], 'the row’s trash');
-        await dialog.getByRole('button', { name: 'Redo', exact: true }).click().catch(() => {});
+        // Off the trash first, so its tooltip covers nothing; Redo has nothing to redo, and says so.
+        await page.mouse.move(1, 1);
+        await dialog.getByRole('button', { name: 'Redo', exact: true }).click({ timeout: 3000 }).catch(() => {});
         await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
         await untilRows(page, dialog, [sentence], 'Undo of the trash');
       }
