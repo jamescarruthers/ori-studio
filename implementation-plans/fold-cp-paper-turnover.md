@@ -31,7 +31,9 @@ on desktop and its overflow menu on phones; record an enum-only analytics event.
 - [x] Add toolbar access, help text, localization and analytics.
 - [x] Test asymmetric sheets, reverse creases, picking/overlays, and repeat turnover.
 - [x] Run web lint, typecheck, unit tests, i18n checks and browser verification.
-- [ ] Open a draft PR against main and leave a local testing server running.
+- [x] Open a draft PR against main and leave a local testing server running.
+
+Draft PR: https://github.com/zacharyfmarion/ori-studio/pull/544.
 
 Browser verification in Chromium covered custom front/back colors on the
 pleat-in-eighths fixture, reversed M/V appearance, return to front without a
