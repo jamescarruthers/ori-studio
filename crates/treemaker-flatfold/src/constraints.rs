@@ -1735,21 +1735,34 @@ impl Search {
     /// made with `first`'s value still has the other to try, and one made
     /// with the other has none.
     ///
-    /// `Ok(None)` when the values are no solution here (a guess breaks a
-    /// constraint, or propagates a value they do not have); the group's
-    /// variables are then open again.
-    pub(crate) fn placed_at(
+    /// `meter` is asked before each guess, as the loop asks it.
+    ///
+    /// `Ok(Ok(None))` when the values are no solution here (a guess breaks a
+    /// constraint, or propagates a value they do not have), and the meter's
+    /// stop when it stops first; in both, the group's variables are open
+    /// again.
+    pub(crate) fn placed_at<M: NodeMeter>(
         tables: &SearchTables<'_>,
         group: &[usize],
         assignments: &mut [u8],
         value: impl Fn(usize) -> u8,
+        meter: &mut M,
         scratch: &mut Scratch,
-    ) -> Result<Option<Search>> {
+    ) -> Result<std::result::Result<Option<Search>, M::Stop>> {
         let mut guesses: Vec<Vec<usize>> = Vec::new();
+        let undo = |guesses: &[Vec<usize>], assignments: &mut [u8]| {
+            for variable in guesses.iter().flatten() {
+                assignments[*variable] = 0;
+            }
+        };
         let mut placed = true;
         for &variable in group {
             if assignments[variable] != 0 {
                 continue;
+            }
+            if let Err(stop) = meter.enter() {
+                undo(&guesses, assignments);
+                return Ok(Err(stop));
             }
             let assigned =
                 propagate_assignment(tables, variable, value(variable), assignments, scratch)?;
@@ -1761,16 +1774,14 @@ impl Search {
         }
         placed &= group.iter().all(|&v| assignments[v] == value(v));
         if !placed {
-            for variable in guesses.iter().flatten() {
-                assignments[*variable] = 0;
-            }
-            return Ok(None);
+            undo(&guesses, assignments);
+            return Ok(Ok(None));
         }
-        Ok(Some(Search {
+        Ok(Ok(Some(Search {
             guesses,
             index: group.len(),
             backtracking: true,
-        }))
+        })))
     }
 
     /// Search on until `limit` more solutions, calling `found` on each, or

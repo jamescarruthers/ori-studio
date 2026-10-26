@@ -362,6 +362,17 @@ pub enum EnumerationStep {
     Stopped(BudgetLimit),
 }
 
+/// What [`Enumeration::after`] did (ours).
+#[derive(Debug, Clone)]
+pub enum Placed {
+    /// The cursor stands on the order: its next call yields the one after.
+    On(Box<Enumeration>),
+    /// The order is not one the walk lists.
+    NotListed,
+    /// The budget ran out first, after `nodes` guesses; nothing is placed.
+    Stopped { limit: BudgetLimit, nodes: u64 },
+}
+
 impl Enumeration {
     /// Search on to the next complete order within `budget`, which bounds
     /// this call alone.
@@ -725,19 +736,23 @@ impl Enumeration {
     /// The same cursor, standing on `order`, one of the orders it lists
     /// (ours): the next call yields what its walk lists after `order`, as
     /// if it had just yielded `order` itself, so a stepper can go on from
-    /// any order without listing the ones before it. `None` when `order` is
-    /// not one it lists: it breaks a constraint, or differs from what the
-    /// deduction forces or the cursor holds. Not for a projected walk.
+    /// any order without listing the ones before it.
+    /// [`Placed::NotListed`] when `order` is not one it lists: it breaks a
+    /// constraint, or differs from what the deduction forces or the cursor
+    /// holds. Not for a projected walk.
     ///
     /// Each varying component's search is placed on `order` by guessing,
     /// in its own order, every variable still open when the search reaches
-    /// it with `order`'s value, and propagating: no search, so placing it is
-    /// bounded however hard the component is to search.
+    /// it with `order`'s value, and propagating: no search. Each guess is a
+    /// node of `budget`, which is asked before it as the search asks it, so
+    /// placing it stops within the budget too ([`Placed::Stopped`]); the
+    /// nodes it took count in [`Self::nodes`].
     pub fn after(
         mut self,
         session: &CompletionSession,
         order: &[PairOrder],
-    ) -> CompletionResult<Option<Enumeration>> {
+        budget: SearchBudget,
+    ) -> CompletionResult<Placed> {
         let n = self.assignments.len();
         if order.len() != n || session.base.assignments.len() != n {
             return Err(invalid(format!(
@@ -760,10 +775,11 @@ impl Enumeration {
             if varies {
                 self.assignments[v] = 0;
             } else if self.assignments[v] != order[v].value() {
-                return Ok(None);
+                return Ok(Placed::NotListed);
             }
         }
         let tables = session.tables();
+        let mut meter = BudgetMeter::new(budget);
         let mut searches = Vec::with_capacity(self.walk.len());
         for &k in &self.walk {
             match Search::placed_at(
@@ -771,18 +787,26 @@ impl Enumeration {
                 &self.components[k],
                 &mut self.assignments,
                 |v| order[v].value(),
+                &mut meter,
                 &mut self.scratch,
             )? {
-                Some(search) => searches.push(search),
-                None => return Ok(None),
+                Ok(Some(search)) => searches.push(search),
+                Ok(None) => return Ok(Placed::NotListed),
+                Err(limit) => {
+                    return Ok(Placed::Stopped {
+                        limit,
+                        nodes: meter.nodes,
+                    });
+                }
             }
         }
+        self.nodes += meter.nodes;
         self.searches = searches;
         self.at = self.walk.len().saturating_sub(1);
         self.yielded = 1;
         self.current = false;
         self.end = None;
-        Ok(Some(self))
+        Ok(Placed::On(Box::new(self)))
     }
 
     /// What the deduction leaves, in independent components, smallest
@@ -2281,19 +2305,56 @@ mod tests {
                         expected
                     );
                 }
+                let place = |order: &[PairOrder], budget: SearchBudget| {
+                    lexical(descending)
+                        .after(session, order, budget)
+                        .unwrap_or_else(|e| panic!("{e}"))
+                };
                 for order in &whole {
                     let at = expected
                         .iter()
                         .position(|e| *e == key(order))
                         .unwrap_or_else(|| panic!("an order of the component"));
-                    let placed = lexical(descending)
-                        .after(session, order)
-                        .unwrap_or_else(|e| panic!("{e}"))
-                        .unwrap_or_else(|| panic!("placed on one of its orders"));
+                    let Placed::On(placed) = place(order, SearchBudget::default()) else {
+                        panic!("placed on one of its orders");
+                    };
+                    let guesses = placed.nodes();
                     assert_eq!(
-                        walk_lexical(session, placed, k, slices, stops),
+                        walk_lexical(session, *placed, k, slices, stops),
                         expected[at + 1..]
                     );
+                    // Each guess is a node of the budget: one fewer stops it,
+                    // having placed nothing, and a past deadline before any.
+                    if guesses > 0 {
+                        let short = SearchBudget {
+                            max_nodes: Some(guesses - 1),
+                            deadline: None,
+                        };
+                        assert!(matches!(
+                            place(order, short),
+                            Placed::Stopped {
+                                limit: BudgetLimit::Nodes,
+                                nodes,
+                            } if nodes == guesses - 1
+                        ));
+                        fn late() -> f64 {
+                            1.0
+                        }
+                        let past = SearchBudget {
+                            max_nodes: None,
+                            deadline: Some(crate::Deadline {
+                                now_ms: late,
+                                at_ms: 0.0,
+                            }),
+                        };
+                        assert!(matches!(
+                            place(order, past),
+                            Placed::Stopped {
+                                limit: BudgetLimit::Deadline,
+                                nodes: 0,
+                            }
+                        ));
+                    }
                 }
                 // Not one of its orders: a variable of the component the
                 // other way where that is no order of it, or a forced one.
@@ -2306,8 +2367,8 @@ mod tests {
                         PairOrder::FirstAbove
                     };
                     if !sorted.contains(&key(&other)) {
-                        let placed = lexical(descending).after(session, &other);
-                        assert!(matches!(placed, Ok(None)), "{v}");
+                        let placed = place(&other, SearchBudget::default());
+                        assert!(matches!(placed, Placed::NotListed), "{v}");
                     }
                 }
                 if let Some(v) = forced.iter().position(Option::is_some) {
@@ -2318,8 +2379,8 @@ mod tests {
                         PairOrder::FirstAbove
                     };
                     assert!(matches!(
-                        lexical(descending).after(session, &other),
-                        Ok(None)
+                        place(&other, SearchBudget::default()),
+                        Placed::NotListed
                     ));
                 }
             }
