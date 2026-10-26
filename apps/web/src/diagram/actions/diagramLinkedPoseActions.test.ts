@@ -197,16 +197,43 @@ describe('the linked pose verbs', () => {
     const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
       fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as never;
     const flat = (foldCase: number) => ({ mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase }) as const;
-    expect(layerOrderLabel(flat(2), null, t)).toEqual({ count: '2', label: 'Layer order 2' });
-    expect(layerOrderLabel(flat(2), { discovered: 5, hasNext: false }, t)).toEqual({ count: '2 of 5', label: 'Layer order 2 of 5' });
+    expect(layerOrderLabel(flat(2), null, t)).toEqual({ count: '2' });
+    expect(layerOrderLabel(flat(2), { discovered: 5, hasNext: false }, t)).toEqual({ count: '2 of 5' });
     expect(layerOrderLabel(flat(2), { discovered: 3, hasNext: true }, t)?.count).toBe('2 of 3+');
     // Never fewer found than the one shown.
     expect(layerOrderLabel(flat(4), { discovered: 3, hasNext: true }, t)?.count).toBe('4 of 4+');
     expect(layerOrderLabel({ mode: 'crease-pattern', rotationDeg: 0 }, null, t)).toBeNull();
     // A fold whose layers could not be ordered has none, not one.
-    expect(layerOrderLabel(flat(1), { discovered: 1, hasNext: false, none: true }, t)).toEqual({
-      count: 'None',
-      label: 'No layer order',
+    expect(layerOrderLabel(flat(1), { discovered: 1, hasNext: false, none: true }, t)).toEqual({ count: 'None' });
+  });
+
+  // The Pose toolbar's ‹ › have no readout (Round 4, H8): each holds at its end, where the Step pane's › wraps.
+  it('holds Next Layer Order at the last order once the count is done, for a pager with no readout', () => {
+    const next = (solutions: DiagramLinkedPoseState['solutions'], foldCase: number, stopsAtLast: boolean) =>
+      buildDiagramLinkedPoseActions(
+        {
+          render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase },
+          readOnly: false,
+          busy: false,
+          solutions,
+        },
+        { t: ((_key: string, fallback: string) => fallback) as never, pose: vi.fn() },
+        { stopsAtLast }
+      ).find((action) => action.id === 'next-solution')!;
+    // The last of five, all found: held with no readout, on round to the first with one.
+    expect(next({ discovered: 5, hasNext: false }, 5, true)).toMatchObject({
+      disabled: true,
+      hint: 'This is its last layer order',
+    });
+    expect(next({ discovered: 5, hasNext: false }, 5, false).disabled).toBe(false);
+    // Short of the last, or while the search may find more, or before it has looked: on.
+    expect(next({ discovered: 5, hasNext: false }, 4, true).disabled).toBe(false);
+    expect(next({ discovered: 5, hasNext: true }, 5, true).disabled).toBe(false);
+    expect(next(null, 1, true).disabled).toBe(false);
+    // One only, as before.
+    expect(next({ discovered: 1, hasNext: false }, 1, true)).toMatchObject({
+      disabled: true,
+      hint: 'This fold has one layer order',
     });
   });
 
