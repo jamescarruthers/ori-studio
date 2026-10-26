@@ -14,7 +14,6 @@ import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes
 import { withLayerOrderAttention, type LayerOrderLossCause } from '../../layer-order/host/layerOrderResolution';
 import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { isFolded3dFigure } from './foldedFigureCapabilities';
-import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { foldedFigureHasLayerOrder } from './foldedFigureState';
 
 /**
@@ -94,14 +93,14 @@ export function foldedFigureLayerOrderAttention(figure: OristudioCpFoldedFigureE
 
 /**
  * A record a reload detached from this figure, shown for review: while the
- * figure is flat, holds no record of its own, and is folded from the creases
- * the record was saved on (its source key); never once an Apply took it up.
+ * figure is flat and holds no record of its own, through its refolds, moves
+ * and renames; never once the user settled it, by an Apply or Dismiss.
  * Never used to fold (`foldedFigureLayerOrders.ts`).
  */
 export function foldedFigureDetachedLayerOrder(figure: OristudioCpFoldedFigureEntry): LayerOrderRecord | null {
   const detached = figure.detachedLayerOrder;
-  if (!detached || detached.reattached || figure.layerOrder || isFolded3dFigure(figure)) return null;
-  return foldedFigureSourceKey(figure) === detached.sourceKey ? detached.record : null;
+  if (!detached || detached.settled || figure.layerOrder || isFolded3dFigure(figure)) return null;
+  return detached.record;
 }
 
 /**

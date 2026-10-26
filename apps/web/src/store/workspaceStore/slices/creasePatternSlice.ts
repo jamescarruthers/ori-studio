@@ -14,6 +14,7 @@ import {
   FOLD_DURATION_MS_BUCKETS,
   track,
   trackDesignSentToEdit,
+  trackLayerConstraintsDismissed,
   trackLayerConstraintsNeedAttention,
 } from '../../../analytics';
 import type { FoldMode, FoldVerdict } from '../../../analytics';
@@ -200,7 +201,7 @@ import {
   sameLayerOrderAttention,
   withLayerOrderAttention,
 } from '../../../layer-order/host/layerOrderResolution';
-import { needsAttentionFact } from '../../../layer-order/model/layerOrderAnalytics';
+import { dismissedFact, needsAttentionFact } from '../../../layer-order/model/layerOrderAnalytics';
 import {
   foldedFigureLayerOrder,
   type FoldedFigureLayerOrder,
@@ -4246,7 +4247,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                   contradiction: result.snapshot.contradiction ?? null,
                   error: null,
                   layerOrder: held.layerOrder,
-                  ...(detached ? { detachedLayerOrder: { ...detached, reattached: true as const } } : {}),
+                  ...(detached ? { detachedLayerOrder: { ...detached, settled: 'reattached' as const } } : {}),
                   // Its refold, as Refold leaves a figure: flat, of the current creases,
                   // a 3D one whose creases fold flat again included.
                   ...(refold
@@ -4272,6 +4273,23 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
         return restorePreviousFigure(figure, engineError(error).message);
       }
+    },
+
+    dismissOristudioCpFigureDetachedLayerOrder: (id) => {
+      const figure = get().oristudioCpFoldedFigures.find((candidate) => candidate.id === id);
+      const shown = figure ? foldedFigureDetachedLayerOrder(figure) : null;
+      const detached = figure?.detachedLayerOrder;
+      if (!figure || !shown || !detached) return false;
+      set({
+        oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
+          candidate.id === figure.id
+            ? { ...candidate, detachedLayerOrder: { ...detached, settled: 'dismissed' as const } }
+            : candidate
+        ),
+        dirty: true,
+      });
+      trackLayerConstraintsDismissed(dismissedFact('edit_figure', shown.constraints.length).properties);
+      return true;
     },
 
     deleteOristudioCpFoldedFigure: async (id) => {

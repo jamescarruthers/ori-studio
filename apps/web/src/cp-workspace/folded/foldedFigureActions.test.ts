@@ -23,7 +23,6 @@ import {
   type FoldedFigureToggleOption,
 } from './foldedFigureActions';
 import { foldedFigureNotice } from './foldedFigureNotice';
-import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
@@ -619,7 +618,7 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
     it('says a record a reload detached isn’t applied, with Review…, from saved data alone', () => {
       const runNoticeAction = vi.fn();
       const plain = solved();
-      const detached = { ...plain, detachedLayerOrder: { record: twoConstraintRecord(), json: '{}', sourceKey: foldedFigureSourceKey(plain) } };
+      const detached = { ...plain, detachedLayerOrder: { record: twoConstraintRecord(), json: '{}' } };
       const [note] = buildFoldedFigureActions(detached, withLayerOrder({ t: tp, runNoticeAction }));
       expect(note).toMatchObject({
         kind: 'note',
@@ -632,12 +631,11 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
       });
       // Never its own record: Another solution steps Oriedita's search as before.
       expect(command(detached, withLayerOrder(), 'another').disabled).toBe(false);
-      // Folded since from other creases, or taken up by an Apply: nothing to show.
-      for (const quiet of [
-        { ...detached, sourceFingerprint: 'cs1:another' },
-        { ...detached, detachedLayerOrder: { ...detached.detachedLayerOrder, reattached: true as const } },
-      ]) {
-        expect(foldedFigureNotice(tp, quiet)).toBeNull();
+      // Refolded here since, from other creases: still shown, as the figure's flag.
+      expect(foldedFigureNotice(tp, { ...detached, sourceFingerprint: 'cs1:another' })).toMatchObject({ label: 'Not applied' });
+      // Taken up by an Apply, or let go with Dismiss: nothing to show.
+      for (const settled of ['reattached', 'dismissed'] as const) {
+        expect(foldedFigureNotice(tp, { ...detached, detachedLayerOrder: { ...detached.detachedLayerOrder, settled } })).toBeNull();
       }
     });
 

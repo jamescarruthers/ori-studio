@@ -89,13 +89,20 @@ import {
   foldedFigureUserBounds,
 } from '../../cp-workspace/adapters/cpFoldedToScene';
 import type { TFunction } from 'i18next';
-import { foldedSourceBounds, isFoldedFigureStale } from '../../cp-workspace/folded/foldedFigureStaleness';
+import {
+  cpLinesByIds,
+  foldedSourceBounds,
+  foldedSourceFingerprint,
+  isFoldedFigureStale,
+  reselectFoldableLineIds,
+} from '../../cp-workspace/folded/foldedFigureStaleness';
 import {
   foldedFigureCurrentCase,
   foldedFigureFrontier,
 } from '../../cp-workspace/folded/foldedFigureState';
 import {
   deleteFoldedFigure,
+  dismissFoldedFigureDetachedLayerOrder,
   setFoldedFigurePlacementAsEntry,
   showAnotherFoldedSolution,
   showPreviousFoldedSolution,
@@ -274,6 +281,8 @@ vi.mock('../../analytics', async (importOriginal) => {
     // A typed wrapper over the runtime's `track`, which the line above can't reach.
     trackLayerConstraintsNeedAttention: (properties: Record<string, unknown>) =>
       analyticsMocks.track(actual.ANALYTICS_EVENTS.layerConstraintsNeedAttention, properties),
+    trackLayerConstraintsDismissed: (properties: Record<string, unknown>) =>
+      analyticsMocks.track(actual.ANALYTICS_EVENTS.layerConstraintsDismissed, properties),
   };
 });
 
@@ -12271,33 +12280,54 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
     });
 
     describe('a record a reload detached, because an older build folded the figure again', () => {
-      /** This build saved a constrained figure; an older one folded it again (no `shown_order`); this one opens it. */
-      async function openedAfterAnOlderBuild({ sourceFingerprint }: { sourceFingerprint?: string } = {}) {
-        resetStores(seedSnapshot());
-        loadSnapshotIntoStore(seedSnapshot());
-        const figure: OristudioCpFoldedFigureEntry = {
-          id: 'generated-1',
-          title: 'Folded model 1',
-          handle: null,
-          sourceKind: 'generated-from-current-cp',
-          sourceCpRevision: 0,
-          startingFaceId: 1,
-          displayStyle: 'Paper5',
-          status: 'ready',
-          placement: IDENTITY_FOLDED_PLACEMENT,
-          snapshot: solvedSnapshot({ shown_order: 'given' }),
-          renderSnapshot: foldedRenderSnapshot(),
-          sourceBounds: foldedSourceBounds(LAYER_ORDER_LINES),
-          sourceFingerprint: null,
-          sourceLineIds: [1, 2],
-          error: null,
-          layerOrder: held(),
-        };
-        const document = {
-          ...blankCpDocumentState().document,
-          crease_pattern: { ...blankCpDocumentState().document.crease_pattern, line_segments: LAYER_ORDER_LINES },
-        };
-        const json = JSON.parse(
+      /** The creases with one more inside the figure's region: a released build's edit. */
+      const EDITED_LINES = [...LAYER_ORDER_LINES, cpLine({ x: 0.5, y: 0 }, { x: 0.5, y: 0.5 })];
+      const BOUNDS = foldedSourceBounds(LAYER_ORDER_LINES);
+
+      const cpDocument = (lines: OristudioCpLineSegment[]) => ({
+        ...blankCpDocumentState().document,
+        crease_pattern: { ...blankCpDocumentState().document.crease_pattern, line_segments: lines },
+      });
+      /** What a fold of the figure's region on `lines` is baselined on. */
+      const fingerprintOn = (lines: OristudioCpLineSegment[]) => {
+        const document = cpDocument(lines);
+        return foldedSourceFingerprint(cpLinesByIds(document, reselectFoldableLineIds(document, BOUNDS)));
+      };
+      /** The figure as this build saved it: folded from the creases before the edit, in its chosen order. */
+      const savedFigure = (): OristudioCpFoldedFigureEntry => ({
+        id: 'generated-1',
+        title: 'Folded model 1',
+        handle: null,
+        sourceKind: 'generated-from-current-cp',
+        sourceCpRevision: 0,
+        startingFaceId: 1,
+        displayStyle: 'Paper5',
+        status: 'ready',
+        placement: IDENTITY_FOLDED_PLACEMENT,
+        snapshot: solvedSnapshot({ shown_order: 'given' }),
+        renderSnapshot: foldedRenderSnapshot(),
+        sourceBounds: BOUNDS,
+        sourceFingerprint: fingerprintOn(LAYER_ORDER_LINES),
+        sourceLineIds: [1, 2],
+        error: null,
+        layerOrder: held(),
+      });
+      /**
+       * The figure as a released build's Refold leaves it after the edit: the
+       * same id, title, placement, starting face and region; re-baselined on
+       * the new creases; its own snapshot, with no `shown_order`.
+       */
+      const refoldedByAnOlderBuild = (): OristudioCpFoldedFigureEntry => {
+        const { layerOrder: _notThatBuildsToWrite, ...figure } = savedFigure();
+        return { ...figure, snapshot: solvedSnapshot(), sourceFingerprint: fingerprintOn(EDITED_LINES) };
+      };
+      /** A project file as this build writes one, its bag from `extensions`. */
+      const projectFile = (
+        document: OristudioCpDocumentSnapshot,
+        foldedFigures: OristudioCpFoldedFigureEntry[],
+        extensions?: Record<string, unknown>
+      ) =>
+        JSON.parse(
           serializeNativeProjectFile(
             createNativeCreasePatternProjectFile({
               title: 'Native CP',
@@ -12310,27 +12340,50 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
               creaseColorMode: 'mvf',
               selection: emptyOristudioCpSelection(),
               viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
-              foldedFigures: [figure],
+              foldedFigures,
               activeFoldedFigureId: null,
               lineage: importedCpLineage(),
               appVersion: '0.1.1',
+              ...(extensions ? { extensions } : {}),
             })
           )
         );
-        // The older build's refold: its own snapshot, with no `shown_order`; the bag carried as it came.
-        const saved = json.workspace.creasePattern.viewState.foldedFigures[0];
-        delete saved.snapshot.shown_order;
-        if (sourceFingerprint !== undefined) saved.sourceFingerprint = sourceFingerprint;
+      async function openFile(json: unknown) {
+        resetStores(seedSnapshot());
+        loadSnapshotIntoStore(seedSnapshot());
         await expect(
           state().openProject(createFileService({ text: JSON.stringify(json), name: 'layers.osf', path: '/tmp/layers.osf' }))
         ).resolves.toBe(true);
       }
 
-      const detachedIn = () => detachedFoldedFigureLayerOrders(withFoldedFigureLayerOrders(state().oristudioCpDocumentExtensions, state().oristudioCpFoldedFigures));
+      /**
+       * This build saved a constrained figure; a released one edited a crease
+       * inside it and refolded it (`refolded`), carrying the bag as it came;
+       * this one opens the file.
+       */
+      async function openedAfterAnOlderBuild(refolded = refoldedByAnOlderBuild()) {
+        const saved = projectFile(cpDocument(LAYER_ORDER_LINES), [savedFigure()]);
+        const older = projectFile(cpDocument(EDITED_LINES), [refolded]);
+        older.workspace.creasePattern.extensions = saved.workspace.creasePattern.extensions;
+        await openFile(older);
+      }
+
+      /** The bag the open project saves. */
+      const savedBag = () => withFoldedFigureLayerOrders(state().oristudioCpDocumentExtensions, state().oristudioCpFoldedFigures);
+      const detachedIn = () => detachedFoldedFigureLayerOrders(savedBag());
+      /** The open project saved, then opened again; `edit` changes its figures between, as a later session's fold. */
+      async function saveAndReopen(edit: (figures: OristudioCpFoldedFigureEntry[]) => OristudioCpFoldedFigureEntry[] = (f) => f) {
+        const { document } = state().oristudioCpDocument!;
+        await openFile(projectFile(document, edit(state().oristudioCpFoldedFigures), state().oristudioCpDocumentExtensions));
+      }
+      const notice = () => foldedFigureNotice(t, figureNow());
 
       it('is flagged as not applied, opens the dialog for review without folding with it, and an Apply takes it up', async () => {
         await openedAfterAnOlderBuild();
         const opened = figureNow();
+        // The older build's refold baselined it on the edited creases: up to date, its record not its own.
+        expect(state().oristudioCpDocument!.document.crease_pattern.line_segments).toHaveLength(3);
+        expect(isFoldedFigureStale(state().oristudioCpDocument!.document, opened)).toBe(false);
         expect(opened.layerOrder).toBeUndefined();
         expect(foldedFigureNotice(t, opened)).toMatchObject({ label: 'Not applied', action: { id: 'review-layer-order' } });
         expect(detachedIn()).toHaveLength(1);
@@ -12359,11 +12412,92 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
         expect(detachedIn()).toHaveLength(1);
       });
 
-      it('shows nothing on a figure folded from other creases on the reused id, and keeps the entry', async () => {
-        await openedAfterAnOlderBuild({ sourceFingerprint: 'cs1:another-figure' });
+      it('is let go with Dismiss, as one entry that an undo takes back', async () => {
+        await openedAfterAnOlderBuild();
+        analyticsMocks.track.mockClear();
+        await expect(dismissFoldedFigureDetachedLayerOrder(figureNow().id, t)).resolves.toBe(true);
+        expect(notice()).toBeNull();
+        expect(labels()).toEqual(['Dismiss layer constraints']);
+        expect(state().dirty).toBe(true);
+        expect(detachedIn()).toEqual([]);
+        expect(analyticsMocks.track.mock.calls.filter(([name]) => name === 'layer constraints dismissed')).toEqual([
+          ['layer constraints dismissed', { surface: 'edit_figure', constraint_count_bucket: '<=2' }],
+        ]);
+
+        await state().undo();
+        await flushMicrotasks();
+        expect(notice()).toMatchObject({ label: 'Not applied' });
+        expect(detachedIn()).toHaveLength(1);
+        await state().redo();
+        await flushMicrotasks();
+        expect(notice()).toBeNull();
+        expect(detachedIn()).toEqual([]);
+        // Nothing left to let go: no entry, and no event.
+        await expect(dismissFoldedFigureDetachedLayerOrder(figureNow().id, t)).resolves.toBe(false);
+        expect(labels()).toEqual(['Dismiss layer constraints']);
+      });
+
+      it('stays through a Refold here, and a reload after it shows it again', async () => {
+        await openedAfterAnOlderBuild();
+        // Edited here too, so the figure is stale, and refolded: plainly, as its record is not its own.
+        useWorkspaceStore.setState({
+          oristudioCpDocument: editableCpState([...EDITED_LINES, cpLine({ x: 0, y: 0.5 }, { x: 0.5, y: 0.5 })]),
+        });
+        expect(isFoldedFigureStale(state().oristudioCpDocument!.document, figureNow())).toBe(true);
+        clearKernelCalls();
+        const { done } = await refoldAsEntry(figureNow().id);
+        expect(done).toBe(true);
+        expect(hostEngineMocks.resolveLayerOrder).not.toHaveBeenCalled();
+        expect(isFoldedFigureStale(state().oristudioCpDocument!.document, figureNow())).toBe(false);
         expect(figureNow().layerOrder).toBeUndefined();
-        expect(foldedFigureNotice(t, figureNow())).toBeNull();
+        expect(notice()).toMatchObject({ label: 'Not applied' });
+
+        await saveAndReopen();
+        expect(figureNow().layerOrder).toBeUndefined();
+        expect(notice()).toMatchObject({ label: 'Not applied' });
         expect(detachedIn()).toMatchObject([{ figureId: 'generated-1', reason: 'order-not-given' }]);
+      });
+
+      it('shows nothing on a figure the older build moved or made again, and keeps the entry', async () => {
+        const moved = refoldedByAnOlderBuild();
+        for (const refolded of [
+          { ...moved, placement: { ...moved.placement, offset: { x: 3, y: 0 } } },
+          { ...moved, title: 'Folded model 2' },
+        ]) {
+          await openedAfterAnOlderBuild(refolded);
+          expect(figureNow().layerOrder).toBeUndefined();
+          expect(notice()).toBeNull();
+          expect(detachedIn()).toMatchObject([{ figureId: 'generated-1', reason: 'order-not-given' }]);
+        }
+      });
+
+      it('once its figure is deleted and saved, never shows on a figure folded on the reused id', async () => {
+        for (const takenUpFirst of [false, true]) {
+          await openedAfterAnOlderBuild();
+          expect(notice()).toMatchObject({ label: 'Not applied' });
+          if (takenUpFirst) {
+            dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind: 'applied', applied: applied() });
+            await expect(openFoldedFigureLayerOrder(figureNow().id, t, { via: 'review' })).resolves.toBe('applied');
+            expect(figureNow().layerOrder).toMatchObject({ kind: 'record' });
+          }
+          // Had the figure stayed, the same figure made again on its id would be shown it.
+          const before = state().oristudioCpDocumentExtensions;
+          await deleteFoldedFigure(figureNow().id, t);
+          expect(state().oristudioCpFoldedFigures).toEqual([]);
+          expect(detachedIn().map((entry) => entry.reason), String(takenUpFirst)).toEqual(['figure-missing']);
+
+          // Saved and reopened; the same creases folded again, on the reused id; saved and reopened.
+          await saveAndReopen();
+          await saveAndReopen(() => [refoldedByAnOlderBuild()]);
+          expect(figureNow().id).toBe('generated-1');
+          expect(notice(), String(takenUpFirst)).toBeNull();
+          expect(detachedIn().map((entry) => entry.reason)).toEqual(['figure-missing']);
+
+          if (!takenUpFirst) {
+            await openFile(projectFile(cpDocument(EDITED_LINES), [refoldedByAnOlderBuild()], before));
+            expect(notice()).toMatchObject({ label: 'Not applied' });
+          }
+        }
       });
     });
 
@@ -12660,6 +12794,7 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
             remove: vi.fn(),
             openLayerOrder: vi.fn(),
             reviewLayerOrder: vi.fn(),
+            dismissDetachedLayerOrder: vi.fn(),
           });
         }
         // The idle queue's 3D rehydrate.
@@ -12816,6 +12951,7 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
         remove: vi.fn(),
         openLayerOrder: vi.fn(),
         reviewLayerOrder: vi.fn(),
+        dismissDetachedLayerOrder: vi.fn(),
       });
       await flushMicrotasks();
       expect(spawned).toEqual([]);

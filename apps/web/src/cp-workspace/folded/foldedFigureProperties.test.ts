@@ -9,7 +9,6 @@ import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCam
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
-import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 
 afterEach(() => resetSolutionFrontiers());
@@ -93,6 +92,7 @@ function deps(
     remove: vi.fn(),
     openLayerOrder: vi.fn(),
     reviewLayerOrder: vi.fn(),
+    dismissDetachedLayerOrder: vi.fn(),
     ...overrides,
   };
 }
@@ -329,22 +329,33 @@ describe('buildFoldedFigureProperties', () => {
       );
     });
 
-    it('flags a record a reload detached as not applied, with Review…, and leaves the row as an unconstrained one', () => {
+    it('flags a record a reload detached as not applied, with Review… and Dismiss, and leaves the row as an unconstrained one', () => {
       const d = deps();
-      const detached = {
-        ...SOLVED,
-        detachedLayerOrder: { record: twoConstraintRecord(), json: '{}', sourceKey: foldedFigureSourceKey(SOLVED) },
-      };
+      const detached = { ...SOLVED, detachedLayerOrder: { record: twoConstraintRecord(), json: '{}' } };
       const sheet = sheetFor(detached, d);
       expect(sheet).toMatchObject({ subtitle: '2 layer constraints aren’t applied', subtitleTone: 'warning' });
       const pose = sheet.sections.find((section) => section.id === 'pose');
       expect(pose?.notice).toMatchObject({
         tone: 'warning',
         text: 'An older Ori Studio refolded this figure, so its 2 layer constraints aren’t applied.',
-        actions: [{ id: 'review-layer-order', label: 'Review…', disabled: false }],
+        actions: [
+          { id: 'review-layer-order', label: 'Review…', disabled: false },
+          { id: 'dismiss-layer-order', label: 'Dismiss', disabled: false },
+        ],
       });
       pose?.notice?.actions?.[0]?.run();
       expect(d.reviewLayerOrder).toHaveBeenCalledWith(detached);
+      pose?.notice?.actions?.[1]?.run();
+      expect(d.dismissDetachedLayerOrder).toHaveBeenCalledWith(detached);
+      // Settled — taken up or dismissed — it is gone; and a figure's own flag has no Dismiss.
+      for (const settled of ['reattached', 'dismissed'] as const) {
+        const after = sheetFor({ ...detached, detachedLayerOrder: { ...detached.detachedLayerOrder, settled } }, deps());
+        expect(after.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      }
+      const own = sheetFor({ ...SOLVED, layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })) }, deps());
+      expect(own.sections.find((section) => section.id === 'pose')?.notice?.actions?.map((action) => action.id)).toEqual([
+        'review-layer-order',
+      ]);
       // Not its own: the row steps Oriedita's search, and says nothing of constraints.
       const layerOrder = stepper(sheet);
       expect(layerOrder).toMatchObject({ readout: '2 of 3+', next: { disabled: false } });

@@ -1259,6 +1259,14 @@ export interface CreasePatternSliceActions {
     applied: LayerOrderApplied,
     options?: { refold?: OristudioCpFigureLayerOrderRefold }
   ) => Promise<boolean>;
+  /**
+   * Let a record a reload detached go (Dismiss, beside its Review…): the
+   * figure stops showing it, and the save drops its entry from the bag's
+   * `detached` list. False, writing nothing, when the figure shows none.
+   * Callers bracket it as one undo entry, so an undo brings it back
+   * (`dismissFoldedFigureDetachedLayerOrder`).
+   */
+  dismissOristudioCpFigureDetachedLayerOrder: (id: string) => boolean;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;
   /**

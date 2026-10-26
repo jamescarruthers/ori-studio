@@ -97,6 +97,15 @@ export function duplicateFoldedFigure(id: string, t: TFunction): Promise<boolean
   );
 }
 
+/** Let go of the layer constraints a reload found detached (Dismiss, beside Review…), as one entry. */
+export function dismissFoldedFigureDetachedLayerOrder(id: string, t: TFunction): Promise<boolean | undefined> {
+  return foldedFigureGesture.run(
+    'verb',
+    t('panels:foldedFigureActions.dismissDetachedLayerOrderAction', 'Dismiss layer constraints'),
+    () => useWorkspaceStore.getState().dismissOristudioCpFigureDetachedLayerOrder(id)
+  );
+}
+
 /**
  * Refold a figure from its creases as they are now, as one entry: in its
  * chosen layer order when it has one (H4), saying what that came to

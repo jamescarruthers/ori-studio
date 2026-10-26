@@ -40,6 +40,7 @@ import {
 } from './foldedFigureActions';
 import {
   foldedFigureAwaitsFlatRefold,
+  foldedFigureDetachedLayerOrder,
   foldedFigureLayerOrderHold,
   foldedFigureLayerOrderRecord,
 } from './foldedFigureLayerOrderState';
@@ -105,6 +106,8 @@ export interface FoldedFigurePropertyDeps {
   openLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
   /** The Pose section's flag's Review…: the dialog on the rows that need attention (D14). */
   reviewLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
+  /** Beside Review… on constraints a reload found detached: let them go, as one entry. */
+  dismissDetachedLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
 }
 
 /**
@@ -627,7 +630,9 @@ function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): Fie
  * look since an edit (D10, D14; the Properties board's state C): the
  * sentence, and Review…, which opens the Layer order dialog on them — held
  * as the row's Edit… is. While the figure folds, Review… waits with the rest
- * of the row. None when nothing needs a look.
+ * of the row. Constraints a reload found detached can be let go beside it
+ * (Dismiss, one entry), as they are not the figure's own until an Apply.
+ * None when nothing needs a look.
  */
 function layerOrderAttentionNotice(
   figure: OristudioCpFoldedFigureEntry,
@@ -648,6 +653,17 @@ function layerOrderAttentionNotice(
         ...(edit.hint ? { hint: edit.hint } : {}),
         run: edit.run,
       },
+      ...(foldedFigureDetachedLayerOrder(figure)
+        ? [
+            {
+              id: 'dismiss-layer-order',
+              label: t('panels:foldedFigureActions.dismissDetachedLayerOrder', 'Dismiss'),
+              // It writes the figure alone, so it waits only while the figure folds.
+              disabled: figure.status !== 'ready',
+              run: () => deps.dismissDetachedLayerOrder(figure),
+            },
+          ]
+        : []),
     ],
   };
 }

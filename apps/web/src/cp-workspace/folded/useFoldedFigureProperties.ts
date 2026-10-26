@@ -26,6 +26,7 @@ import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './fo
 import { isFoldedFigureStale } from './foldedFigureStaleness';
 import {
   deleteFoldedFigure,
+  dismissFoldedFigureDetachedLayerOrder,
   duplicateFoldedFigure,
   exportFoldedFigure,
   setFolded3dCamera,
@@ -136,6 +137,8 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
       openLayerOrder: (target: OristudioCpFoldedFigureEntry) => void openFoldedFigureLayerOrder(target.id, t),
       reviewLayerOrder: (target: OristudioCpFoldedFigureEntry) =>
         void openFoldedFigureLayerOrder(target.id, t, { via: 'review' }),
+      dismissDetachedLayerOrder: (target: OristudioCpFoldedFigureEntry) =>
+        void dismissFoldedFigureDetachedLayerOrder(target.id, t),
     }),
     [t]
   );
