@@ -3,6 +3,7 @@ import type { Point } from '../../lib/geometry';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
 import { restackedScene, type LayerPaneSegment } from './layerPaneFigure';
 import {
+  BESIDE_CLEAR_REACH_CHIPS,
   cappedFaces,
   chipFits,
   foldedLabelIndex,
@@ -429,8 +430,9 @@ describe('placing the letters', () => {
       expect([moved.x, moved.y]).toEqual([312, 208]);
     });
 
-    it('finds the spot a look at every step would: the nearest clear one, whichever way', () => {
-      // The reference: out each way 2 px at a time, the first spot clear of the face and of every crease.
+    it('finds the spot a look at every step would: the nearest clear one, whichever way, or else the nearest beside', () => {
+      // The reference: out each way 2 px at a time to where it clears the face, then on to the first spot
+      // clear of every crease too, no more than the reach past the face; with none, the nearest beside.
       const crosses = ([a, b]: LayerPaneSegment, minX: number, minY: number, maxX: number, maxY: number) => {
         let [t0, t1] = [0, 1];
         const [dx, dy] = [b.x - a.x, b.y - a.y];
@@ -462,30 +464,62 @@ describe('placing the letters', () => {
       const [halfW, halfH] = [size.width / 2 + 3, size.height / 2 + 3];
       let seed = 7;
       const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-      let compared = 0;
+      let cleared = 0;
       for (let trial = 0; trial < 40; trial += 1) {
-        const creases: LayerPaneSegment[] = Array.from({ length: 12 }, () => [
+        // Denser trial by trial, so the later ones often leave no clear spot close by.
+        const creases: LayerPaneSegment[] = Array.from({ length: 8 + 3 * trial }, () => [
           { x: random() * 260 - 30, y: random() * 260 - 30 },
           { x: random() * 260 - 30, y: random() * 260 - 30 },
         ]);
         const all = [...sides(thin), ...creases];
         let expected: { x: number; y: number; reach: number } | null = null;
+        let besideOnly: { x: number; y: number; reach: number } | null = null;
         for (const [dx, dy] of ways) {
-          for (let reach = 2; reach <= 160; reach += 2) {
-            const [x, y] = [104 + dx * reach, 104 + dy * reach];
-            const overFace = x + halfW > 100 && x - halfW < 108 && y + halfH > 100 && y - halfH < 108;
-            if (overFace || all.some((s) => crosses(s, x - halfW, y - halfH, x + halfW, y + halfH))) continue;
-            if (!expected || reach < expected.reach) expected = { x, y, reach };
+          const spot = (reach: number) => ({ x: 104 + dx * reach, y: 104 + dy * reach, reach });
+          const overFace = ({ x, y }: { x: number; y: number }) => x + halfW > 100 && x - halfW < 108 && y + halfH > 100 && y - halfH < 108;
+          let out = 2;
+          while (out <= 160 && overFace(spot(out))) out += 2;
+          if (out > 160) continue;
+          if (!besideOnly || out < besideOnly.reach) besideOnly = spot(out);
+          for (let reach = out; reach <= Math.min(160, out + BESIDE_CLEAR_REACH_CHIPS * size.height); reach += 2) {
+            const { x, y } = spot(reach);
+            if (all.some((s) => crosses(s, x - halfW, y - halfH, x + halfW, y + halfH))) continue;
+            if (!expected || reach < expected.reach) expected = spot(reach);
             break;
           }
         }
         const placed = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines: labelLineIndex(all) })[0]!;
-        if (!expected) continue;
-        compared += 1;
-        expect([placed.x, placed.y]).toEqual([expected.x, expected.y]);
+        const want = expected ?? besideOnly!;
+        if (expected) cleared += 1;
+        expect([placed.x, placed.y]).toEqual([want.x, want.y]);
       }
-      // Most of the trials leave a clear spot somewhere.
-      expect(compared).toBeGreaterThan(30);
+      // Both ends are tried: trials with a clear spot close by, and trials with none.
+      expect(cleared).toBeGreaterThanOrEqual(5);
+      expect(40 - cleared).toBeGreaterThanOrEqual(5);
+    });
+
+    it('takes no crease-free spot further past its face than the reach: it sits beside the face over a crease', () => {
+      const reach = BESIDE_CLEAR_REACH_CHIPS * labelSize('A', false, false).height;
+      // A crease every 6 px each way over a square round the face: clear past its edge, and nowhere inside it.
+      const meshOver = (half: number) =>
+        Array.from({ length: Math.floor((2 * half) / 6) + 1 }, (_, k) => [
+          across(104 - half + k * 6, 104 - half, 104 + half),
+          down(104 - half + k * 6, 104 - half, 104 + half),
+        ]).flat();
+      // 30 px round the face: the clear spot over it is 30 px past the face, inside the reach, so it is taken.
+      const near = meshOver(34);
+      const taken = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines: labelLineIndex([...sides(thin), ...near]) })[0]!;
+      expect(taken.off).toBe(true);
+      for (const segment of near) expect(covers(taken, segment, 3)).toBe(false);
+      expect(100 - (taken.y + taken.height / 2)).toBeLessThan(reach + 3);
+      // 60 px round it: the nearest clear spot is 60 px past the face, beyond the reach, so the letter
+      // sits where it would with no lines at all, beside its face, over the creases.
+      const far = meshOver(64);
+      expect(60).toBeGreaterThan(reach);
+      const plain = placeLabels(label, spotsOf, () => 'A', (p) => p);
+      const kept = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines: labelLineIndex([...sides(thin), ...far]) });
+      expect(at(kept)).toEqual(at(plain));
+      expect(far.some((segment) => covers(kept[0]!, segment, 0))).toBe(true);
     });
 
     it('with no clear spot, falls back as before: beside the face, whatever it covers', () => {

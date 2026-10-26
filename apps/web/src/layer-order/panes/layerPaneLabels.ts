@@ -44,7 +44,10 @@
  *   clash's, the face pointed at) takes a clear spot inside its face if one
  *   has room, else sits just off the face, beside it, so it never covers the
  *   tint and ring that mark it; and clear of every line the pane draws
- *   ({@link labelLineIndex}), so it never covers another crease either (D20).
+ *   ({@link labelLineIndex}), so it never covers another crease either
+ *   (D20), when such a spot lies close by ({@link BESIDE_CLEAR_REACH_CHIPS}).
+ *   Further out it would lose its tie to the face, so it sits against the
+ *   face over the crease instead.
  *
  * Pure: no React, no store, no engine.
  */
@@ -651,6 +654,17 @@ const BESIDE_WAYS: readonly (readonly [number, number])[] = [
 /** How far out, CSS px, and in what steps, a letter beside its face looks for room. */
 const BESIDE_REACH_PX = 160;
 const BESIDE_STEP_PX = 2;
+/**
+ * How far past its face a letter beside it goes for a spot clear of every
+ * line, in heights of its own chip: further out, the letter loses its tie to
+ * the face, and sits against the face over a crease instead. On kabuto at
+ * Fit, a letter beside its face finds a clear spot right against it, or, the
+ * furthest, 1.97 heights out (E, past the strip beside it, when C's letter
+ * fills its corner); on iguana-c0 the subject's would go 7 heights, off the
+ * paper. In chip heights, it holds at every zoom: a chip keeps its size on
+ * screen.
+ */
+export const BESIDE_CLEAR_REACH_CHIPS = 2.5;
 
 /**
  * Points beside a face, nearest first, ties in {@link BESIDE_WAYS}' order:
@@ -675,10 +689,11 @@ const NO_BESIDE: BesideSpots = { wanted: null, clear: [], any: [] };
  *
  * `clear` goes on out each way, in the same steps, to where the chip clears
  * every line the pane draws by as much (`clearance`), so it covers no crease
- * either. Each look skips the steps where a line it crosses still would, and
- * the ways are taken nearest first, so the search stops at the first spot
- * that is `wanted` without walking the others out. With no lines, `clear` is
- * `any`.
+ * either, but no more than {@link BESIDE_CLEAR_REACH_CHIPS} of its heights
+ * past where it cleared the face. Each look skips the steps where a line it
+ * crosses still would, and the ways are taken nearest first, so the search
+ * stops at the first spot that is `wanted` without walking the others out.
+ * With no lines, `clear` is `any`.
  */
 function besideSpots(
   outline: readonly Point[],
@@ -703,22 +718,23 @@ function besideSpots(
   }
   const any = [...ways].sort((a, b) => a.reach - b.reach).map(({ way, reach }) => at(way, reach));
   // On out past the lines, the nearest way first: a way's reach only grows, so the first clear is the nearest.
+  const furthest = (way: { out: number }) => Math.min(BESIDE_REACH_PX, way.out + BESIDE_CLEAR_REACH_CHIPS * size.height);
   const clear: Point[] = [];
   while (ways.length > 0) {
     const next = ways.reduce((best, way) => (way.reach < best.reach ? way : best));
     const p = at(next.way, next.reach);
-    const past = clearance ? clearance(p.x - halfW, p.y - halfH, p.x + halfW, p.y + halfH, next.way[0], next.way[1]) : 0;
+    const crossed = clearance ? clearance(p.x - halfW, p.y - halfH, p.x + halfW, p.y + halfH, next.way[0], next.way[1]) : 0;
     // A convex face, left behind, stays behind; the check is only for a face that isn't.
-    if (past === 0 && (next.reach === next.out || !touches(next.way, next.reach))) {
+    if (crossed === 0 && (next.reach === next.out || !touches(next.way, next.reach))) {
       clear.push(p);
       if (wanted(p)) return { wanted: p, clear, any };
       ways.splice(ways.indexOf(next), 1);
       continue;
     }
     // The next step past every line crossed here: every step before it still crosses one of them.
-    const beyond = Math.ceil((next.reach + past) / BESIDE_STEP_PX - 1e-9) * BESIDE_STEP_PX;
+    const beyond = Math.ceil((next.reach + crossed) / BESIDE_STEP_PX - 1e-9) * BESIDE_STEP_PX;
     next.reach = Math.max(next.reach + BESIDE_STEP_PX, beyond);
-    if (next.reach > BESIDE_REACH_PX) ways.splice(ways.indexOf(next), 1);
+    if (next.reach > furthest(next)) ways.splice(ways.indexOf(next), 1);
   }
   return { wanted: null, clear, any };
 }
@@ -742,8 +758,8 @@ function besideSpots(
  * well as of the ring ({@link LABEL_EDGE_ROOM_PX}). `lines`, every line the
  * pane draws, keeps a letter set beside its face off every crease, not only
  * its own face's: the first place tried is clear of the lines and the other
- * letters, and only then do the fallbacks come, which cover a letter before a
- * line.
+ * letters, within {@link BESIDE_CLEAR_REACH_CHIPS} of the face, and only then
+ * do the fallbacks come, which cover a letter before a line.
  */
 export function placeLabels(
   labels: readonly LayerPaneLabel[],
