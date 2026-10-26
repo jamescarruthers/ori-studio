@@ -429,7 +429,10 @@ describe('DiagramStepPanel', () => {
         );
         publishOpenLinkedPose('step-f', {
           actions,
-          layerOrder: { count: '2 of 2+', label: 'Layer order 2 of 2+' },
+          toolbar: actions,
+          layerOrder: { count: '2 of 2+' },
+          layerOrderEdit: null,
+          editLayerOrder: async () => false,
           spatial: null,
           onCamera: () => {},
           registerLiveView: () => () => {},
@@ -482,7 +485,10 @@ describe('DiagramStepPanel', () => {
         const controls = buildDiagramSpreadControls(poseState, null, { t, ...verbs });
         publishOpenLinkedPose('step-f', {
           actions: buildDiagramLinkedPoseActions(poseState, { t, pose: verbs.pose }),
+          toolbar: [],
           layerOrder: null,
+          layerOrderEdit: null,
+          editLayerOrder: async () => false,
           spatial: null,
           onCamera: () => {},
           registerLiveView: () => () => {},

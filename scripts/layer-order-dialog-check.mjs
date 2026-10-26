@@ -981,9 +981,10 @@ function diagramStepCases(theme) {
     await page.getByRole('button', { name: 'Review…' }).waitFor({ state: 'visible', timeout: 10000 });
     await record(`diagram-${tag}-pane-attention`, { page: await pageShot(page) });
 
-    // Edit… opens the dialog's shell on the step; Cancel writes nothing.
+    // Edit… opens the dialog's shell on the step; Cancel writes nothing. The Step pane's, by its row:
+    // the Pose toolbar's Edit order… has the same name (H8).
     const entries = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
-    await page.getByRole('button', { name: 'Edit Layer Order…' }).click();
+    await row.getByRole('button', { name: 'Edit Layer Order…' }).click();
     const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
     await dialog.waitFor({ state: 'visible', timeout: 60000 });
     await page.waitForTimeout(3000);
@@ -1051,8 +1052,9 @@ function diagramStepCases(theme) {
       in3d = await stepSource(page);
       console.log(`[${tag}] 3D refused for kabuto; the 3D row shown on the render: ${JSON.stringify(in3d)}`);
     }
-    await page.getByRole('button', { name: 'Edit Layer Order…' }).waitFor({ state: 'visible' });
-    if ((await page.getByRole('button', { name: 'Edit Layer Order…' }).getAttribute('aria-disabled')) !== 'true') {
+    const paneEdit = row.getByRole('button', { name: 'Edit Layer Order…' });
+    await paneEdit.waitFor({ state: 'visible' });
+    if ((await paneEdit.getAttribute('aria-disabled')) !== 'true') {
       throw new Error('Edit… is not held on a 3D step');
     }
     await record(`diagram-${tag}-pane-3d`, { page: await pageShot(page) });
@@ -1136,6 +1138,399 @@ function diagramStepOfflineCases(theme) {
       throw new Error('offline Refresh All raised the app’s error toast');
     }
     if (result.flagged !== 0 || result.constrained !== 5) throw new Error('offline Refresh All wrote to a record');
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Pose (H8)
+
+/** The step detail's Pose toolbar. */
+function poseToolbar(page) {
+  return page.getByRole('toolbar', { name: 'Pose' });
+}
+
+/** The toolbar's controls by name, whether ‹, › and Edit order… are held, and what it reads. */
+async function poseToolbarState(page) {
+  const bar = poseToolbar(page);
+  const held = async (name) => (await bar.getByRole('button', { name }).getAttribute('aria-disabled')) === 'true';
+  return {
+    previous: await held('Previous Layer Order'),
+    next: await held('Next Layer Order'),
+    edit: await held(EDIT_ORDER),
+    // Each button's accessible name: its label, or the words it shows.
+    names: await bar
+      .locator('button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent)),
+    editTitle: await bar.getByRole('button', { name: EDIT_ORDER }).getAttribute('title'),
+    text: (await bar.textContent()) ?? '',
+  };
+}
+
+/** Pose's Edit order…, named by the word it shows. */
+const EDIT_ORDER = 'Edit order…';
+
+/** The toolbar, with the tooltip of the control named `hover` up when given. */
+async function toolbarShot(page, hover = null) {
+  const bar = poseToolbar(page);
+  // Away first: a control just pressed under the pointer has had its tooltip dismissed.
+  await page.mouse.move(1, 1);
+  await page.waitForTimeout(300);
+  if (hover) {
+    await bar.getByRole('button', { name: hover }).hover();
+    await page.waitForTimeout(900);
+  }
+  await settle(page);
+  const box = await bar.boundingBox();
+  const x = Math.max(0, Math.floor(box.x - 24));
+  const y = Math.max(0, Math.floor(box.y - 64));
+  return page.screenshot({
+    animations: 'disabled',
+    clip: { x, y, width: Math.min(VIEWPORT.width - x, Math.ceil(box.width + 48)), height: Math.ceil(box.height + 88) },
+  });
+}
+
+/** Run one of the open step's Pose verbs from the toolbar, and wait for its capture. */
+async function toolbarVerb(page, name) {
+  await poseToolbar(page).getByRole('button', { name }).click();
+  await page.waitForTimeout(200);
+  await captured(page);
+}
+
+/**
+ * The request the open dialog was given, against the kernel's own: the step's
+ * creases folded afresh at its case (and at the first, to tell them apart),
+ * its scene read. What Pose's held fold is, if Edit order… opened on it.
+ */
+async function dialogRequestAgainstKernel(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { chooseStepCreases, knownCreasesOf } = await import('/src/diagram/capture/captureCreases.ts');
+    const { resolveFoldRoute } = await import('/src/cp-workspace/folded/foldRoute.ts');
+    const { peekCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { captureModel } = await import('/src/diagram/capture/captureFolded.ts');
+    const { stepFoldSource } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const { createCpCaptureRuntime } = await import('/src/store/workspaceStore/cpFoldRuntimeBindings.ts');
+    const request = useLayerOrderDialogStore.getState().opening?.request;
+    if (!request) throw new Error('no dialog is open');
+    const state = window.__treemakerWorkspaceStore.getState();
+    const source = stepById(state.diagram, window.__layerOrderStep).source;
+    const document = state.oristudioCpDocument.document;
+    const choice = chooseStepCreases(document, source.scope, peekCpSheetIndex(document), knownCreasesOf(source));
+    const route = resolveFoldRoute(document, choice.creases.foldLineIds);
+    const runtime = createCpCaptureRuntime(0, null);
+    const model = captureModel(document, source.render.side);
+    const atCase = await stepFoldSource(runtime, route.lineIds, model, source.render.foldCase);
+    const atFirst = await stepFoldSource(runtime, route.lineIds, model, 1);
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    return {
+      foldCase: source.render.foldCase,
+      turnDeg: request.look.turnDeg,
+      rotationDeg: source.render.rotationDeg,
+      record: request.record ? request.record.constraints.length : null,
+      shown: request.shown ? (same(request.shown, atCase.scene) ? 'the step’s case' : same(request.shown, atFirst.scene) ? 'the first' : 'another') : null,
+      firstDiffers: !same(atCase.scene, atFirst.scene),
+      digest: request.source.digest === atCase.source.digest,
+      name: request.name ?? null,
+      surface: request.surface ?? null,
+    };
+  });
+}
+
+/**
+ * Answer the open dialog with Apply, as its inspector will once U10 lands: on
+ * the host engine, opened on the request the host gave (its source and the
+ * scene it shows), the first open pair whose constraint moves a spot, saved,
+ * with its relations; handed back through the dialog's store as `applied`.
+ */
+async function applyThroughOpenDialog(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore, settleLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+    const opening = useLayerOrderDialogStore.getState().opening;
+    if (!opening) throw new Error('no dialog is open');
+    const { request } = opening;
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    try {
+      const { engine } = runtime;
+      const opened = await engine.openShowing(request.source, layerOrderSceneRelations(request.shown), LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`open: ${JSON.stringify(opened)}`);
+      const pairs = opened.open_pairs;
+      let chosen = null;
+      for (let k = 0; k + 1 < pairs.length && !chosen; k += 2) {
+        for (const sign of [1, -1]) {
+          const candidate = [pairs[k], pairs[k + 1], sign];
+          const previewed = await engine.preview(candidate, LAYER_ORDER_LIMITS.preview);
+          if (previewed.verdict === 'fits' && previewed.changed.front.length + previewed.changed.back.length > 0) {
+            chosen = { candidate, token: previewed.token };
+            break;
+          }
+        }
+      }
+      if (!chosen) throw new Error('no constraint moves the step off its order');
+      await engine.commitPreview(chosen.token, [chosen.candidate], LAYER_ORDER_LIMITS.commit);
+      const saved = await engine.save();
+      if (saved.status !== 'ok') throw new Error(`save: ${JSON.stringify(saved)}`);
+      const relations = await engine.relations();
+      const applied = { record: saved.record, relations, source: request.source };
+      if (!settleLayerOrderDialog(opening.id, { kind: 'applied', applied })) throw new Error('the dialog had already answered');
+      return { candidate: chosen.candidate, relations: relations.length / 2 };
+    } finally {
+      runtime.dispose();
+    }
+  });
+}
+
+/**
+ * The #523 review's race, swept: for each delay, an Apply through Pose, then
+ * Turn Over and, `delay` ms later, Undo as ⌘Z runs it (the menu action: the
+ * canvas sessions hear it, then the history moves). Per round: the toasts
+ * that say a capture failed, and whether a record was left once every Apply
+ * was undone again.
+ */
+const RACE_DELAYS_MS = (process.env.POSE_RACE_DELAYS ?? '0,2,4,6,8,10,12,14,16,18,20,25,30,40,60')
+  .split(',')
+  .map(Number);
+
+async function undoRaceSweep(page, delays) {
+  await page.evaluate(() => {
+    if (window.__toastsSeen) return;
+    window.__toastsSeen = [];
+    new MutationObserver(() => {
+      for (const node of document.querySelectorAll('[data-sonner-toast]')) {
+        if (node.__seen) continue;
+        node.__seen = true;
+        window.__toastsSeen.push(node.textContent ?? '');
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  const undo = () =>
+    page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.undo');
+    });
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  const rounds = [];
+  for (const delay of delays) {
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await applyThroughOpenDialog(page);
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    await captured(page);
+    const seen = await page.evaluate(() => window.__toastsSeen.length);
+    await page.evaluate(async (wait) => {
+      const { openLinkedPoseOf } = await import('/src/diagram/capture/openLinkedPose.ts');
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      openLinkedPoseOf(window.__layerOrderStep)
+        .actions.find((action) => action.id === 'turn-over')
+        .run();
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      await handleMenuAction('edit.undo');
+    }, delay);
+    await page.waitForTimeout(300);
+    await captured(page);
+    const errors = (await page.evaluate((from) => window.__toastsSeen.slice(from), seen)).filter((text) =>
+      /couldn.t be captured|invalid folded figure handle|stopped unexpectedly/i.test(text)
+    );
+    // The turn may have landed before the undo, which then took it back instead: undo to no record.
+    for (let more = 0; more < 4 && (await poseNow(page)).layerOrder; more += 1) {
+      await undo();
+      await captured(page);
+    }
+    rounds.push({ delay, errors, record: (await poseNow(page)).layerOrder !== null });
+  }
+  return rounds;
+}
+
+/** The step selected, its source's render and record, and how many undo steps there are. */
+async function poseNow(page) {
+  return page.evaluate(async () => {
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const state = window.__treemakerWorkspaceStore.getState();
+    const source = stepById(state.diagram, window.__layerOrderStep).source;
+    return {
+      selected: state.diagramSelectedStepId,
+      detail: state.diagramDetail,
+      render: source.render,
+      layerOrder: source.layerOrder ?? null,
+      entries: state.diagramHistory.past.length,
+    };
+  });
+}
+
+/**
+ * The Pose toolbar (H8) on kabuto's step, in one theme: ‹ › with no readout
+ * and Edit order… after them; each held at its end; Edit order… opening the
+ * dialog on the fold Pose holds — at the step's own layer order, past the
+ * first — with Pose's keys standing down while it is open, and Cancel
+ * writing nothing; then the same step constrained: ‹ › held (D9), and Edit
+ * order… opening on its record.
+ */
+function poseToolbarCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    await linkKabutoStep(page);
+    await captured(page);
+    // A second step, so a step key has somewhere to go.
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().addDiagramStep();
+      store.getState().selectDiagramStep(window.__layerOrderStep);
+      store.getState().openDiagramStep(window.__layerOrderStep);
+    });
+    await reopenDetail(page);
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+
+    // Unconstrained, at the first order: ‹ held, › free, no readout between them, Edit order… after.
+    const first = await poseToolbarState(page);
+    console.log(`[${tag}] toolbar at the first order: ${JSON.stringify(first)}`);
+    const at = first.names.indexOf('Previous Layer Order');
+    if (
+      JSON.stringify(first.names.slice(at, at + 5)) !==
+      JSON.stringify(['Previous Layer Order', 'Next Layer Order', EDIT_ORDER, 'Spread Layers', 'Reset Pose'])
+    ) {
+      throw new Error('the toolbar is not ‹ › Edit order… Spread Reset');
+    }
+    // Named by its word (label in name), titled in full.
+    if (first.editTitle !== 'Edit layer order…') throw new Error(`Edit order…'s tooltip: ${first.editTitle}`);
+    if (/\d\s*of\s*\d|Layer order \d/.test(first.text)) throw new Error(`the toolbar reads out a place: ${first.text}`);
+    if (!first.previous || first.next || first.edit) throw new Error('at the first order: ‹ held, › and Edit order… free');
+    await record(`pose-${tag}-toolbar-first`, { toolbar: await toolbarShot(page, 'Previous Layer Order') });
+
+    // On to the last: › until it holds, which it does once the count is done.
+    let steps = 0;
+    for (; steps < 24 && !(await poseToolbarState(page)).next; steps += 1) await toolbarVerb(page, 'Next Layer Order');
+    const last = await poseToolbarState(page);
+    const lastCase = (await poseNow(page)).render.foldCase;
+    console.log(`[${tag}] after ${steps} presses of ›: order ${lastCase}, ${JSON.stringify({ previous: last.previous, next: last.next })}`);
+    if (!last.next || last.previous) throw new Error('at the last order: › held, ‹ free');
+    await record(`pose-${tag}-toolbar-last`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
+
+    // Edit order… on the fold Pose holds, at the step's own order.
+    const before = await poseNow(page);
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    const asked = await dialogRequestAgainstKernel(page);
+    console.log(`[${tag}] Edit order… asked: ${JSON.stringify(asked)}`);
+    if (
+      asked.shown !== 'the step’s case' ||
+      asked.record !== null ||
+      !asked.digest ||
+      asked.turnDeg !== asked.rotationDeg ||
+      asked.surface !== 'pose'
+    ) {
+      throw new Error('Edit order… did not open on the step’s held fold');
+    }
+    if (asked.foldCase > 1 && !asked.firstDiffers) console.log(`[${tag}] (order ${asked.foldCase} draws as the first does)`);
+
+    // Pose's keys stand down while it is open: the step keys move nothing.
+    for (const key of [']', '[', 'ArrowRight', 'End', 'Home']) await page.keyboard.press(key);
+    const during = await poseNow(page);
+    if (during.selected !== before.selected || during.detail !== before.detail || during.render.foldCase !== before.render.foldCase) {
+      throw new Error(`a key reached Pose behind the dialog: ${JSON.stringify(during)}`);
+    }
+    await page.waitForTimeout(2500);
+    await record(`pose-${tag}-dialog`, { dialog: await steadyShot(page, dialog, { masked: false, timeoutMs: 60000 }) });
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    const cancelled = await poseNow(page);
+    if (cancelled.entries !== before.entries || cancelled.layerOrder !== before.layerOrder) throw new Error('Cancel wrote something');
+    console.log(`[${tag}] keys behind the dialog moved nothing; Cancel wrote nothing (${cancelled.entries} undo steps, record ${cancelled.layerOrder})`);
+    // And once it is closed they answer again.
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press(']');
+    await page.waitForFunction((was) => window.__treemakerWorkspaceStore.getState().diagramSelectedStepId !== was, before.selected, {
+      timeout: 5000,
+    });
+    console.log(`[${tag}] after the dialog closed, ] went on to the next step`);
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().selectDiagramStep(window.__layerOrderStep);
+      store.getState().openDiagramStep(window.__layerOrderStep);
+    });
+    await reopenDetail(page);
+
+    // Apply through Pose → undo → Turn Over draws the order before Apply. The dialog's Apply waits for
+    // U10, so its answer is given through its store, as that Apply will give it: an order worked out on
+    // the host engine from the request Pose opened it with (`applyThroughOpenDialog`).
+    const preApplyShot = await stageShot(page);
+    await record(`pose-${tag}-before-apply`, { stage: preApplyShot });
+    await toolbarVerb(page, 'Turn Over');
+    const beforeTurned = await stageShot(page);
+    await record(`pose-${tag}-before-apply-turned`, { stage: beforeTurned });
+    await toolbarVerb(page, 'Turn Over');
+    const ready = await poseNow(page);
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    const answered = await applyThroughOpenDialog(page);
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    await page.waitForFunction((was) => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length > was, ready.entries, {
+      timeout: 120000,
+    });
+    await captured(page);
+    const afterApply = await poseNow(page);
+    const label = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.at(-1)?.label);
+    const appliedShot = await stageShot(page);
+    const appliedDiffers = await pixelDiff(page, preApplyShot, appliedShot);
+    console.log(
+      `[${tag}] Apply through Pose: ${JSON.stringify(answered)}, one undo step "${label}" (${afterApply.entries - ready.entries}), ` +
+        `record ${afterApply.layerOrder ? 'written' : 'none'}, ${appliedDiffers.differing} of ${appliedDiffers.pixels} pixels changed`
+    );
+    // One undo step, named as the Step pane's Apply names it.
+    if (afterApply.entries - ready.entries !== 1 || label !== 'Change layer order' || !afterApply.layerOrder || appliedDiffers.differing === 0) {
+      throw new Error('Apply through Pose did not write its order as one undo step');
+    }
+    await record(`pose-${tag}-applied`, { stage: appliedShot });
+    await page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.undo');
+    });
+    await captured(page);
+    const undone = await poseNow(page);
+    if (undone.layerOrder !== ready.layerOrder) throw new Error('undo left the applied record');
+    await toolbarVerb(page, 'Turn Over');
+    const undoneTurned = await stageShot(page);
+    const preApply = await pixelDiff(page, beforeTurned, undoneTurned);
+    console.log(`[${tag}] Apply → undo → Turn Over vs the order before Apply turned over: ${preApply.differing} pixels differ`);
+    if (preApply.differing !== 0) throw new Error('Turn Over after the undo did not draw the order before Apply');
+    await record(`pose-${tag}-undone-turned`, { stage: undoneTurned });
+    await toolbarVerb(page, 'Turn Over');
+
+    // The #523 review's race: Apply, Turn Over, then ⌘Z some milliseconds later, while the turn may still
+    // be reading the fold the undo takes the order of. Nothing may say the picture couldn't be captured.
+    const raced = await undoRaceSweep(page, RACE_DELAYS_MS);
+    console.log(`[${tag}] Apply, Turn Over, undo after ${raced.map((round) => `${round.delay}ms`).join(', ')}: ${JSON.stringify(raced.flatMap((round) => round.errors))}`);
+    if (raced.some((round) => round.errors.length > 0 || round.record)) throw new Error('an undo under a turn failed it');
+
+    // Constrained: D9's hold on ‹ ›, and Edit order… opening on the record.
+    const applied = await applyConstraintToStep(page);
+    await captured(page);
+    if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
+    const constrained = await poseToolbarState(page);
+    console.log(`[${tag}] constrained toolbar: ${JSON.stringify({ previous: constrained.previous, next: constrained.next, edit: constrained.edit })}`);
+    if (!constrained.previous || !constrained.next || constrained.edit) throw new Error('constrained: ‹ › held, Edit order… free');
+    await record(`pose-${tag}-toolbar-constrained`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
+    const constrainedBefore = await poseNow(page);
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    const askedConstrained = await dialogRequestAgainstKernel(page);
+    console.log(`[${tag}] Edit order… on the constrained step asked: ${JSON.stringify(askedConstrained)}`);
+    if (askedConstrained.record !== 1 || askedConstrained.shown !== null || !askedConstrained.digest || askedConstrained.surface !== 'pose') {
+      throw new Error('Edit order… did not open on the step’s record');
+    }
+    await page.waitForTimeout(2500);
+    await record(`pose-${tag}-dialog-constrained`, { dialog: await steadyShot(page, dialog, { masked: false, timeoutMs: 60000 }) });
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    const after = await poseNow(page);
+    if (after.entries !== constrainedBefore.entries || after.layerOrder !== constrainedBefore.layerOrder) {
+      throw new Error('Cancel on the constrained step wrote something');
+    }
+    console.log(`[${tag}] constrained: Cancel wrote nothing`);
+    await record(`pose-${tag}-constrained`, { page: await pageShot(page) });
   };
 }
 
@@ -2609,6 +3004,8 @@ const CASES = [
   { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
   { name: 'edit-selection', run: editSelectionCases(null) },
   { name: 'edit-selection-horizon', run: editSelectionCases('Horizon') },
+  { name: 'pose-toolbar', run: poseToolbarCases(null) },
+  { name: 'pose-toolbar-horizon', run: poseToolbarCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------

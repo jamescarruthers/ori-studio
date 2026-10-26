@@ -211,8 +211,8 @@ export interface StepFoldSource {
 /**
  * Fold a step's creases as a capture does — stepped to `foldCase`, the
  * kernel's layer order the step shows, when that is past the first — read
- * what the fold was made from and the paper it lies on, and free it. A fold's
- * source is the same at every case; its scene is the case's.
+ * what the fold was made from and the paper it lies on ({@link heldFoldSource}),
+ * and free it. A fold's source is the same at every case; its scene is the case's.
  */
 export async function stepFoldSource(
   runtime: CpFoldRuntime,
@@ -224,16 +224,33 @@ export async function stepFoldSource(
   const folded = await openFold(runtime, [...lineIds], model);
   try {
     if (foldCase > 1) await runtime.foldToCase(folded.handle, foldCase);
-    const kernel = await runtime.source(folded.handle);
-    const scene = await runtime.paperScene(folded.handle);
-    return {
-      source: layerOrderSourceOf(kernel, model),
-      frame: scene && scene.sheet_points.length > 0 ? diagramLayerOrderFrame(scene) : segmentsFrame(kernel),
-      scene,
-    };
+    return await heldFoldSource(runtime, folded.handle, model);
   } finally {
     await runtime.free(folded.handle);
   }
+}
+
+/**
+ * What a flat fold someone holds was made from, and the paper it lies on, as
+ * it stands — Pose's held fold (H8), in the kernel's order at its case or in a
+ * record's (`fold_with_order` folds exactly the source it is given, so its
+ * source is the plain fold's). `model` is the one it was folded or last set
+ * with; `scene`, its paper scene when the holder has read it already.
+ */
+export async function heldFoldSource(
+  runtime: CpFoldRuntime,
+  handle: number,
+  model: OristudioCpFoldedFigureModel,
+  scene?: OristudioCpFoldedPaperScene | null
+): Promise<StepFoldSource> {
+  if (!runtime.source) throw new Error('This crease kernel cannot say what a fold was made from');
+  const kernel = await runtime.source(handle);
+  const paper = scene === undefined ? await runtime.paperScene(handle) : scene;
+  return {
+    source: layerOrderSourceOf(kernel, model),
+    frame: paper && paper.sheet_points.length > 0 ? diagramLayerOrderFrame(paper) : segmentsFrame(kernel),
+    scene: paper,
+  };
 }
 
 /** Why a record's order was not drawn: the host engine's answer, or the kernel refusing to draw it. */
