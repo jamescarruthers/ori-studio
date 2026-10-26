@@ -22,6 +22,7 @@ import {
   foldedFigureLayerOrderAttention,
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderHold,
+  foldedFigureLayerOrderRecord,
   refoldHeldByLayerOrder,
   refoldHeldByLayerOrderReason,
   type FoldedFigureLayerOrderBlock,
@@ -728,9 +729,13 @@ export function anotherSolutionCommand(
 function heldByLayerOrderHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string | null {
   switch (foldedFigureLayerOrderHold(figure)) {
     case 'record':
-      return foldedFigureLayerOrderAttention(figure)
-        ? t('panels:foldedFigureActions.layerOrderReviewFirst', 'Review the layer constraints that need attention first')
-        : t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
+      if (!foldedFigureLayerOrderAttention(figure)) {
+        return t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
+      }
+      // An order chosen with no constraint has none to review: the order itself (D16).
+      return (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0
+        ? t('panels:foldedFigureActions.layerOrderReviewChosenFirst', 'Review the chosen layer order first')
+        : t('panels:foldedFigureActions.layerOrderReviewFirst', 'Review the layer constraints that need attention first');
     case 'newer':
       return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
     case null:
@@ -762,7 +767,7 @@ export function layerOrderCommand(
   const { t, openLayerOrder } = deps;
   if (!openLayerOrder) return null;
   const block = foldedFigureLayerOrderBlock(figure);
-  const hint = block ? layerOrderBlockHint(block, t) : null;
+  const hint = block === '3d' ? layerOrder3dHint(figure, t) : block ? layerOrderBlockHint(block, t) : null;
   return {
     kind: 'command',
     id: 'layer-order',
@@ -772,6 +777,27 @@ export function layerOrderCommand(
     ...(hint ? { hint } : {}),
     run: () => openLayerOrder(figure),
   };
+}
+
+/**
+ * Why "Layer order…" waits on a 3D figure, in the States board's words for
+ * its 3D lock: and, when it keeps a chosen order, that its constraints are
+ * kept for when it folds flat again (D13).
+ */
+function layerOrder3dHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string {
+  const record = foldedFigureLayerOrderRecord(figure);
+  if (!record) return t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
+  if (record.constraints.length === 0) {
+    return t(
+      'panels:foldedFigureActions.layerOrder3dChosenKept',
+      'Layer order works on flat figures. Its chosen layer order is kept for when it folds flat again.'
+    );
+  }
+  return t('panels:foldedFigureActions.layerOrder3dKept', {
+    count: record.constraints.length,
+    defaultValue_one: 'Layer order works on flat figures. Its layer constraint is kept for when it folds flat again.',
+    defaultValue_other: 'Layer order works on flat figures. Its {{count}} layer constraints are kept for when it folds flat again.',
+  });
 }
 
 /** Why "Layer order…" waits, as its hint; null while the figure is folding, which says nothing. */

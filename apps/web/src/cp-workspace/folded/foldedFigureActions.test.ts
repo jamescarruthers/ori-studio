@@ -23,6 +23,7 @@ import {
   type FoldedFigureToggleOption,
 } from './foldedFigureActions';
 import { foldedFigureNotice } from './foldedFigureNotice';
+import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
@@ -575,7 +576,7 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
       return solved({ layerOrder: made.layerOrder });
     };
 
-    it('leads the toolbar and the menu with how many, its sentence, and Review…, which opens the dialog', () => {
+    it('leads the toolbar and the menu with the flag, how many in its sentence, and Review…, which opens the dialog', () => {
       const runNoticeAction = vi.fn();
       const figure = flagged({ reason: 'conflict', count: 2 });
       const actions = buildFoldedFigureActions(figure, withLayerOrder({ t: tp, runNoticeAction }));
@@ -587,7 +588,7 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
         notice: {
           id: 'layer-order-attention',
           tone: 'warn',
-          label: '2 need attention',
+          label: 'Needs attention',
           detail: '2 layer constraints need attention since the creases changed.',
           action: { id: 'review-layer-order', label: 'Review…', lineIds: [] },
         },
@@ -602,11 +603,62 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
 
     it('says a check that ran out of time, and an order chosen with no constraint, in their own words', () => {
       const timedOut = foldedFigureNotice(tp, flagged({ reason: 'timeout', count: 1 }));
-      expect(timedOut).toMatchObject({ label: '1 needs attention', detail: '1 layer constraint couldn’t be checked in time.' });
-      const chosen = foldedFigureNotice(tp, flagged({ reason: 'timeout', count: 0 }, []));
-      expect(chosen).toMatchObject({
+      expect(timedOut).toMatchObject({ label: 'Needs attention', detail: '1 layer constraint couldn’t be checked in time.' });
+      const chosen = flagged({ reason: 'timeout', count: 0 }, []);
+      expect(foldedFigureNotice(tp, chosen)).toMatchObject({
         label: 'Needs attention',
         detail: 'This figure’s chosen layer order couldn’t be checked in time.',
+      });
+      // ‹ › point at the order itself: there is no constraint to review.
+      expect(command(chosen, withLayerOrder(), 'another')).toMatchObject({
+        disabled: true,
+        hint: 'Review the chosen layer order first',
+      });
+    });
+
+    it('says a record a reload detached isn’t applied, with Review…, from saved data alone', () => {
+      const runNoticeAction = vi.fn();
+      const plain = solved();
+      const detached = { ...plain, detachedLayerOrder: { record: twoConstraintRecord(), json: '{}', sourceKey: foldedFigureSourceKey(plain) } };
+      const [note] = buildFoldedFigureActions(detached, withLayerOrder({ t: tp, runNoticeAction }));
+      expect(note).toMatchObject({
+        kind: 'note',
+        notice: {
+          id: 'layer-order-attention',
+          label: 'Not applied',
+          detail: 'An older Ori Studio refolded this figure, so its 2 layer constraints aren’t applied.',
+          action: { id: 'review-layer-order', label: 'Review…' },
+        },
+      });
+      // Never its own record: Another solution steps Oriedita's search as before.
+      expect(command(detached, withLayerOrder(), 'another').disabled).toBe(false);
+      // Folded since from other creases, or taken up by an Apply: nothing to show.
+      for (const quiet of [
+        { ...detached, sourceFingerprint: 'cs1:another' },
+        { ...detached, detachedLayerOrder: { ...detached.detachedLayerOrder, reattached: true as const } },
+      ]) {
+        expect(foldedFigureNotice(tp, quiet)).toBeNull();
+      }
+    });
+
+    it('flags a 3D figure whose creases fold flat again and whose record a refold could not draw: Layer order… opens', () => {
+      const made = foldedFigureLayerOrder(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } }));
+      if (!made.ok) throw new Error('the fixture record encodes');
+      const figure = { ...make3dFigure(), sourceBounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 }, layerOrder: made.layerOrder };
+      expect(foldedFigureNotice(tp, figure)).toMatchObject({ id: 'layer-order-attention', label: 'Needs attention' });
+      expect(command(figure, withLayerOrder({ t: tp }), 'layer-order')).toMatchObject({ disabled: false });
+      expect(command(figure, withLayerOrder({ t: tp }), 'another')).toMatchObject({
+        disabled: true,
+        hint: 'Review the layer constraints that need attention first',
+      });
+    });
+
+    it('says on a 3D figure that its constraints are kept for when it folds flat again (D13)', () => {
+      const waiting = foldedFigureLayerOrder(twoConstraintRecord({ attention: { reason: 'route-3d', count: 2 } }));
+      if (!waiting.ok) throw new Error('the fixture record encodes');
+      expect(command({ ...make3dFigure(), layerOrder: waiting.layerOrder }, withLayerOrder({ t: tp }), 'layer-order')).toMatchObject({
+        disabled: true,
+        hint: 'Layer order works on flat figures. Its 2 layer constraints are kept for when it folds flat again.',
       });
     });
 

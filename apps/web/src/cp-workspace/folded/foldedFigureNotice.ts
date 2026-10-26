@@ -26,12 +26,11 @@ import type {
   OristudioCpFoldedFigureEntry,
 } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
-import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { cpDiagnosticEntryMessage } from '../diagnostics/foldabilityMessages';
 import { cpDiagnosticClass } from '../diagnostics/severity';
 import { cpDiagnosticEntryAt } from '../diagnostics/visibleEntries';
 import { documentLineIdsForKernelLines, kernelLineOrder } from './foldRoute';
-import { foldedFigureLayerOrderAttention, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import { foldedFigureLayerOrderFlag, type FoldedFigureLayerOrderFlag } from './foldedFigureLayerOrderState';
 
 /** What a notice asks the user to do about it. */
 export type FoldedFigureNoticeActionId = 'show-issues' | 'select-creases' | 'simulate-instead' | 'review-layer-order';
@@ -147,8 +146,9 @@ export function orderReasonDetail(t: TFunction, reason: OristudioCpFold3dOrderRe
  *
  * `null` on a flat figure whose layer constraints need nothing and on a 3D
  * figure whose verdict is `folded` — silence is the right report for success,
- * and a chip that always shows is a chip nobody reads. A flat figure whose
- * constraints need a look since an edit says so, with Review…
+ * and a chip that always shows is a chip nobody reads. A figure whose layer
+ * order is flagged — its constraints need a look since an edit, or a reload
+ * detached them — says so first, with Review…
  * ({@link foldedFigureLayerOrderAttentionNotice}).
  */
 export function foldedFigureNotice(
@@ -157,7 +157,10 @@ export function foldedFigureNotice(
 ): FoldedFigureNotice | null {
   const snapshot = figure?.folded3d ?? null;
   if (!figure) return null;
-  if (!snapshot) return foldedFigureLayerOrderAttentionNotice(t, figure);
+  // A flagged layer order leads: it is what the user acts on, and a 3D figure
+  // flagged so is one whose creases fold flat again (its verdict is the old picture's).
+  const flagged = foldedFigureLayerOrderAttentionNotice(t, figure);
+  if (flagged || !snapshot) return flagged;
   const verdict = snapshot.verdict;
   switch (verdict.verdict) {
     case 'folded':
@@ -217,31 +220,28 @@ export function foldedFigureNotice(
 }
 
 /**
- * A flat figure's layer constraints that need a look since an edit (D10,
- * D14), as the toolbar's chip and the context menu's first row say it: the
- * count, short; the sentence the Properties pane's notice says in full; and
- * Review…, which opens the Layer order dialog on them. Read from the record's
- * stored summary, never the engine. Null when nothing needs a look.
+ * A figure's layer order flag (`foldedFigureLayerOrderFlag`), as the toolbar's
+ * chip and the context menu's first row say it: a short label, within the
+ * chip's 16 characters, so the count is the sentence's; the sentence the
+ * Properties pane's notice says in full; and Review…, which opens the Layer
+ * order dialog on them. Read from saved data, never the engine. Null when
+ * nothing needs a look.
  */
 export function foldedFigureLayerOrderAttentionNotice(
   t: TFunction,
   figure: OristudioCpFoldedFigureEntry
 ): FoldedFigureNotice | null {
-  const attention = foldedFigureLayerOrderAttention(figure);
-  if (!attention) return null;
-  const chosen = (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0;
+  const flag = foldedFigureLayerOrderFlag(figure);
+  if (!flag) return null;
   return {
     id: 'layer-order-attention',
     tone: 'warn',
     // Literal keys so the i18n extractor can see them (see apps/web/CLAUDE.md).
-    label: chosen
-      ? t('panels:foldedFigureActions.chosenOrderAttentionLabel', 'Needs attention')
-      : t('panels:foldedFigureActions.layerOrderAttentionLabel', {
-          count: attention.count,
-          defaultValue_one: '{{count}} needs attention',
-          defaultValue_other: '{{count}} need attention',
-        }),
-    detail: foldedFigureLayerOrderAttentionSentence(t, figure, attention),
+    label:
+      flag.kind === 'detached'
+        ? t('panels:foldedFigureActions.layerOrderDetachedLabel', 'Not applied')
+        : t('panels:foldedFigureActions.layerOrderAttentionLabel', 'Needs attention'),
+    detail: foldedFigureLayerOrderFlagSentence(t, flag),
     action: {
       id: 'review-layer-order',
       label: t('panels:foldedFigureActions.reviewLayerOrder', 'Review…'),
@@ -251,17 +251,28 @@ export function foldedFigureLayerOrderAttentionNotice(
 }
 
 /**
- * Why a flat figure's layer constraints need a look, as one sentence: they
- * couldn't be checked in time, or they need attention since its creases
- * changed — clashing, split or gone, which the dialog tells apart row by row
- * when it opens. A record with no constraint says so of its chosen order (D16).
+ * A figure's layer order flag as one sentence: a reload detached its
+ * constraints because an older build folded it again (the approved
+ * "Detached by an older build" frame); they couldn't be checked in time; or
+ * they need attention since its creases changed — clashing, split or gone,
+ * which the dialog tells apart row by row when it opens. A record with no
+ * constraint says so of its chosen order (D16).
  */
-export function foldedFigureLayerOrderAttentionSentence(
-  t: TFunction,
-  figure: OristudioCpFoldedFigureEntry,
-  attention: LayerOrderAttention
-): string {
-  const chosen = (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0;
+export function foldedFigureLayerOrderFlagSentence(t: TFunction, flag: FoldedFigureLayerOrderFlag): string {
+  const chosen = flag.constraints === 0;
+  if (flag.kind === 'detached') {
+    return chosen
+      ? t(
+          'panels:cpProperties.folded.chosenOrderDetached',
+          'An older Ori Studio refolded this figure, so its chosen layer order isn’t applied.'
+        )
+      : t('panels:cpProperties.folded.layerConstraintsDetached', {
+          count: flag.constraints,
+          defaultValue_one: 'An older Ori Studio refolded this figure, so its layer constraint isn’t applied.',
+          defaultValue_other: 'An older Ori Studio refolded this figure, so its {{count}} layer constraints aren’t applied.',
+        });
+  }
+  const { attention } = flag;
   const { count } = attention;
   if (attention.reason === 'timeout') {
     return chosen
@@ -284,15 +295,21 @@ export function foldedFigureLayerOrderAttentionSentence(
       });
 }
 
-/** The Properties pane's subtitle for a figure whose constraints need a look: the count, in full. */
-function layerOrderAttentionSubtitle(t: TFunction, figure: OristudioCpFoldedFigureEntry): string | undefined {
-  const attention = foldedFigureLayerOrderAttention(figure);
-  if (!attention) return undefined;
-  if ((foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0) {
-    return t('panels:cpProperties.folded.chosenOrderAttention', 'Chosen layer order needs attention');
+/** The Properties pane's subtitle for a figure whose layer order is flagged: the count, in full. */
+function layerOrderFlagSubtitle(t: TFunction, flag: FoldedFigureLayerOrderFlag): string {
+  const chosen = flag.constraints === 0;
+  if (flag.kind === 'detached') {
+    return chosen
+      ? t('panels:cpProperties.folded.chosenOrderNotApplied', 'Chosen layer order isn’t applied')
+      : t('panels:cpProperties.folded.layerConstraintsNotApplied', {
+          count: flag.constraints,
+          defaultValue_one: '1 layer constraint isn’t applied',
+          defaultValue_other: '{{count}} layer constraints aren’t applied',
+        });
   }
+  if (chosen) return t('panels:cpProperties.folded.chosenOrderAttention', 'Chosen layer order needs attention');
   return t('panels:cpProperties.folded.layerConstraintsAttention', {
-    count: attention.count,
+    count: flag.attention.count,
     defaultValue_one: '1 layer constraint needs attention',
     defaultValue_other: '{{count}} layer constraints need attention',
   });
@@ -300,11 +317,11 @@ function layerOrderAttentionSubtitle(t: TFunction, figure: OristudioCpFoldedFigu
 
 /**
  * The tone the Properties pane draws its subtitle in: a warning while the
- * figure's layer constraints need a look (the Properties board's state C),
- * the quiet default otherwise.
+ * figure's layer order is flagged (the Properties board's state C), the
+ * quiet default otherwise.
  */
 export function foldedFigureSubtitleTone(figure: OristudioCpFoldedFigureEntry): 'warning' | undefined {
-  return figure.status === 'ready' && foldedFigureLayerOrderAttention(figure) ? 'warning' : undefined;
+  return figure.status === 'ready' && foldedFigureLayerOrderFlag(figure) ? 'warning' : undefined;
 }
 
 /**
@@ -324,7 +341,8 @@ export function foldedFigureSubtitle(
   figure: OristudioCpFoldedFigureEntry,
   stale: boolean
 ): string | undefined {
-  if (foldedFigureSubtitleTone(figure)) return layerOrderAttentionSubtitle(t, figure);
+  const flag = figure.status === 'ready' ? foldedFigureLayerOrderFlag(figure) : null;
+  if (flag) return layerOrderFlagSubtitle(t, flag);
   if (stale) return t('panels:creasePattern.stale', 'Stale');
   // Literal keys so the i18n extractor can see them (see apps/web/CLAUDE.md).
   switch (figure.status) {

@@ -38,7 +38,11 @@ import {
   layerOrderCommand,
   previousSolutionCommand,
 } from './foldedFigureActions';
-import { foldedFigureLayerOrderHold, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import {
+  foldedFigureAwaitsFlatRefold,
+  foldedFigureLayerOrderHold,
+  foldedFigureLayerOrderRecord,
+} from './foldedFigureLayerOrderState';
 import {
   foldedAppearanceSupport,
   foldedAppearanceVisible,
@@ -506,9 +510,15 @@ function layerOrderField(
       ...(note ? { note } : {}),
     };
   }
+  // A 3D figure whose creases fold flat again, its record flagged by a refold
+  // on them: a stale figure on flat creases. Edit… opens on them; no pager,
+  // since its 3D solutions are not the ones its record orders; the flag below.
+  const record = foldedFigureLayerOrderRecord(figure);
+  if (foldedFigureAwaitsFlatRefold(figure)) {
+    return { ...row, readout: '', support: 'supported', ...(action ? { action } : {}), ...(note ? { note } : {}) };
+  }
   // A 3D figure keeps a chosen order for when its creases fold flat again
   // (D13): no pager, Edit… held, and why under the label.
-  const record = foldedFigureLayerOrderRecord(figure);
   if (isFolded3dFigure(figure) && record) {
     const flat = t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
     return {
@@ -517,6 +527,8 @@ function layerOrderField(
       readout: '',
       support: 'unsupported',
       reason: flat,
+      // The row says the rest under its label: the button's own reason stays short.
+      ...(action ? { action: { ...action, hint: flat } } : {}),
       note: {
         kind: 'reason',
         text: t('panels:cpProperties.folded.layerOrderKept3d', {
@@ -526,7 +538,6 @@ function layerOrderField(
             'Layer order works on flat figures. Its {{count}} constraints are kept for when it folds flat again.',
         }),
       },
-      ...(action ? { action } : {}),
     };
   }
   // Failed or reopened from a file: as every kernel-backed row waits. A

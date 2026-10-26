@@ -11,9 +11,10 @@
  */
 import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
-import type { LayerOrderLossCause } from '../../layer-order/host/layerOrderResolution';
+import { withLayerOrderAttention, type LayerOrderLossCause } from '../../layer-order/host/layerOrderResolution';
 import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { isFolded3dFigure } from './foldedFigureCapabilities';
+import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { foldedFigureHasLayerOrder } from './foldedFigureState';
 
 /**
@@ -35,8 +36,11 @@ export type FoldedFigureLayerOrderBlock = '3d' | 'waiting' | 'undetermined' | 'n
 
 /** Why "Layer order…" cannot open on `figure`, or null when it can. */
 export function foldedFigureLayerOrderBlock(figure: OristudioCpFoldedFigureEntry): FoldedFigureLayerOrderBlock | null {
-  if (isFolded3dFigure(figure)) return '3d';
+  const awaitsFlat = foldedFigureAwaitsFlatRefold(figure);
+  if (isFolded3dFigure(figure) && !awaitsFlat) return '3d';
   if (figure.status !== 'ready') return 'waiting';
+  // A stale figure on flat creases: opened on them, as any stale figure is (D12).
+  if (awaitsFlat) return figure.sourceBounds == null ? 'no-source' : null;
   const found = foldedFigureHasLayerOrder(figure);
   if (found === null) return 'waiting';
   if (!found) return 'undetermined';
@@ -55,7 +59,7 @@ export function foldedFigureLayerOrderBlock(figure: OristudioCpFoldedFigureEntry
  * (D13).
  */
 export function foldedFigureLayerOrderHold(figure: OristudioCpFoldedFigureEntry): 'record' | 'newer' | null {
-  if (isFolded3dFigure(figure)) return null;
+  if (isFolded3dFigure(figure) && !foldedFigureAwaitsFlatRefold(figure)) return null;
   return figure.layerOrder?.kind ?? null;
 }
 
@@ -65,15 +69,73 @@ export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntr
 }
 
 /**
- * Why a flat figure's constraints need a look since its creases changed, as
- * its record stores it (D10, D11): the summary a refold kept the old picture
+ * A 3D figure whose creases fold flat again, and whose record a refold on
+ * them did not draw: it keeps its 3D picture, and its record a summary other
+ * than waiting for flat creases (D10 after D13). It is a stale figure on flat
+ * creases: flagged, opened on them, and refolded flat by an Apply.
+ */
+export function foldedFigureAwaitsFlatRefold(figure: OristudioCpFoldedFigureEntry): boolean {
+  if (!isFolded3dFigure(figure)) return false;
+  const attention = foldedFigureLayerOrderRecord(figure)?.attention;
+  return attention !== undefined && attention.reason !== 'route-3d';
+}
+
+/**
+ * Why a figure's constraints need a look since its creases changed, as its
+ * record stores it (D10, D11): the summary a refold kept the old picture
  * with, or drew the rest of the constraints without. Null for a figure whose
- * record needs nothing, a figure with none, and a 3D figure, whose record
+ * record needs nothing, a figure with none, and a 3D figure whose record
  * waits for its creases to fold flat again and says so on its own row (D13).
  */
 export function foldedFigureLayerOrderAttention(figure: OristudioCpFoldedFigureEntry): LayerOrderAttention | null {
-  if (isFolded3dFigure(figure)) return null;
+  if (isFolded3dFigure(figure) && !foldedFigureAwaitsFlatRefold(figure)) return null;
   return foldedFigureLayerOrderRecord(figure)?.attention ?? null;
+}
+
+/**
+ * A record a reload detached from this figure, shown for review: while the
+ * figure is flat, holds no record of its own, and is folded from the creases
+ * the record was saved on (its source key); never once an Apply took it up.
+ * Never used to fold (`foldedFigureLayerOrders.ts`).
+ */
+export function foldedFigureDetachedLayerOrder(figure: OristudioCpFoldedFigureEntry): LayerOrderRecord | null {
+  const detached = figure.detachedLayerOrder;
+  if (!detached || detached.reattached || figure.layerOrder || isFolded3dFigure(figure)) return null;
+  return foldedFigureSourceKey(figure) === detached.sourceKey ? detached.record : null;
+}
+
+/**
+ * What a figure's flag says, read from saved data alone: its constraints need
+ * a look since an edit (`attention`, D10, D14), or a reload detached them
+ * because an older build folded it again (`detached`); null when there is
+ * nothing to look at. `constraints` is how many the record holds; none is an
+ * order chosen with no constraint (D16).
+ */
+export type FoldedFigureLayerOrderFlag =
+  | { readonly kind: 'attention'; readonly attention: LayerOrderAttention; readonly constraints: number }
+  | { readonly kind: 'detached'; readonly constraints: number };
+
+export function foldedFigureLayerOrderFlag(figure: OristudioCpFoldedFigureEntry): FoldedFigureLayerOrderFlag | null {
+  const attention = foldedFigureLayerOrderAttention(figure);
+  if (attention) {
+    return { kind: 'attention', attention, constraints: foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0 };
+  }
+  const detached = foldedFigureDetachedLayerOrder(figure);
+  return detached ? { kind: 'detached', constraints: detached.constraints.length } : null;
+}
+
+/**
+ * The record "Layer order…" and Review… open the dialog on: the figure's
+ * own, or one detached for review, flagged as detached so that even an
+ * untouched Apply takes it up; null with neither.
+ */
+export function foldedFigureLayerOrderDialogRecord(figure: OristudioCpFoldedFigureEntry): LayerOrderRecord | null {
+  const own = foldedFigureLayerOrderRecord(figure);
+  if (own) return own;
+  const detached = foldedFigureDetachedLayerOrder(figure);
+  return detached
+    ? withLayerOrderAttention(detached, { reason: 'detached', count: detached.constraints.length })
+    : null;
 }
 
 /**

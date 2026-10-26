@@ -77,13 +77,13 @@ import {
   deleteFoldedFigure,
   duplicateFoldedFigure,
   exportFoldedFigure,
+  refoldFoldedFigure,
   setFoldedFigureDisplayStyle,
   showAnotherFoldedSolution,
 } from './foldedFigureVerbs';
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
-import { sayFoldedFigureLayerOrderRefold } from './foldedFigureLayerOrderToasts';
 
 /**
  * The face folding holds fixed. Oriedita lets this be chosen and the kernel still
@@ -170,9 +170,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
   );
   const updateOristudioCpFoldedFigureModel = useWorkspaceStore(
     (state) => state.updateOristudioCpFoldedFigureModel
-  );
-  const refoldOristudioCpFoldedFigure = useWorkspaceStore(
-    (state) => state.refoldOristudioCpFoldedFigure
   );
   const setOristudioCpViewportOption = useWorkspaceStore(
     (state) => state.setOristudioCpViewportOption
@@ -958,15 +955,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
         void duplicateFoldedFigure(figure.id, t);
       },
       remove: (figure) => void deleteFoldedFigure(figure.id, t),
-      refold: (figure) =>
-        runFoldedFigureAction(
-          t('panels:creasePattern.refoldFoldedModelAction', 'Refold folded model'),
-          () =>
-            refoldOristudioCpFoldedFigure(figure.id, {
-              // A chosen layer order refolds with it (H4): say what it came to.
-              onLayerOrder: (outcome) => sayFoldedFigureLayerOrderRefold(outcome, figure.title, t),
-            })
-        ),
+      // A chosen layer order refolds with it (H4), saying what it came to.
+      refold: (figure) => {
+        endOpenMenuGesture();
+        void refoldFoldedFigure(figure.id, t);
+      },
       // Derived, not stamped: an edit outside a figure's source region leaves it
       // alone, which is the whole point of porting Oriedita's box + content
       // check. Memoized on the document so a pan or a selection does not re-run
@@ -1036,7 +1029,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       trackStyled,
       setOristudioCpFolded3dCamera,
       endOpenMenuGesture,
-      refoldOristudioCpFoldedFigure,
       runFoldedFigureAction,
       setOristudioCpViewportOption,
       requestOristudioCpAction,

@@ -9,6 +9,7 @@ import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCam
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import { foldedFigureSourceKey } from './foldedFigureLayerOrders';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 
 afterEach(() => resetSolutionFrontiers());
@@ -328,6 +329,44 @@ describe('buildFoldedFigureProperties', () => {
       );
     });
 
+    it('flags a record a reload detached as not applied, with Review…, and leaves the row as an unconstrained one', () => {
+      const d = deps();
+      const detached = {
+        ...SOLVED,
+        detachedLayerOrder: { record: twoConstraintRecord(), json: '{}', sourceKey: foldedFigureSourceKey(SOLVED) },
+      };
+      const sheet = sheetFor(detached, d);
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints aren’t applied', subtitleTone: 'warning' });
+      const pose = sheet.sections.find((section) => section.id === 'pose');
+      expect(pose?.notice).toMatchObject({
+        tone: 'warning',
+        text: 'An older Ori Studio refolded this figure, so its 2 layer constraints aren’t applied.',
+        actions: [{ id: 'review-layer-order', label: 'Review…', disabled: false }],
+      });
+      pose?.notice?.actions?.[0]?.run();
+      expect(d.reviewLayerOrder).toHaveBeenCalledWith(detached);
+      // Not its own: the row steps Oriedita's search, and says nothing of constraints.
+      const layerOrder = stepper(sheet);
+      expect(layerOrder).toMatchObject({ readout: '2 of 3+', next: { disabled: false } });
+      expect(layerOrder.note).toBeUndefined();
+    });
+
+    it('opens a 3D figure whose creases fold flat again, its record flagged, as a stale flat one', () => {
+      const d = deps({ stale: true });
+      const flagged = {
+        ...SPATIAL,
+        sourceBounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+        layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })),
+      };
+      const sheet = sheetFor(flagged, d);
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints need attention', subtitleTone: 'warning' });
+      const layerOrder = stepper(sheet);
+      expect(layerOrder).toMatchObject({ support: 'supported', readout: '', action: { label: 'Edit…', disabled: false } });
+      expect(layerOrder.previous).toBeUndefined();
+      expect(layerOrder.note).toEqual({ kind: 'status', text: '2 constraints' });
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice?.actions?.[0]).toMatchObject({ disabled: false });
+    });
+
     it('keeps a 3D figure’s flag on its row alone: no warning header, no notice (D13)', () => {
       const waiting = { ...SPATIAL, layerOrder: held(twoConstraintRecord({ attention: { reason: 'route-3d', count: 2 } })) };
       const sheet = sheetFor(waiting);
@@ -369,7 +408,8 @@ describe('buildFoldedFigureProperties', () => {
           kind: 'reason',
           text: 'Layer order works on flat figures. Its 2 constraints are kept for when it folds flat again.',
         },
-        action: { label: 'Edit…', disabled: true },
+        // Short on the button: the row says the rest (the toolbar's tooltip says it all).
+        action: { label: 'Edit…', disabled: true, hint: 'Layer order works on flat figures' },
       });
       expect(kept.previous).toBeUndefined();
       expect(kept.next).toBeUndefined();

@@ -47,7 +47,8 @@ import type {
 } from '../../store/workspaceStore/types';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
-import { foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import { foldedFigureLayerOrderDialogRecord } from './foldedFigureLayerOrderState';
+import { refoldFoldedFigure } from './foldedFigureVerbs';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type FoldedFigureLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
@@ -101,7 +102,8 @@ export function foldedFigureLayerOrderRequest(
   opening: Extract<OristudioCpFigureLayerOrderOpening, { status: 'ready' }>,
   view: EditFigureView
 ): LayerOrderRequest {
-  const record = foldedFigureLayerOrderRecord(figure);
+  // Its own, or one a reload detached, shown for review (never folded with).
+  const record = foldedFigureLayerOrderDialogRecord(figure);
   return {
     surface: 'edit_figure',
     source: layerOrderSourceOf(opening.source, opening.model),
@@ -164,6 +166,9 @@ export async function openFoldedFigureLayerOrder(
     // From the flag's Review…: the dialog opens on the rows that need attention (D14).
     const outcome = await openLayerOrderDialog(via === 'review' ? { ...request, review: true } : request);
     if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, t, opening.refold);
+    // A stale figure with no record, its Apply untouched: the order a plain
+    // Refold draws (the dialog opened on it), so the Apply is that Refold (D12).
+    if (outcome.kind === 'unchanged' && opening.refold && request.record === null) await refoldFoldedFigure(id, t);
     return outcome.kind;
   } finally {
     await opening.release();
