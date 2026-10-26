@@ -479,7 +479,6 @@ export function listControls(state: LayerOrderDialogState): LayerListControls {
     redo: settled && canRedo(state.history),
     clearAll: settled && rows > 0,
     clearSentence: builderLive(state) && (state.sentence.subject !== null || state.sentence.objects.length > 0),
-    /** Each row's trash and each object's × (D21). */
     remove: open && quietNow && state.settle.kind !== 'restoring',
   };
 }
@@ -692,7 +691,7 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
 
 /** One object of a list row: the stored constraint behind it. */
 export interface LayerRowMemberView {
-  /** Its id: an object's × in a row of two or more sends `rows_removed` with it alone (D21). */
+  /** The stored constraint's id. */
   readonly id: number;
   /** Null when the face no longer exists. */
   readonly object: LayerFace | null;
@@ -703,10 +702,9 @@ export interface LayerRowMemberView {
 /**
  * One row of the constraints list: one subject, one verb, one or more
  * objects, "D in front of H, K" (D21).
- * - `row_hovered` and `row_clicked` take its `key`, which stays the same as
- *   its constraints go and as the figure turns over.
- * - Its trash always sends `rows_removed` with every member's id, a row of
- *   one included; an object's × sends that member's id alone.
+ * - `row_hovered`, `row_clicked` and `row_removed` (its trash, the whole row)
+ *   take its `key`, which stays the same as the figure turns over and as an
+ *   undo takes back an Add that joined it.
  */
 export interface LayerRowGroupView {
   readonly key: LayerRowKey;

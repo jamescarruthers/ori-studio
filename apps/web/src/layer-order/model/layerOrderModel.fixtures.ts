@@ -203,6 +203,11 @@ export function rowKey(state: LayerOrderDialogState, id: number): LayerRowKey {
   return rowKeyOf(row, state.figure);
 }
 
+/** The trash of the list row that shows stored constraint `id`: the whole row goes. */
+export function trashOf(state: LayerOrderDialogState, id: number): LayerOrderAction {
+  return { type: 'row_removed', key: rowKey(state, id) };
+}
+
 /** Open, pick 2 in front of 0, preview it fitting, Add it, and land the commit: one committed row, `[2, 0, 1]`. */
 export function withOneConstraint(openPairsAfter: Uint32Array = Uint32Array.of(2, 3, 4, 5)): Played {
   const added = play(fits(picked(opened().state, 2, 0)).state, { type: 'add' });

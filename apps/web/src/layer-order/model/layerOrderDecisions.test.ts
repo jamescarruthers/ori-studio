@@ -26,6 +26,7 @@ import {
   position,
   sidesOf,
   stacksOf,
+  trashOf,
 } from './layerOrderModel.fixtures';
 import { addState, applyState, hintLine, openNotice, rowGroupsView, statusView } from './layerOrderSelectors';
 
@@ -121,7 +122,7 @@ describe('decisions', () => {
     expect(added.state.solutions.runs).toBe(true);
     expect(lastOf(added.effects, 'solutions_restart').count).toBe(true);
     const removed = commits(
-      play(added.state, { type: 'rows_removed', ids: [added.state.rows.committed[0]!.id] }),
+      play(added.state, trashOf(added.state, added.state.rows.committed[0]!.id)),
       withOpenPairs(limit + 1)
     );
     expect(removed.state.solutions.runs).toBe(false);
@@ -159,7 +160,7 @@ describe('decisions', () => {
     expect(dispatch(state, { type: 'apply', at: 2_000 }).effects).toEqual([]);
 
     const first = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'rows_removed', ids: [first] });
+    const removed = play(state, trashOf(state, first));
     // Never one by one: every row left that can apply, in one commit.
     expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[0, 2, 1], [4, 5, -1]]]);
     expect(applyState(removed.state)).toEqual({ enabled: false, why: 'unsettled' });

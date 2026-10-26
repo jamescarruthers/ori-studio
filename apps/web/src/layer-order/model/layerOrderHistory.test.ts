@@ -6,9 +6,11 @@ import {
   canRedo,
   canUndo,
   emptyHistory,
+  landed,
   recorded,
   redoTarget,
   undoTarget,
+  type LayerHistory,
 } from './layerOrderHistory';
 
 describe('the local history', () => {
@@ -42,5 +44,26 @@ describe('the local history', () => {
     const redone = afterRedo(undone, 'a');
     expect(redone).toEqual({ past: ['a'], future: ['c'] });
     expect(afterRedo(redone, 'b')).toEqual({ past: ['a', 'b'], future: [] });
+  });
+});
+
+describe('a commit or a step landing', () => {
+  const start: LayerHistory<string> = { past: ['a', 'b'], future: ['x', 'y'] };
+
+  it('with nothing recorded since, moves as undo, redo and a new edit do at once', () => {
+    expect(landed(start, 2, { kind: 'record', entry: 'c' })).toEqual(recorded(start, 'c'));
+    expect(landed(start, 2, { kind: 'undo', present: 'c' })).toEqual(afterUndo(start, 'c'));
+    expect(landed(start, 2, { kind: 'redo', present: 'c' })).toEqual(afterRedo(start, 'c'));
+    expect(landed(start, 2, { kind: 'none' })).toBe(start);
+  });
+
+  it('keeps the sentence’s edits made while it was in flight on top of it, with the future they dropped', () => {
+    // Asked with two entries in the past; two edits went on while it ran, dropping the future.
+    const since = recorded(recorded(start, 'e1'), 'e2');
+    expect(landed(since, 2, { kind: 'record', entry: 'c' })).toEqual({ past: ['a', 'b', 'c', 'e1', 'e2'], future: [] });
+    // An undo asked then takes back 'b', the entry before the edits; its redo went with the future.
+    expect(landed(since, 2, { kind: 'undo', present: 'c' })).toEqual({ past: ['a', 'e1', 'e2'], future: [] });
+    expect(landed(since, 2, { kind: 'redo', present: 'c' })).toEqual({ past: ['a', 'b', 'c', 'e1', 'e2'], future: [] });
+    expect(landed(since, 2, { kind: 'none' })).toBe(since);
   });
 });

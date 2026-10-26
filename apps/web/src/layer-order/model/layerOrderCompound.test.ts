@@ -27,6 +27,7 @@ import {
   rowKey,
   sidesOf,
   stacksOf,
+  trashOf,
   type Played,
 } from './layerOrderModel.fixtures';
 import { chosenPreview } from './layerOrderReducer';
@@ -399,20 +400,47 @@ describe('a clash on a compound sentence', () => {
       expect(effectsOf(moved.effects, 'preview')).toHaveLength(1);
     });
 
-    it('an undo and a redo leave the same sentence counted', () => {
+    it('an undo and a redo of the sentence’s edits never report it again', () => {
       const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
       const first = previewed(sentenceOf(one.state, 2, 3), { verdict: 'cant_fit', constraints: [0, 1] });
       expect(tracked(first)).toEqual([constraintBlockedFact(1, 1)]);
-      const undone = commits(play(first.state, { type: 'undo' }), OPEN_PAIRS);
-      expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [3] });
-      const undoneBlocked = previewed(undone, CANT);
-      expect(chosenPreview(undoneBlocked.state)?.kind).toBe('cant_fit');
-      expect(tracked(undoneBlocked)).toEqual([]);
-      const redone = commits(play(undoneBlocked.state, { type: 'redo' }), Uint32Array.of(2, 3, 4, 5));
-      expect(redone.state.rows.committed).toHaveLength(1);
-      const redoneBlocked = previewed(redone, { verdict: 'cant_fit', constraints: [0, 1] });
-      expect(chosenPreview(redoneBlocked.state)?.kind).toBe('cant_fit');
-      expect(tracked(redoneBlocked)).toEqual([]);
+      // Undo takes the pick of 3 back, with no engine call.
+      const undone = play(first.state, { type: 'undo' });
+      expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [] });
+      expect(effectsOf(undone.effects, 'commit')).toEqual([]);
+      // Redo brings the blocked sentence back from its known can't-fit, and reports nothing.
+      const redone = dispatch(undone.state, { type: 'redo' });
+      expect(redone.state.sentence).toMatchObject({ subject: 2, objects: [3] });
+      expect(chosenPreview(redone.state)?.kind).toBe('cant_fit');
+      expect(effectsOf(redone.effects, 'preview')).toEqual([]);
+      expect(tracked(redone)).toEqual([]);
+      // Picking 3 again after the undo is the same sentence, already counted.
+      expect(tracked(dispatch(undone.state, { type: 'face_picked', face: 3, origin: 'pattern' }))).toEqual([]);
+      // A new subject after the undo is a new sentence, counted when it is blocked.
+      const other = play(undone.state, { type: 'slot_activated', slot: 'subject' }, { type: 'face_picked', face: 4, origin: 'pattern' });
+      expect(tracked(previewed(play(other.state, { type: 'face_picked', face: 5, origin: 'pattern' }), CANT))).toEqual([
+        constraintBlockedFact(1, 1),
+      ]);
+    });
+
+    it('an undo and a redo through the list never report it again either', () => {
+      const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
+      const first = previewed(sentenceOf(one.state, 2, 3), { verdict: 'cant_fit', constraints: [0, 1] });
+      // Back past the Add: the two picks, then the Add, whose commit brings back 2 in front of 0.
+      const picksUndone = play(first.state, { type: 'undo' }, { type: 'undo' });
+      expect(picksUndone.state.sentence.subject).toBeNull();
+      const undone = commits(play(picksUndone.state, { type: 'undo' }), OPEN_PAIRS);
+      expect(undone.state.rows.committed).toEqual([]);
+      expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [0] });
+      expect(tracked(fits(undone))).toEqual([]);
+      // Forward again: the Add's commit, then the picks, whose sentence is checked again after the commit.
+      const added = commits(play(fits(undone).state, { type: 'redo' }), Uint32Array.of(2, 3, 4, 5));
+      expect(added.state.sentence).toMatchObject({ subject: null, objects: [] });
+      const repicked = play(added.state, { type: 'redo' }, { type: 'redo' });
+      expect(repicked.state.sentence).toMatchObject({ subject: 2, objects: [3] });
+      const again = previewed(repicked, { verdict: 'cant_fit', constraints: [0, 1] });
+      expect(chosenPreview(again.state)?.kind).toBe('cant_fit');
+      expect(tracked(again)).toEqual([]);
     });
 
     it('an Add starts the count afresh, for the same subject and verb too', () => {
@@ -580,7 +608,7 @@ describe('the hint before an explain runs', () => {
     // A preview answers can't-fit while a removal is in flight: its explain waits for the commit.
     const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
     const p = sentenceOf(one.state, 4, 5);
-    const removing = play(p.state, { type: 'rows_removed', ids: [one.state.rows.committed[0]!.id] });
+    const removing = play(p.state, trashOf(p.state, one.state.rows.committed[0]!.id));
     const landed = play(removing.state, {
       type: 'previewed',
       request: lastOf(p.effects, 'preview').request,
@@ -613,7 +641,9 @@ describe('Add with several objects', () => {
       [2, 0, 1],
       [2, 3, -1],
     ]);
-    expect(landed.state.history.past).toHaveLength(1);
+    // One undo step, however many objects.
+    expect(landed.state.history.past).toHaveLength(added.state.history.past.length + 1);
+    expect(landed.state.history.past.at(-1)).toMatchObject({ kind: 'list', rows: { committed: [] } });
     expect(landed.state.sentence).toMatchObject({ subject: null, objects: [] });
     // Once per Add, with the objects it named.
     expect(effectsOf(landed.effects, 'track').map((effect) => effect.fact)).toEqual([
@@ -639,7 +669,14 @@ describe('Add with several objects', () => {
     expect(lastOf(undo.effects, 'commit')).toMatchObject({ constraints: [], token: null });
     const undone = commits(undo, OPEN_PAIRS, SPOTS);
     expect(undone.state.rows.committed).toEqual([]);
-    expect(listControls(undone.state)).toMatchObject({ undo: false, redo: true });
+    // The sentence Add took comes back, and is checked again against the list it now stands on.
+    expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [0, 3] });
+    expect(lastOf(undone.effects, 'preview').constraints).toEqual([
+      [2, 0, 1],
+      [2, 3, -1],
+    ]);
+    // The picks before it are steps of their own.
+    expect(listControls(undone.state)).toMatchObject({ undo: true, redo: true });
 
     const redo = play(undone.state, { type: 'redo' });
     expect(lastOf(redo.effects, 'commit').constraints).toEqual([
@@ -717,25 +754,24 @@ describe('the list: one row per subject and verb', () => {
     ]);
   });
 
-  it('a row keeps its key, its place and its hover when its earliest object goes, and across a turn', () => {
+  it('a row keeps its key, its place and its hover when an undo takes back the Add that joined it, and across a turn', () => {
     const third = threeAdds();
     const [twoZero, fourFive, twoThree] = third.state.rows.committed.map((row) => row.id);
     const [twoRow, fourRow] = rowGroupsView(third.state);
     const hovered = play(third.state, { type: 'row_hovered', key: twoRow!.key });
-    const asked = play(hovered.state, { type: 'rows_removed', ids: [twoZero!] });
-    // The row's next object takes the removed one's place in the list; the engine treats it as a set.
+    const asked = play(hovered.state, { type: 'undo' });
     expect(lastOf(asked.effects, 'commit').constraints).toEqual([
-      [2, 3, -1],
+      [2, 0, 1],
       [4, 5, -1],
     ]);
-    const removed = commits(asked, Uint32Array.of(2, 0));
-    expect(removed.state.rows.committed.map((row) => row.id)).toEqual([twoThree, fourFive]);
-    const after = rowGroupsView(removed.state);
+    const undone = commits(asked, Uint32Array.of(2, 3));
+    expect(undone.state.rows.committed.map((row) => row.id)).toEqual([twoZero, fourFive]);
+    const after = rowGroupsView(undone.state);
     expect(after.map((row) => [row.key, row.sentence])).toEqual([
-      [twoRow!.key, view(2, 'in_front_of', 3)],
+      [twoRow!.key, view(2, 'in_front_of', 0)],
       [fourRow!.key, view(4, 'in_front_of', 5)],
     ]);
-    expect(removed.state.hover.row).toBe(twoRow!.key);
+    expect(undone.state.hover.row).toBe(twoRow!.key);
     expect(after.map((row) => row.hot)).toEqual([true, false]);
     // Turned over, every row keeps its key, its members and its place, and reads the other verb.
     const back = rowGroupsView(play(third.state, { type: 'side_set', side: 'back' }).state);
@@ -743,9 +779,9 @@ describe('the list: one row per subject and verb', () => {
       [twoRow!.key, [twoZero, twoThree], view(2, 'behind', 0, 3)],
       [fourRow!.key, [fourFive], view(4, 'behind', 5)],
     ]);
-    // Undo puts the list back as it was.
-    const undone = commits(play(removed.state, { type: 'undo' }), new Uint32Array());
-    expect(undone.state.rows.committed.map((row) => row.id)).toEqual([twoZero, fourFive, twoThree]);
+    // Redo puts the list back as it was.
+    const redone = commits(play(undone.state, { type: 'redo' }), new Uint32Array());
+    expect(redone.state.rows.committed.map((row) => row.id)).toEqual([twoZero, fourFive, twoThree]);
   });
 
   it('a different verb for the same subject is a row of its own', () => {
@@ -753,30 +789,19 @@ describe('the list: one row per subject and verb', () => {
     expect(rowGroupsView(start).map((row) => row.sentence)).toEqual([view(2, 'in_front_of', 0), view(2, 'behind', 3)]);
   });
 
-  it('the row’s trash removes every object in it, as one undo step', () => {
+  it('the row’s trash removes every object in it, as one undo step: a row has no per-object remove', () => {
     const added = twoObjectsAdded();
     const row = rowGroupsView(added.state)[0]!;
-    const asked = play(added.state, { type: 'rows_removed', ids: row.members.map((member) => member.id) });
+    const asked = play(added.state, { type: 'row_removed', key: row.key });
     expect(effectsOf(asked.effects, 'commit').map((effect) => effect.constraints)).toEqual([[]]);
     const removed = commits(asked, OPEN_PAIRS, SPOTS);
     expect(rowGroupsView(removed.state)).toEqual([]);
-    expect(removed.state.history.past).toHaveLength(2);
+    expect(removed.state.history.past).toHaveLength(added.state.history.past.length + 1);
 
     const undone = commits(play(removed.state, { type: 'undo' }), Uint32Array.of(4, 5), SPOTS_TWO_OVER_ZERO);
     expect(rowGroupsView(undone.state)[0]!.members.map((member) => member.object)).toEqual([0, 3]);
-  });
-
-  it('each object’s × removes only it, as one undo step', () => {
-    const added = twoObjectsAdded();
-    const [row] = rowGroupsView(added.state);
-    const [zero, three] = row!.members;
-    const asked = play(added.state, { type: 'rows_removed', ids: [three!.id] });
-    expect(lastOf(asked.effects, 'commit').constraints).toEqual([[2, 0, 1]]);
-    const removed = commits(asked, Uint32Array.of(2, 3, 4, 5));
-    expect(rowGroupsView(removed.state).map((r) => [r.key, r.sentence])).toEqual([[row!.key, view(2, 'in_front_of', 0)]]);
-
-    const undone = commits(play(removed.state, { type: 'undo' }), Uint32Array.of(4, 5));
-    expect(rowGroupsView(undone.state)[0]!.members.map((member) => member.id)).toEqual([zero!.id, three!.id]);
+    // A key no row has removes nothing.
+    expect(dispatch(added.state, { type: 'row_removed', key: 'committed:9:in_front_of' }).effects).toEqual([]);
   });
 
   it('hovering a row lights its subject and all its objects; a click puts its subject in the builder', () => {
@@ -861,17 +886,15 @@ describe('the list: one row per subject and verb', () => {
       ]);
     });
 
-    it('pointing at a grouped carried row gives the row’s reason, and its × removes one, as one undo step', () => {
+    it('pointing at a grouped carried row gives the row’s reason, and its trash removes it whole, as one undo step', () => {
       const { state } = opened(RESTORED, { hasRecord: true });
       const row = rowGroupsView(state)[1]!;
       const hovered = play(state, { type: 'row_hovered', key: row.key });
       expect(hintLine(hovered.state)?.text).toEqual({ key: 'row_not_applied', reason: { key: 'ambiguous', face: 2 } });
       expect(paneMarks(hovered.state).rowFaces).toEqual([2, 3, 5]);
 
-      const removedOne = play(state, { type: 'rows_removed', ids: [row.members[0]!.id] });
-      expect(effectsOf(removedOne.effects, 'commit')).toEqual([]);
-      expect(rowGroupsView(removedOne.state)[1]!.sentence).toEqual(view(2, 'in_front_of', 5));
-      const removedRow = play(state, { type: 'rows_removed', ids: row.members.map((member) => member.id) });
+      const removedRow = play(state, { type: 'row_removed', key: row.key });
+      expect(effectsOf(removedRow.effects, 'commit')).toEqual([]);
       expect(removedRow.state.rows.carried.map((r) => r.facts.index)).toEqual([3, 4]);
       expect(removedRow.state.history.past).toHaveLength(1);
       expect(play(removedRow.state, { type: 'undo' }).state.rows.carried.map((r) => r.facts.index)).toEqual([1, 2, 3, 4]);
@@ -896,7 +919,7 @@ describe('the list: one row per subject and verb', () => {
         members: [{ clash: true }, { clash: true }],
       });
       expect(waiting).toMatchObject({ sentence: view(4, 'in_front_of', 5), mark: 'none', reason: { key: 'waiting' } });
-      const removed = play(state, { type: 'rows_removed', ids: row!.members.map((member) => member.id) });
+      const removed = play(state, { type: 'row_removed', key: row!.key });
       expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[4, 5, -1]]]);
       expect(commits(removed).state.settle).toEqual({ kind: 'settled' });
     });
@@ -962,7 +985,7 @@ describe('the list: one row per subject and verb', () => {
       ]);
       // After 4 in front of 5 goes, the re-check finds the two left clash: one row, both marked.
       const fourFive = state.rows.carried[2]!.id;
-      const removed = play(state, { type: 'rows_removed', ids: [fourFive] });
+      const removed = play(state, trashOf(state, fourFive));
       const commit = lastOf(removed.effects, 'commit');
       const still = play(removed.state, {
         type: 'committed',

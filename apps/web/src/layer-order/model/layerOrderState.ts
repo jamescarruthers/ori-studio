@@ -34,7 +34,7 @@ import type {
   LayerStepFacts,
   LayerVerb,
 } from './layerOrderEngineFacts';
-import type { LayerHistory } from './layerOrderHistory';
+import type { LayerHistory, LayerHistoryMove } from './layerOrderHistory';
 import type { LayerRowKey } from './layerOrderRowGroups';
 import type { LayerLetterRanks, LayerOpenIndex, LayerPickOrigin, LayerSentence, LayerSlot } from './layerOrderSentence';
 
@@ -174,13 +174,51 @@ export interface LayerCommitAsk {
   readonly limits: LayerOrderLimits;
   /** The rows once it lands. */
   readonly rows: LayerRows;
-  /** The history once it lands. */
-  readonly history: LayerHistory<LayerRows>;
-  /** For Add: the sentence it came from. */
-  readonly sentence: LayerSentence | null;
+  /** How the history moves once it lands, from the past's length when it was asked (`landed`). */
+  readonly move: LayerHistoryMove<LayerUndoEntry>;
+  readonly at: number;
+  /**
+   * The sentence on screen when it was asked: Add's own, which it clears, and
+   * the one an undo or redo replaces with {@link restore}. Either only if it
+   * is still on screen: an edit since is newer, and stays.
+   */
+  readonly sentence: LayerSentence;
+  /** For undo and redo: the sentence the entry brings back, with its block as reported. */
+  readonly restore: LayerSentenceEntry | null;
   /** The row each constraint of the list came from, by id. */
   readonly listRows: readonly number[];
 }
+
+// ---------------------------------------------------------------------------
+// The undo history (`layerOrderHistory.ts`)
+
+/** The sentence an entry brings back, and the block `layer constraint blocked` had reported for it (see {@link LayerOrderDialogState.blocked}). */
+export interface LayerSentenceEntry {
+  readonly sentence: LayerSentence;
+  readonly blocked: string | null;
+}
+
+/**
+ * One undo step: every inspector action is one (plan, "The inspector's
+ * behaviour"). In the past it is what undo goes back to; in the future, what
+ * redo goes forward to. View toggles (Front/Back, X-ray, Undecided) and the
+ * pointer are no step: they change what is seen, never what Apply writes.
+ */
+export type LayerUndoEntry =
+  /** A sentence edit (a pick, a ×, the verb, Clear, a row click): the sentence on the other side of it. No engine call. */
+  | ({ readonly kind: 'sentence' } & LayerSentenceEntry)
+  /**
+   * A change to the list (Add, a row's trash, Clear all): the rows and the
+   * sentence on the other side of it. A different committed list is committed
+   * again, for the fitting order closest to the one on screen.
+   */
+  | ({ readonly kind: 'list'; readonly rows: LayerRows } & LayerSentenceEntry)
+  /**
+   * A solution step (‹ ›), which only moved the order on screen. Undo steps
+   * the other way by what it stepped by, back to the picture it left (with
+   * X-ray, the very layer order); redo takes the step again.
+   */
+  | { readonly kind: 'step'; readonly direction: LayerStepDirection; readonly by: LayerStepBy };
 
 export type LayerCommitState =
   | { readonly kind: 'idle' }
@@ -215,7 +253,15 @@ export type LayerStepDirection = 'next' | 'previous';
 
 export type LayerStepState =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'pending'; readonly request: number; readonly direction: LayerStepDirection; readonly by: LayerStepBy }
+  | {
+      readonly kind: 'pending';
+      readonly request: number;
+      readonly direction: LayerStepDirection;
+      readonly by: LayerStepBy;
+      /** How the history moves once it moves the order: a step of the user's is an entry; an undo or redo of one moves through it. */
+      readonly move: LayerHistoryMove<LayerUndoEntry>;
+      readonly at: number;
+    }
   /** No solution lies that way among those counted. */
   | { readonly kind: 'end'; readonly direction: LayerStepDirection }
   | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection };
@@ -287,7 +333,7 @@ export interface LayerOrderDialogState {
   readonly shown: LayerSidesStacks | null;
 
   readonly rows: LayerRows;
-  readonly history: LayerHistory<LayerRows>;
+  readonly history: LayerHistory<LayerUndoEntry>;
   readonly commit: LayerCommitState;
   readonly settle: LayerSettle;
   /** The rows "Review…" opened on (D14). */
@@ -311,9 +357,11 @@ export interface LayerOrderDialogState {
   /**
    * The sentence `layer constraint blocked` last went out for, by its subject
    * and its verb as read from the front (D21): once per sentence, until the
-   * subject or that verb changes, an Add, or a Clear. A commit, a step, undo
-   * and redo leave it, so a sentence blocked again after one is not counted
-   * again.
+   * subject or that verb changes, an Add, or a Clear. A commit and a step
+   * leave it, so a sentence blocked again after one is not counted again; an
+   * undo or redo never reports one: it keeps this while the sentence it
+   * brings back has the same subject and verb, and otherwise brings back the
+   * one that sentence had.
    */
   readonly blocked: string | null;
 
@@ -458,14 +506,15 @@ export type LayerOrderAction =
   | { readonly type: 'add' }
   /** The hint line's Keep trying, or a refusal's: whatever ran out runs again, later. */
   | { readonly type: 'keep_trying' }
-  // The constraints list: rows by key, the constraints in them by id.
+  // The constraints list, by row key.
   | { readonly type: 'row_hovered'; readonly key: LayerRowKey | null }
   | { readonly type: 'row_clicked'; readonly key: LayerRowKey }
   /**
-   * The one way to remove constraints, as one undo step (D21): a row's trash
-   * sends every member's id, an object's × in a row of two or more its own.
+   * A row's trash, the one way to remove constraints: every constraint the
+   * row shows goes, as one undo step. A row has no per-object remove (D21,
+   * your words after trying it, 2026-10-26).
    */
-  | { readonly type: 'rows_removed'; readonly ids: readonly number[] }
+  | { readonly type: 'row_removed'; readonly key: LayerRowKey }
   | { readonly type: 'undo' }
   | { readonly type: 'redo' }
   | { readonly type: 'clear_all' }
