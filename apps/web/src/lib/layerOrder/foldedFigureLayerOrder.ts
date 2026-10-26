@@ -29,6 +29,25 @@ export type FoldedFigureLayerOrder =
     };
 
 /**
+ * A record a reload detached from its figure, because an older build folded
+ * the figure again (its snapshot no longer says the order was given), held
+ * on the figure for review alone: the flag says its constraints aren't
+ * applied, and Layer order… opens on it. Never used to fold. The bag keeps
+ * its entry in `detached`, written back as it came, until an Apply re-attaches
+ * it (`reattached`), and the save then drops it
+ * (`cp-workspace/folded/foldedFigureLayerOrders.ts`).
+ */
+export interface DetachedFigureLayerOrder {
+  readonly record: LayerOrderRecord;
+  /** The record as saved. */
+  readonly json: string;
+  /** The source key it was saved with: shown only while the figure's is that one. */
+  readonly sourceKey: string;
+  /** An Apply on the figure took it up: no longer shown, and dropped from the bag when saved. */
+  readonly reattached?: true;
+}
+
+/**
  * A record for a figure to hold, encoded once, so what it holds is what it
  * saves: or why it cannot be saved, a part that does not read or more than
  * the budget.

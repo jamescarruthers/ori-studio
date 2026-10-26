@@ -7,6 +7,7 @@ import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY as KEY,
   detachedFoldedFigureLayerOrders,
   foldedFigureLayerOrderKey,
+  foldedFigureSourceKey,
   linkFoldedFigureLayerOrders,
   withFoldedFigureLayerOrders,
 } from './foldedFigureLayerOrders';
@@ -98,7 +99,9 @@ describe('saving a figure’s layer order in the bag', () => {
     const bag = saved({ futureDocFeature: { a: 1 } }, [fig, figure('generated-2')]);
     expect(Object.keys(bag)).toEqual(['futureDocFeature', KEY]);
     expect(bag[KEY]).toEqual({
-      figures: { 'generated-1': { figureKey: foldedFigureLayerOrderKey(fig), record: RECORD_JSON } },
+      figures: {
+        'generated-1': { figureKey: foldedFigureLayerOrderKey(fig), sourceKey: foldedFigureSourceKey(fig), record: RECORD_JSON },
+      },
     });
   });
 
@@ -191,13 +194,62 @@ describe('attaching saved layer orders at install', () => {
   ])('detaches a record when %s, and keeps it', (_label, figures, reason) => {
     const bag = bagFor([withRecord(figure('generated-1'))]);
     const record = ((bag[KEY] as { figures: Record<string, { record: string }> }).figures['generated-1']!).record;
+    const sourceKey = foldedFigureSourceKey(figure('generated-1'));
     const linked = linkFoldedFigureLayerOrders(bag, figures);
     expect(linked.figures.every((entry) => entry.layerOrder === undefined)).toBe(true);
-    expect(detachedFoldedFigureLayerOrders(linked.extensions)).toEqual([{ figureId: 'generated-1', reason, record }]);
+    expect(detachedFoldedFigureLayerOrders(linked.extensions)).toEqual([{ figureId: 'generated-1', reason, sourceKey, record }]);
     // Written back where it is now, and never attached again, whatever takes the id.
     const again = saved(linked.extensions, linked.figures);
-    expect(detachedFoldedFigureLayerOrders(again)).toEqual([{ figureId: 'generated-1', reason, record }]);
+    expect(detachedFoldedFigureLayerOrders(again)).toEqual([{ figureId: 'generated-1', reason, sourceKey, record }]);
     expect(linkFoldedFigureLayerOrders(again, [figure('generated-1')]).figures[0]!.layerOrder).toBeUndefined();
+  });
+
+  describe('a detached record, shown for review (the “Detached by an older build” frame)', () => {
+    /** The bag as this build saved it, then the figure as an older build left it: folded again, no `shown_order`. */
+    const refoldedByAnOlderBuild = () => {
+      const bag = bagFor([withRecord(figure('generated-1'))]);
+      return { bag, figures: [figure('generated-1', { searched: true })] };
+    };
+
+    it('holds it on its figure for review, never as the figure’s own, and keeps its entry', () => {
+      const { bag, figures } = refoldedByAnOlderBuild();
+      const linked = linkFoldedFigureLayerOrders(bag, figures);
+      expect(linked.figures[0]!.layerOrder).toBeUndefined();
+      expect(linked.figures[0]!.detachedLayerOrder).toEqual({
+        record: RECORD,
+        json: RECORD_JSON,
+        sourceKey: foldedFigureSourceKey(figures[0]!),
+      });
+      expect(detachedFoldedFigureLayerOrders(linked.extensions).map((entry) => entry.reason)).toEqual(['order-not-given']);
+      // Saved again, untaken: the entry as it was, and nothing on the figure.
+      expect(saved(linked.extensions, linked.figures)).toEqual(saved(linked.extensions, figures));
+    });
+
+    it('shows nothing for a reused id folded from other creases, a missing figure, or a 3D one, and keeps every entry', () => {
+      const { bag } = refoldedByAnOlderBuild();
+      const others: OristudioCpFoldedFigureEntry[][] = [
+        [figure('generated-1', { searched: true, fingerprint: 'cs1:another-figure' })],
+        [figure('generated-2', { searched: true })],
+        [{ ...figure('generated-1'), snapshot: null, folded3d: { current_fold_case: 1 } as OristudioCpFoldedFigureEntry['folded3d'] }],
+      ];
+      for (const figures of others) {
+        const linked = linkFoldedFigureLayerOrders(bag, figures);
+        expect(linked.figures.every((entry) => entry.detachedLayerOrder === undefined)).toBe(true);
+        expect(detachedFoldedFigureLayerOrders(saved(linked.extensions, linked.figures))).toHaveLength(1);
+      }
+    });
+
+    it('drops its entry once an Apply took it up, and keeps it when that Apply is undone', () => {
+      const { bag, figures } = refoldedByAnOlderBuild();
+      const linked = linkFoldedFigureLayerOrders(bag, figures);
+      const shown = linked.figures[0]!;
+      const taken = { ...shown, layerOrder: held(), detachedLayerOrder: { ...shown.detachedLayerOrder!, reattached: true as const } };
+      const written = saved(linked.extensions, [taken]);
+      expect(detachedFoldedFigureLayerOrders(written)).toEqual([]);
+      expect((written[KEY] as { figures: Record<string, unknown> }).figures['generated-1']).toMatchObject({ record: RECORD_JSON });
+      // The figure as it was before the Apply: the entry stays.
+      expect(detachedFoldedFigureLayerOrders(saved(linked.extensions, [shown]))).toHaveLength(1);
+    });
   });
 
   it('holds a newer build’s record as it came, keyed as that build keyed it', () => {

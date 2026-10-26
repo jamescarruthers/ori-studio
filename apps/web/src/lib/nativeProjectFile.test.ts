@@ -24,6 +24,7 @@ import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY,
   detachedFoldedFigureLayerOrders,
   foldedFigureLayerOrderKey,
+  foldedFigureSourceKey,
   linkFoldedFigureLayerOrders,
 } from '../cp-workspace/folded/foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from './layerOrder/foldedFigureLayerOrder';
@@ -2490,7 +2491,11 @@ describe('a crease pattern’s layer orders', () => {
       'zeta.other': [1, 2],
       [FOLDED_FIGURE_LAYER_ORDERS_KEY]: {
         figures: {
-          'generated-1': { figureKey: foldedFigureLayerOrderKey(figure), record: RECORD_JSON },
+          'generated-1': {
+            figureKey: foldedFigureLayerOrderKey(figure),
+            sourceKey: foldedFigureSourceKey(figure),
+            record: RECORD_JSON,
+          },
         },
       },
     });
@@ -2567,7 +2572,11 @@ describe('a crease pattern’s layer orders', () => {
       const here = opened(refolded);
       expect(here.figures[0]!.layerOrder).toBeUndefined();
       const detached = detachedFoldedFigureLayerOrders(here.extensions);
-      expect(detached).toEqual([{ figureId: 'generated-1', reason: 'order-not-given', record: RECORD_JSON }]);
+      const sourceKey = foldedFigureSourceKey(constrained());
+      expect(detached).toEqual([{ figureId: 'generated-1', reason: 'order-not-given', sourceKey, record: RECORD_JSON }]);
+      // Shown on its figure for review, folded from the same creases, never as its own.
+      expect(here.figures[0]!.detachedLayerOrder).toEqual({ record: RECORD, json: RECORD_JSON, sourceKey });
+      expect(figuresOf(resaved(refolded))[0]).not.toHaveProperty('detachedLayerOrder');
       // And saved here, it is still there.
       expect(detachedFoldedFigureLayerOrders(opened(resaved(refolded)).extensions)).toEqual(detached);
     });

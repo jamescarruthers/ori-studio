@@ -11,8 +11,8 @@
  * ```json
  * "extensions": {
  *   "oristudio.foldedFigureLayerOrders": {
- *     "figures": { "<figure id>": { "figureKey": "fk1:…", "record": "{\"v\":1,…}" } },
- *     "detached": [{ "figureId": "…", "reason": "order-not-given", "figureKey": "…", "record": "…" }]
+ *     "figures": { "<figure id>": { "figureKey": "fk1:…", "sourceKey": "fs1:…", "record": "{\"v\":1,…}" } },
+ *     "detached": [{ "figureId": "…", "reason": "order-not-given", "figureKey": "…", "sourceKey": "…", "record": "…" }]
  *   }
  * }
  * ```
@@ -34,6 +34,16 @@
  * again by accident, until the user takes it up or lets it go. Only damage —
  * an entry that is not one — is dropped.
  *
+ * **Detached, shown for review** (the approved "Detached by an older build"
+ * frame). An `order-not-given` record whose figure is still there, flat, and
+ * folded from the creases the record was saved on — its source key, a hash of
+ * the source fingerprint alone, is the figure's — is held on the figure for
+ * review (`detachedLayerOrder`): never used to fold, its entry still in the
+ * list. A figure on a reused id, folded from other creases, has another source
+ * key and is shown nothing. An Apply on the figure takes the record up
+ * (`reattached`), and the next save drops its entry; an undo of that Apply
+ * puts the figure back as it was, and the entry stays.
+ *
  * **Zero bytes by default.** With no record and none detached the key is left
  * out, and a bag the writer was handed is written as it came, so a project
  * without layer orders saves the bytes it always did.
@@ -41,7 +51,7 @@
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { NEWER, hasNewerKey, isRecord } from '../../lib/documentFile';
 import { keyDigest } from '../../lib/keyDigest';
-import type { FoldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import type { DetachedFigureLayerOrder, FoldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { readLayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { foldedFigureCurrentCase } from './foldedFigureState';
 
@@ -50,9 +60,10 @@ export const FOLDED_FIGURE_LAYER_ORDERS_KEY = 'oristudio.foldedFigureLayerOrders
 
 /** Names the algorithm in the key itself, so a later one can be told apart. */
 const FIGURE_KEY_PREFIX = 'fk1:';
+const SOURCE_KEY_PREFIX = 'fs1:';
 
 /** The fields of a saved record's entry; another makes it a newer build's. */
-const SAVED_KEYS: ReadonlySet<string> = new Set(['figureKey', 'record']);
+const SAVED_KEYS: ReadonlySet<string> = new Set(['figureKey', 'sourceKey', 'record']);
 
 /**
  * Why a record is detached:
@@ -70,6 +81,8 @@ export interface DetachedFoldedFigureLayerOrder {
   /** The figure it was saved on: which may be gone, or another figure now. */
   figureId: string;
   reason: FoldedFigureLayerOrderDetachReason;
+  /** The source key it was saved with, when it was saved with one ({@link foldedFigureSourceKey}). */
+  sourceKey?: string;
   /** The record as saved; a newer build's, or damage, alike. */
   record: string;
 }
@@ -93,10 +106,22 @@ export function foldedFigureLayerOrderKey(figure: OristudioCpFoldedFigureEntry):
 }
 
 /**
+ * Which creases a figure was folded from, for a detached record to recognise
+ * its figure by: a hash of its source fingerprint alone, so another case of
+ * the same fold, as an older build's Another solution or refold of unchanged
+ * creases leaves it, is still the same figure.
+ */
+export function foldedFigureSourceKey(figure: OristudioCpFoldedFigureEntry): string {
+  return keyDigest([figure.sourceFingerprint ?? ''], SOURCE_KEY_PREFIX);
+}
+
+/**
  * Attach each saved record to its figure, at install: by the rule above. A
  * record that does not attach moves to the detached list, with why. The bag
  * keeps the key where it was, holding what is left, so a project opened and
- * saved again writes it in the same place.
+ * saved again writes it in the same place. A detached record its figure still
+ * shows for review is held on the figure besides (`detachedLayerOrder`), its
+ * entry left in the list.
  */
 export function linkFoldedFigureLayerOrders(
   extensions: Record<string, unknown>,
@@ -120,10 +145,13 @@ export function linkFoldedFigureLayerOrders(
     const held = heldLayerOrder(entry);
     if (held) attached.set(figureId, held);
   }
+  const shown = detachedForReview(stillDetached, byId);
   return {
     figures: figures.map((figure) => {
       const layerOrder = attached.get(figure.id);
-      return layerOrder ? { ...figure, layerOrder } : figure;
+      const detachedLayerOrder = layerOrder ? undefined : shown.get(figure.id);
+      if (!layerOrder && !detachedLayerOrder) return figure;
+      return { ...figure, ...(layerOrder ? { layerOrder } : {}), ...(detachedLayerOrder ? { detachedLayerOrder } : {}) };
     }),
     extensions: {
       ...extensions,
@@ -133,12 +161,37 @@ export function linkFoldedFigureLayerOrders(
 }
 
 /**
+ * The detached records a figure shows for review, by figure id: an
+ * `order-not-given` entry whose figure is there and flat, saved with that
+ * figure's source key, holding a record this build reads. Never a
+ * `figure-missing` one, a 3D figure's, another figure's on a reused id, or a
+ * newer build's. One per figure, the last.
+ */
+function detachedForReview(
+  entries: readonly unknown[],
+  byId: ReadonlyMap<string, OristudioCpFoldedFigureEntry>
+): Map<string, DetachedFigureLayerOrder> {
+  const shown = new Map<string, DetachedFigureLayerOrder>();
+  for (const entry of entries) {
+    if (!isRecord(entry) || entry.reason !== 'order-not-given' || typeof entry.figureId !== 'string') continue;
+    if (typeof entry.sourceKey !== 'string' || typeof entry.record !== 'string') continue;
+    const figure = byId.get(entry.figureId);
+    if (!figure || figure.folded3d != null || foldedFigureSourceKey(figure) !== entry.sourceKey) continue;
+    const read = readLayerOrderRecord(entry.record);
+    if (read === NEWER || !read.ok) continue;
+    shown.set(entry.figureId, { record: read.record, json: entry.record, sourceKey: entry.sourceKey });
+  }
+  return shown;
+}
+
+/**
  * The bag to write: `extensions` with every figure's record in it. Each
  * figure's own record replaces one of its id the bag still holds; what the bag
  * holds that no figure claims — detached records, other builds' keys, records
- * a reader never linked — is written as it came. With none of either, the key
- * is left out; and a bag with no key and no figure with a record is returned
- * as it came, the very object.
+ * a reader never linked — is written as it came, but for a detached record a
+ * figure's Apply took up (`detachedLayerOrder.reattached`). With none of
+ * either, the key is left out; and a bag with no key and no figure with a
+ * record is returned as it came, the very object.
  */
 export function withFoldedFigureLayerOrders(
   extensions: Record<string, unknown>,
@@ -157,9 +210,19 @@ export function withFoldedFigureLayerOrders(
   const claimed = new Set(live.map(([figureId]) => figureId));
   const unclaimed = Object.entries(isRecord(saved) ? saved : {}).filter(([figureId]) => !claimed.has(figureId));
   const written = [...live, ...unclaimed];
+  // A detached record an Apply took up is the figure's live one now: its entry goes.
+  const reattached = (entry: unknown) =>
+    isRecord(entry) &&
+    figures.some(
+      (figure) =>
+        figure.id === entry.figureId &&
+        figure.detachedLayerOrder?.reattached === true &&
+        figure.detachedLayerOrder.json === entry.record
+    );
+  const stillDetached = Array.isArray(detached) ? detached.filter((entry) => !reattached(entry)) : [];
   const ours = {
     ...(written.length > 0 ? { figures: Object.fromEntries(written) } : {}),
-    ...(Array.isArray(detached) && detached.length > 0 ? { detached } : {}),
+    ...(stillDetached.length > 0 ? { detached: stillDetached } : {}),
     ...rest,
   };
   if (Object.keys(ours).length > 0) return { ...extensions, [FOLDED_FIGURE_LAYER_ORDERS_KEY]: ours };
@@ -177,7 +240,14 @@ export function detachedFoldedFigureLayerOrders(
     typeof entry.figureId === 'string' &&
     isDetachReason(entry.reason) &&
     typeof entry.record === 'string'
-      ? [{ figureId: entry.figureId, reason: entry.reason, record: entry.record }]
+      ? [
+          {
+            figureId: entry.figureId,
+            reason: entry.reason,
+            ...(typeof entry.sourceKey === 'string' ? { sourceKey: entry.sourceKey } : {}),
+            record: entry.record,
+          },
+        ]
       : []
   );
 }
@@ -210,7 +280,7 @@ function savedLayerOrder(
 ): Readonly<Record<string, unknown>> {
   return layerOrder.kind === 'newer'
     ? layerOrder.saved
-    : { figureKey: foldedFigureLayerOrderKey(figure), record: layerOrder.json };
+    : { figureKey: foldedFigureLayerOrderKey(figure), sourceKey: foldedFigureSourceKey(figure), record: layerOrder.json };
 }
 
 function isDetachReason(value: unknown): value is FoldedFigureLayerOrderDetachReason {
