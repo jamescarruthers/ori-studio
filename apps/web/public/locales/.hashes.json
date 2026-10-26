@@ -6492,7 +6492,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12987,7 +12994,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19484,7 +19498,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25623,7 +25644,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31762,7 +31790,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38257,7 +38292,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44752,7 +44794,14 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50891,6 +50940,13 @@
     "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
     "panels:diagram.layerOrder.editOrder": "7b4ae31bb993",
     "panels:diagram.layerOrder.editOrderName": "38e0cef17572",
-    "panels:diagram.pose.lastSolution": "77fca1d3c84e"
+    "panels:diagram.pose.lastSolution": "77fca1d3c84e",
+    "panels:creasePattern.layerOrderSelectionName": "ca4067071fcf",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder": "37fef729c44f",
+    "panels:creasePattern.selectionToolbar.foldWithLayerOrder3d": "5720b1bce0df",
+    "errors:cp.layerOrderNotFolded": "0412ecf5e2cd",
+    "errors:cp.layerOrderPatternChanged": "250008745c11",
+    "errors:cp.layerOrderTooLargeToFold": "9bc0f2c93e25",
+    "errors:cp.layerOrderUndeterminedSelection": "7f39a601aee1"
   }
 }
