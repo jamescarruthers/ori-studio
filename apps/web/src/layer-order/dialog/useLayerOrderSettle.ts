@@ -27,9 +27,9 @@ import {
   applyChangedNothing,
   openedApplyBlocker,
   openedBaseline,
-  untouchedApplyWrites,
   type LayerOrderAtApply,
 } from '../model/layerOrderDecisions';
+import { layerOrderRequestInit } from './layerOrderDialogInit';
 import { settleLayerOrderDialog, type LayerOrderDialogOpening } from './layerOrderDialogStore';
 import type { LayerOrderSession } from './useLayerOrderSession';
 
@@ -70,7 +70,8 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
       // Saved rows that clashed or were never checked: never written as they stand.
       if (now === undefined && waits !== null) return;
       const { open } = status;
-      const baseline = openedBaseline(open.facts, untouchedApplyWrites(request.record, request.applyRefolds));
+      // The reducer's own reading of the request (`layerOrderRequestInit`), so the two can't drift.
+      const baseline = openedBaseline(open.facts, layerOrderRequestInit(request).recordNeedsAttention);
       const onScreen = now ?? { constraints: open.facts.constraints, carried: baseline.carried, stacks: open.stacks };
       if (applyChangedNothing(baseline, onScreen)) {
         settleLayerOrderDialog(id, { kind: 'unchanged' });

@@ -284,19 +284,26 @@ describe('the Layer order dialog’s session', () => {
     expect(monitoring.reportError).not.toHaveBeenCalled();
   });
 
-  it('on creases changed since the host’s fold, says Apply also refolds, and Apply saves even the host’s own order (D12)', async () => {
+  it('on creases changed since the host’s fold, says Apply also refolds; an untouched Apply writes a record, not none (D12)', async () => {
     mount();
-    const { outcome } = await opened({ ...REQUEST, applyRefolds: true });
+    const withRecord = await opened({ ...REQUEST, record: RECORD, applyRefolds: true });
     await until(isReady, 'the session opened');
     // The foot, beside Apply, in the quiet tone.
     expect(byRole(openDialog(), 'status', /Apply also refolds/).textContent).toBe(
       'Kabuto’s creases changed since it was folded: Apply also refolds it.'
     );
-    // The order the host shows, untouched: still written, since the Apply is the host's refold.
+    // The record restored whole, untouched: still written, since the Apply is the host's refold in it.
     click(button('Apply'));
-    const answer = await outcome;
-    expect(answer.kind).toBe('applied');
+    expect((await withRecord.outcome).kind).toBe('applied');
     expect(spawned[0]!.backend.calls).toContain('save');
+    await flush();
+
+    // No record: it opened on the order a plain Refold draws, so an untouched Apply is that Refold, the host's to run.
+    const plain = await opened({ ...REQUEST, applyRefolds: true });
+    await until(isReady, 'the session opened again');
+    click(button('Apply'));
+    await expect(plain.outcome).resolves.toEqual({ kind: 'unchanged' });
+    expect(spawned[1]!.backend.calls).not.toContain('save');
   });
 
   it('Apply on an order that isn’t the host’s (D19) saves, and hands the host its fold', async () => {
