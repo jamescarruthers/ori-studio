@@ -10,9 +10,12 @@ use oristudio_cp::folding::{
 };
 use oristudio_cp::session::{CpSession, FoldSource};
 use oristudio_fold::complete::CompletionLimits;
-use oristudio_fold::steer::{LayerSource, SourceRefusal};
-use oristudio_fold::{FaceId, FixedPair};
-use oristudio_layer_order::{EdgeKind, Letter};
+use oristudio_fold::steer::{LAYER_ORDER_MAX_STACKED_TRIPLES, LayerSource, SourceRefusal};
+use oristudio_fold::{
+    CreasePatternInput, FaceId, FixedPair, ImportKind, ImportRefusal, ImportSegment, ImportSpace,
+    ImportTarget, ImportedPattern, StartSide,
+};
+use oristudio_layer_order::{EdgeKind, Letter, MAX_STACKED_TRIPLES};
 
 /// The source a host would hand over for the whole sheet of a `.cp` text.
 fn source_of_cp(text: &str) -> FoldSource {
@@ -195,6 +198,122 @@ fn a_digest_that_does_not_name_the_faces_is_refused() {
     source.digest = "0000000000000000".to_string();
     let refusal = LayerSource::from_oriedita(&source).expect_err("forged digest");
     assert_eq!(refusal.code(), "source_digest_mismatch");
+}
+
+/// `strips` vertical strips of a square of side 400 folded back and forth
+/// along creases of alternating letters: every face on one stack, `strips`
+/// deep. The edges are split where the creases meet them.
+fn accordion_cp(strips: usize) -> String {
+    let x = |k: usize| -200.0 + 400.0 * k as f64 / strips as f64;
+    let mut text = String::from("1 200 -200 200 200\n1 -200 200 -200 -200\n");
+    for k in 0..strips {
+        text += &format!(
+            "1 {} -200 {} -200\n1 {} 200 {} 200\n",
+            x(k),
+            x(k + 1),
+            x(k),
+            x(k + 1)
+        );
+    }
+    for k in 1..strips {
+        let kind = if k % 2 == 0 { 2 } else { 3 };
+        text += &format!("{kind} {} -200 {} 200\n", x(k), x(k));
+    }
+    text
+}
+
+/// The same accordion on the unit square, as Fold's Import CP reads it.
+fn accordion_input(strips: usize) -> CreasePatternInput {
+    let segment = |from, to, kind| ImportSegment { from, to, kind };
+    let corners = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    let mut segments: Vec<ImportSegment> = (0..4)
+        .map(|i| segment(corners[i], corners[(i + 1) % 4], ImportKind::Border))
+        .collect();
+    for k in 1..strips {
+        let at = k as f64 / strips as f64;
+        let kind = if k % 2 == 0 {
+            ImportKind::Mountain
+        } else {
+            ImportKind::Valley
+        };
+        segments.push(segment([at, 0.0], [at, 1.0], kind));
+    }
+    CreasePatternInput {
+        space: ImportSpace::Sheet,
+        segments,
+    }
+}
+
+fn choose3(d: u64) -> u64 {
+    d * (d - 1) * (d - 2) / 6
+}
+
+/// The fewest layers one stack needs to hold more than `cap` triples.
+fn deepest_over(cap: u64) -> usize {
+    (3..).find(|&d| choose3(d) > cap).unwrap_or(3) as usize
+}
+
+/// The dialog takes stacks deeper than Fold's cap: an accordion one layer
+/// past the deepest stack Fold imports is the dialog's to order, while Fold's
+/// Import CP still refuses the same pattern.
+#[test]
+fn a_stack_too_deep_for_fold_is_admitted_up_to_the_dialog_s_own_cap() {
+    const { assert!(LAYER_ORDER_MAX_STACKED_TRIPLES > MAX_STACKED_TRIPLES) };
+    let strips = deepest_over(MAX_STACKED_TRIPLES);
+    assert_eq!(strips, 418);
+    let triples = choose3(strips as u64);
+    assert!(triples <= LAYER_ORDER_MAX_STACKED_TRIPLES);
+
+    let layer = LayerSource::from_oriedita(&source_of_cp(&accordion_cp(strips)))
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(layer.view().faces().len(), strips);
+    let depth = layer.problem().stack_depth(layer.view());
+    assert_eq!((depth.deepest, depth.triples), (strips, triples));
+
+    let refusal = ImportedPattern::new(
+        &accordion_input(strips),
+        ImportTarget::Empty {
+            start: StartSide::Front,
+        },
+    )
+    .err();
+    assert_eq!(
+        refusal,
+        Some(ImportRefusal::StackedTooDeep {
+            deepest: strips,
+            triples,
+            limit: MAX_STACKED_TRIPLES,
+        })
+    );
+}
+
+/// One layer past the deepest stack the dialog's cap takes is refused with
+/// how deep it stacks, which the dialog's notice names.
+#[test]
+fn a_stack_over_the_dialog_s_cap_is_refused_with_its_depth() {
+    let cap = LAYER_ORDER_MAX_STACKED_TRIPLES;
+    let strips = deepest_over(cap);
+    let triples = choose3(strips as u64);
+    let refusal = LayerSource::from_oriedita(&source_of_cp(&accordion_cp(strips)))
+        .expect_err("over the dialog's cap");
+    assert_eq!(
+        refusal,
+        SourceRefusal::StackedTooDeep {
+            deepest: strips,
+            triples,
+            limit: cap,
+        }
+    );
+    let wire = serde_json::to_value(&refusal).expect("serialise");
+    assert_eq!(
+        wire,
+        serde_json::json!({
+            "code": "source_stacked_too_deep",
+            "deepest": strips,
+            "triples": triples,
+            "limit": cap,
+        })
+    );
 }
 
 /// The refusal codes are the wire's.

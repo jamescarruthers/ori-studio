@@ -199,7 +199,12 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   deadlineMs }`: the deadline is relative to the call's start and read by
   the worker's own clock, so keep trying is the same call with a larger
   `deadlineMs`. Refusals are values (`source_*`, `session_no_order`,
-  `session_timed_out`, `record_*`); a bad constraint
+  `session_timed_out`, `record_*`). The source has its own stacking cap,
+  `oristudio_fold::steer::LAYER_ORDER_MAX_STACKED_TRIPLES` (20,000,000),
+  above Fold's: a figure over it is refused `source_stacked_too_deep`
+  (`deepest`, `triples`, `limit`), and one between the two opens in the
+  dialog though Fold's Import CP refuses it (the constant's docs have the
+  measurement). A bad constraint
   (`session_bad_constraint`), a closed session (`unknown_layer_session`)
   and malformed input throw. E6's calls sit beside them: `layer_explain`
   and `layer_explain_list` (the smallest clashing set: `fits`, `clash {
