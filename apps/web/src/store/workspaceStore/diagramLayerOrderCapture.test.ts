@@ -170,13 +170,14 @@ describe('a step’s layer order, captured', () => {
   });
 
   it.each([
-    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
-    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
-    // The engine's own "did not start" may be a defect: no connection to check.
-    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
+    // Only a reload retries a load that failed: Reload, the toast's one action.
+    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.', 'Reload'],
+    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined],
+    // The engine's own "did not start" may be a defect: nothing to reload for.
+    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined],
   ] as const)(
     'with no host engine (%s) writes nothing: no undo step, not dirty, never saved as couldn’t be checked',
-    async (cause, said) => {
+    async (cause, said, action) => {
       const stepId = await constrainedStep();
       const before = step(stepId);
       useWorkspaceStore.setState({ dirty: false });
@@ -187,7 +188,10 @@ describe('a step’s layer order, captured', () => {
       expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.attention).toBeUndefined();
       expect(state().diagramHistory.past).toHaveLength(entries);
       expect(state().dirty).toBe(false);
-      expect(toasts.error).toHaveBeenCalledWith(said);
+      expect(toasts.error).toHaveBeenCalledOnce();
+      const [text, options] = toasts.error.mock.calls[0]! as [string, { action?: { label: string } } | undefined];
+      expect(text).toBe(said);
+      expect(options?.action?.label).toBe(action);
       expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
     }
   );
@@ -338,7 +342,8 @@ describe('a step’s layer order, captured', () => {
     expect(bindings.runtime!.source).toHaveBeenCalledOnce();
     expect(toasts.error).toHaveBeenCalledOnce();
     expect(toasts.error).toHaveBeenCalledWith(
-      'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.'
+      'Layer order couldn’t load, so 5 steps weren’t changed. Reload Ori Studio to try again.',
+      { action: expect.objectContaining({ label: 'Reload' }) }
     );
     expect(toasts.success).toHaveBeenCalledWith('Refreshed 1 step');
     // The unconstrained step's picture, one entry; no record flagged.

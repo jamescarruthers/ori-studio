@@ -28,6 +28,7 @@ import {
   type FoldedFigureLayerOrderBlock,
 } from './foldedFigureLayerOrderState';
 import { foldedSolutionPlace } from './foldedSolutionCursor';
+import { solutionPlaceEnds } from '../../layer-order/host/solutionCursorTable';
 import { edgeInkEdits } from '../paper/paperStyleFields';
 
 /**
@@ -804,22 +805,21 @@ function constrainedSolutionCommand(
   }
   const place = foldedSolutionPlace(figure);
   if (!place) return verb;
-  const { index, total } = place.position;
-  // A step that way found nothing: an end E9 proved, whatever the count says.
-  const ended = place.ended === direction;
+  // Every host's stepper waits at the same ends (`solutionCursorTable.ts`), a way a step proved to end
+  // (E9) among them, whatever the count says.
+  const ends = solutionPlaceEnds(place);
   if (direction === 'previous') {
-    return index <= 1 || ended
+    return ends.first
       ? { ...verb, disabled: true, hint: t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution') }
       : verb;
   }
-  if (!ended && (!total.exact || index < total.n)) return verb;
+  if (!ends.last) return verb;
   return {
     ...verb,
     disabled: true,
-    hint:
-      total.n <= 1
-        ? t('panels:foldedFigureActions.onlySolution', 'This figure has one solution')
-        : t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution'),
+    hint: ends.only
+      ? t('panels:foldedFigureActions.onlySolution', 'This figure has one solution')
+      : t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution'),
   };
 }
 

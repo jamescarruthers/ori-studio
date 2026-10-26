@@ -216,6 +216,7 @@ import {
   watchFoldedSolutionCursor,
 } from '../../../cp-workspace/folded/foldedSolutionCursor';
 import { resolveLayerOrder } from '../../../layer-order/host/hostEngineGateway';
+import { solutionPressOf } from '../../../layer-order/host/solutionCursorTable';
 import {
   routed3dLayerOrderRecord,
   sameLayerOrderAttention,
@@ -4565,22 +4566,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           if (!landing.holds()) return { status: 'stopped' };
           // Nothing moved: the figure is as it was, and the press says why.
           restorePreviousFigureQuietly(figure);
-          switch (answer.outcome) {
-            case 'end':
-              // Proved (E9), however far the count got: the cursor marks that way as ended.
-              return { status: 'end' };
-            case 'timed_out':
-              // The restore, or the search for the next solution: Keep trying goes on from what it proved.
-              return { status: 'timed_out', stage: answer.stage };
-            case 'unrestored':
-              return { status: 'unrestored', why: answer.why };
-            case 'too_large':
-              return { status: 'too-large' };
-            case 'lost':
-              return { status: 'lost', cause: answer.cause };
-            default:
-              return { status: 'stopped' };
-          }
+          // As every host's press says it (`solutionCursorTable.ts`): an end is proved (E9), and Keep
+          // trying after a timeout goes on from what it proved.
+          return answer.outcome === 'moved' ? { status: 'stopped' } : solutionPressOf(answer);
         }
         const notApplied = i18n.t(
           'errors:cp.layerOrderNotApplied',

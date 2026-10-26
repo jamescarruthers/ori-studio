@@ -1120,7 +1120,7 @@ Settled while building H10 (Fold's Import CP):
 - [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
 - [ ] Your test feedback: no per-object × and exact undo of every action (#539)
 - [x] H10: Fold's Import CP chooses its order in the dialog (#541)
-- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s) waits on your answer
+- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)

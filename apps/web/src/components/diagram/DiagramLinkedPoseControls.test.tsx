@@ -189,16 +189,21 @@ describe('DiagramLinkedPoseControls', () => {
       expect(named('Next Layer Order').hasAttribute('aria-disabled')).toBe(false);
     });
 
-    it('holds ‹ › on a constrained step, pointing to the dialog (D9), and Edit order… opens it', () => {
+    it('offers ‹ › on a constrained step at rest, holds them at the ends a press found (H9), and Edit order… opens it', () => {
       const open = vi.fn();
-      show(
-        { render: { ...FLAT, foldCase: 2 }, solutions: { discovered: 1, hasNext: false }, constrained: true },
-        open,
-        { constraints: 2, attention: null }
-      );
+      const constrained = { render: FLAT, solutions: { discovered: 1, hasNext: false }, constrained: true } as const;
+      show({ ...constrained, place: null }, open, { constraints: 2, attention: null });
       for (const name of ['Previous Layer Order', 'Next Layer Order']) {
-        expect(named(name).getAttribute('aria-disabled')).toBe('true');
+        expect(named(name).hasAttribute('aria-disabled')).toBe(false);
       }
+      // Still no readout: the toolbar's never has one (Round 4).
+      expect(host!.textContent).not.toMatch(/\d of \d|Solution \d/);
+      show({ ...constrained, place: { position: { index: 3, total: { n: 3, exact: true } }, counted: true } }, open, {
+        constraints: 2,
+        attention: null,
+      });
+      expect(named('Previous Layer Order').hasAttribute('aria-disabled')).toBe(false);
+      expect(named('Next Layer Order').getAttribute('aria-disabled')).toBe('true');
       act(() => named('Edit order…').click());
       expect(open).toHaveBeenCalledOnce();
     });
