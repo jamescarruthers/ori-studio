@@ -2943,12 +2943,20 @@ function inspectorCoarseCases(browserName) {
       const row = dialog.getByRole('listitem').first();
       await row.waitFor({ state: 'visible', timeout: 30000 });
       const removes = await dialog.locator('li button[aria-label^="Remove "]').evaluateAll((buttons) =>
-        buttons.map((button) => ({ name: button.getAttribute('aria-label'), opacity: getComputedStyle(button).opacity, height: button.getBoundingClientRect().height }))
+        buttons.map((button) => {
+          const box = button.getBoundingClientRect();
+          // An object's × is drawn 16 px short of its slot, and the gap toward the next object is its target too.
+          const gutter = document.elementFromPoint(box.right + 8, box.top + box.height / 2);
+          return { name: button.getAttribute('aria-label'), opacity: getComputedStyle(button).opacity, height: box.height, gutterHit: button.contains(gutter) };
+        })
       );
       console.log(`[coarse ${browserName}] the row's removes: ${JSON.stringify(removes)}`);
       const objectRemoves = removes.filter((remove) => !remove.name.includes(','));
       if (objectRemoves.length < 2 || objectRemoves.some((remove) => remove.opacity !== '1')) {
         throw new Error(`${browserName}: each object's × should show with no hover: ${JSON.stringify(removes)}`);
+      }
+      if (objectRemoves.some((remove) => remove.height < 44 || !remove.gutterHit)) {
+        throw new Error(`${browserName}: each object's × should be a 44 px target: ${JSON.stringify(removes)}`);
       }
       await record(`inspector-coarse-${browserName}-row`, { dialog: await steadyShot(page, dialog, { masked: false }) });
       // A tap on the row, on its subject, puts that subject in the builder; its objects keep their ×.

@@ -185,12 +185,9 @@ function ConstraintRow({
     switch (part.kind) {
       case 'subject':
         return (
-          <LayerOrderFaceChip
-            key="subject"
-            letter={copy.letter(sentence.subject)}
-            gone={sentence.subject === null}
-            dim={dim}
-          />
+          <span key="subject" className={styles.lead}>
+            <LayerOrderFaceChip letter={copy.letter(sentence.subject)} gone={sentence.subject === null} dim={dim} />
+          </span>
         );
       case 'verb':
         return (
@@ -239,7 +236,9 @@ function ConstraintRow({
                           remove([member.id]);
                         }}
                       >
-                        <X size={10} aria-hidden="true" />
+                        <span className={styles.objectTab} aria-hidden="true">
+                          <X size={10} />
+                        </span>
                       </button>
                     </span>
                   )}

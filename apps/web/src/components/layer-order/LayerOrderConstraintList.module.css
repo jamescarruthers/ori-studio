@@ -88,9 +88,10 @@
   outline-offset: -2px;
 }
 
+/* On the sentence's first line, however many lines its objects take. */
 .dot {
   flex: none;
-  align-self: center;
+  margin-top: calc(var(--row-height) / 2 - 3px);
   width: 6px;
   height: 6px;
   border-radius: 999px;
@@ -109,7 +110,10 @@
 /*
  * The sentence on one line (A5's grouped rows): the subject chip and the words never wrap, and a row
  * too long for the column wraps inside its objects, under its first object, never the whole group
- * onto a line of its own. In a locale whose words follow the objects (ja, ko, zh) they stay after them.
+ * onto a line of its own. Every part sits on the first line: the subject and the words are each a
+ * line box of the row's height, and each object is one too, so the objects' lines are that tall and
+ * the first lines up with them. In a locale whose words follow the objects (ja, ko, zh) they stay
+ * after them, on the first line.
  */
 .sentence {
   display: flex;
@@ -123,9 +127,12 @@
   pointer-events: none;
 }
 
-.sentence > * {
+.lead,
+.verb {
+  display: flex;
   flex: none;
-  align-self: center;
+  align-items: center;
+  height: var(--row-height);
 }
 
 .verb {
@@ -138,15 +145,13 @@
   opacity: 0.55;
 }
 
-.sentence > .objects {
+.objects {
   display: flex;
   flex: 0 1 auto;
   flex-wrap: wrap;
   align-items: center;
-  align-self: flex-start;
-  gap: 4px;
+  gap: 0 4px;
   min-width: 0;
-  min-height: var(--row-height);
 }
 
 .object {
@@ -155,6 +160,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
+  height: var(--row-height);
   pointer-events: auto;
   cursor: pointer;
 }
@@ -176,19 +182,30 @@
   line-height: 1;
 }
 
+/* The button: the whole segment at rest; at touch size, the 44 px target around its tab. */
 .objectRemove {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+/* What it draws: a tab against the chip's right side, the chip's height. */
+.objectTab {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 20px;
   border: 1px solid var(--text-tertiary);
   border-left: 0;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--bg-elevated);
-  color: var(--text-secondary);
-  cursor: pointer;
-  opacity: 0;
 }
 
 .object:hover .objectRemove,
@@ -202,11 +219,19 @@
 }
 
 .objectRemove:focus-visible {
+  outline: none;
+}
+
+.objectRemove:focus-visible .objectTab {
   outline: 2px solid var(--accent-primary);
   outline-offset: 1px;
 }
 
-/* At touch size (Round5-Compound's phone): no hover, so every object's × shows, each a 44 px target; rows 44 px. */
+/*
+ * At touch size (Round5-Compound's phone): no hover, so every object's × shows, a 28 px tab with
+ * 16 px after it, and its button covers both, 44 px tall: a 44 px square. Rows and the objects'
+ * lines are 44 px, so the chips sit 24 px apart and no two targets overlap.
+ */
 @media (pointer: coarse) {
   .row {
     --row-height: var(--touch-target);
@@ -216,9 +241,8 @@
     padding: 0 var(--space-2) 0 4px;
   }
 
-  .objects {
-    row-gap: 24px;
-    padding: 12px 0;
+  .objectSlot {
+    height: var(--touch-target);
   }
 
   .objectRemove {
@@ -226,11 +250,12 @@
     opacity: 1;
   }
 
+  /* The 16 px after it, toward the next object, is its target too. */
   .objectRemove::after {
     position: absolute;
-    top: -12px;
+    top: 0;
     right: -17px;
-    bottom: -12px;
+    bottom: 0;
     left: 0;
     content: '';
   }
