@@ -466,15 +466,16 @@ const OPEN_EXAMPLE_PREFIX = 'file.openExample:';
 /**
  * What an open modal dialog ({@link isShortcutBarrierOpen}) holds back from the
  * menus: the actions that change the workspace behind it. Undo and redo would
- * rewind a document the dialog covers, a view switch would move the workspace
- * out from under a dialog opened over it, and the File menu's New, Open,
- * Import (Add), Import Diagram Steps and Detect CP from Image would replace the
- * document under it, or load another file into it. A key stops
- * at the dialog (`handleAppKeyDown`), but a menu reaches
- * {@link handleMenuAction} with no key to stop — so the native menu ran every
- * one of these behind any modal. A file opened from the Finder is refused for
- * the same reason (`useTauriOpenedFiles`), and so is an example, by its prefix
- * ({@link isHeldBehindModal}).
+ * rewind a document the dialog covers, and a view switch would move the
+ * workspace out from under a dialog opened over it. The rest would replace the
+ * document under it, or load another into it: the File menu's New, Open,
+ * Import (Add), Import Diagram Steps and Detect CP from Image, and Fold's
+ * Import CP, Start from Edit's Folded Figure, Send to Edit and Send to Diagram.
+ * The examples and Fold's samples are held by their prefix
+ * ({@link HELD_BEHIND_MODAL_PREFIXES}). A key stops at the dialog
+ * (`handleAppKeyDown`), but a menu reaches {@link handleMenuAction} with no key
+ * to stop — so the native menu ran every one of these behind any modal. A file
+ * opened from the Finder is refused for the same reason (`useTauriOpenedFiles`).
  *
  * Only these. Settings, About and the exports open over a dialog on purpose;
  * `App.tsx` stacks the modals for it.
@@ -492,7 +493,19 @@ const HELD_BEHIND_MODAL_ACTIONS: ReadonlySet<MenuActionId> = new Set<MenuActionI
   'file.importAdd',
   'file.importDiagramSteps',
   'file.detectCpImage',
+  'fold.import-cp',
+  'fold.start-from-edit-folded-figure',
+  'fold.send-to-edit',
+  'fold.send-to-diagram',
+  'fold.send-path-to-diagram',
 ]);
+
+/**
+ * The held actions named by a prefix: the examples, whose ids carry the example
+ * outside the static union, and Fold's samples, so a sample added later is
+ * held without a line here.
+ */
+const HELD_BEHIND_MODAL_PREFIXES: readonly string[] = [OPEN_EXAMPLE_PREFIX, 'fold.import-sample-'];
 
 /**
  * The held actions that a dialog with a history of its own takes instead
@@ -512,7 +525,8 @@ export function isMenuActionId(id: string): id is MenuActionId {
 
 function isHeldBehindModal(id: string): boolean {
   const held =
-    id.startsWith(OPEN_EXAMPLE_PREFIX) || (isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id));
+    HELD_BEHIND_MODAL_PREFIXES.some((prefix) => id.startsWith(prefix)) ||
+    (isMenuActionId(id) && HELD_BEHIND_MODAL_ACTIONS.has(id));
   return held && isShortcutBarrierOpen();
 }
 
