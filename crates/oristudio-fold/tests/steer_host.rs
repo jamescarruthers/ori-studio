@@ -554,6 +554,35 @@ fn rows_a_restore_cannot_apply_are_carried_and_saved() {
     assert_eq!(session.carried().len(), 1, "the gone row is still carried");
     let saved = session.save().expect("save");
     assert_eq!(saved.constraints.len(), 2);
+    // A dialog keeps or drops a carried row at the save, by its record
+    // index, and the session keeps it either way, for an undo after a save
+    // the host refuses.
+    assert_eq!(session.carried()[0].index, 2);
+    assert_eq!(
+        session.save_keeping(&[]).expect("save").constraints.len(),
+        1
+    );
+    assert_eq!(
+        session.save_keeping(&[2]).expect("save").constraints.len(),
+        2
+    );
+    assert_eq!(
+        session
+            .save_keeping(&[0, 1])
+            .expect("save")
+            .constraints
+            .len(),
+        1
+    );
+    assert_eq!(session.carried().len(), 1);
+    // A removal names its row by record index too, never by its place: the
+    // row of record index 2 is the only one now.
+    assert!(
+        session.remove_carried(0).is_none(),
+        "record index 0 was applied"
+    );
+    assert_eq!(session.remove_carried(2).map(|row| row.index), Some(2));
+    assert_eq!(session.save().expect("save").constraints.len(), 1);
     session.clear_carried();
     assert_eq!(session.save().expect("save").constraints.len(), 1);
 }

@@ -395,7 +395,7 @@ export interface LayerOrderBridge {
   ): LayerCommitted;
   /** The saved constraints the last restore did not apply, in record order. */
   layer_carried(session: number): LayerCarriedRow[];
-  /** A carried row's trash button; whether there was one at `index`. */
+  /** Remove the carried row of record index `index` (`LayerCarriedRow.index`, not its place); whether there was one. */
   layer_remove_carried(session: number, index: number): boolean;
   layer_clear_carried(session: number): void;
   layer_stacks(session: number, side: LayerSide): LayerStacks;
@@ -403,8 +403,11 @@ export interface LayerOrderBridge {
   layer_scene(session: number, side: LayerSide, model?: OristudioCpFoldedFigureModel): OristudioCpFoldedPaperScene | null;
   /** `[upper, lower, …]`, for the CP bridge's `folded_figure_fold_with_order`. */
   layer_oriedita_relations(session: number): Uint32Array;
-  /** The committed constraints, then the carried rows as saved, as one record. */
-  layer_save(session: number): LayerSaveOutcome;
+  /**
+   * The committed constraints, then the carried rows as saved, as one record: every carried row, or
+   * only those whose record index `keep` names. The session keeps its carried rows either way.
+   */
+  layer_save(session: number, keep?: Uint32Array): LayerSaveOutcome;
   layer_close(session: number): boolean;
   layer_live(): number;
 

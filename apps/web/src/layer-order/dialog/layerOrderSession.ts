@@ -146,16 +146,18 @@ export type LayerOrderApplyAnswer =
 
 /**
  * Apply's plumbing: the session's record (its committed constraints, the
- * carried rows still in it, the order's free pairs) and the order on screen
- * as the relations the host seeds its fold with, on the request's source.
- * Whoever drives the inspector removes the carried rows Apply drops first
- * (U9's `keepCarried`). Rejects when a call fails.
+ * carried rows `keepCarried` names by record index, or every one when left
+ * out, and the order's free pairs) and the order on screen as the relations
+ * the host seeds its fold with, on the request's source. Nothing in the
+ * session changes, so a refused save leaves it as it was. Rejects when a
+ * call fails.
  */
 export async function applyLayerOrderSession(
   engine: Pick<LayerOrderEngine, 'save' | 'relations'>,
-  request: LayerOrderRequest
+  request: LayerOrderRequest,
+  keepCarried?: readonly number[]
 ): Promise<LayerOrderApplyAnswer> {
-  const saved = await engine.save();
+  const saved = await engine.save(keepCarried);
   if (saved.status === 'refused') return { kind: 'refused', refusal: saved.refusal };
   const relations = await engine.relations();
   return { kind: 'applied', applied: { record: saved.record, relations, source: request.source } };

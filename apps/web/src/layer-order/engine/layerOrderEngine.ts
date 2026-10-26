@@ -308,7 +308,11 @@ export interface LayerOrderSessionCalls {
   commitPreview(token: number, constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
   /** The saved constraints the last restore did not apply, in record order. */
   carried(): Promise<LayerCarriedRow[]>;
-  /** A carried row's trash button: whether there was one at `index` (its index in the record). */
+  /**
+   * Remove the carried row whose record index is `index` (`LayerCarriedRow.index`, never its place
+   * in {@link carried}) from the session; whether there was one. The dialog never does: a removal it
+   * can still undo is left out of {@link save}'s `keepCarried` instead.
+   */
   removeCarried(index: number): Promise<boolean>;
   /** Drop every carried row (Clear all). */
   clearCarried(): Promise<void>;
@@ -320,8 +324,12 @@ export interface LayerOrderSessionCalls {
    * fold will; null when the figure has no subfaces.
    */
   scene(side: LayerSide): Promise<OristudioCpFoldedPaperScene | null>;
-  /** The record to save: the committed constraints, then the carried rows as saved, and the order's free pairs. */
-  save(): Promise<LayerOrderSaveOutcome>;
+  /**
+   * The record to save: the committed constraints, then the carried rows as saved, and the order's
+   * free pairs. `keepCarried` names the carried rows to write back by record index (every one when
+   * left out); the session keeps them all, so a save the host refuses has removed nothing.
+   */
+  save(keepCarried?: readonly number[]): Promise<LayerOrderSaveOutcome>;
   /**
    * The order on screen as Oriedita's relations, flat `[upper, lower, …]` over
    * the kernel's faces: what the host seeds its fold with

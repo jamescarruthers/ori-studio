@@ -17,11 +17,12 @@
  *   (`ModalFrame`'s `history`), so ⌘Z, ⇧⌘Z and the menu bar's Undo and Redo
  *   act inside the dialog, through the shortcut runtime: nothing here listens
  *   for a key or depends on where focus is.
- * - **Apply** asks the model first (its `applyBlocker`, D16), then removes
- *   the carried rows the model dropped, then saves what is on screen through
- *   `useLayerOrderSettle.apply`; only a save that went through closes the
- *   model and reports the close. One that refused keeps the dialog open, as
- *   it was, with the reason in the foot.
+ * - **Apply** asks the model (its `applyBlocker`, and D16's verdict) and
+ *   hands its answer to `useLayerOrderSettle.apply`: nothing to write, or a
+ *   save of the session's order with the carried rows the model still lists,
+ *   by record index. The save changes nothing in the session, so one the
+ *   engine refuses keeps the dialog open, as it was, with the reason in the
+ *   foot; only an Apply that went through closes the model and reports it.
  * - **Losses.** A call the engine rejects because the dialog is closing goes
  *   nowhere. One that lost the engine is the session's loss; any other is
  *   reported once, under `layer-order:dialog`, and the session counts as
@@ -36,7 +37,7 @@ import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import { isLayerOrderEngineLost } from '../engine/layerOrderRuntime';
 import { recordNeedsAttentionOf } from '../model/layerOrderDecisions';
 import type { LayerSidesStacks } from '../model/layerOrderEngineFacts';
-import { committedConstraints, currentStepBy, initLayerOrderDialog, layerOrderReducer } from '../model/layerOrderReducer';
+import { currentStepBy, initLayerOrderDialog, layerOrderReducer } from '../model/layerOrderReducer';
 import { listControls } from '../model/layerOrderSelectors';
 import type { LayerOrderAction, LayerOrderDialogState } from '../model/layerOrderState';
 import type { LayerPaneId, LayerPanesEvents } from '../panes/layerPaneInput';
@@ -190,13 +191,14 @@ export function useLayerOrderDialog(
       },
       request,
       dispatch: (action) => dispatch(action),
-      reopen: (openRequest) => {
+      reopen: (openRequest, limits) => {
         // The model's first open is the session's own, made as the dialog mounted: it has begun,
-        // and may have answered already. A later one begins when the session says it is opening.
+        // and may have answered already. A later one begins when the session says it is opening,
+        // with the model's limits (Keep trying's, after one that ran out).
         const mounting = openRequest === firstOpen;
         awaiting.current = { request: openRequest, begun: mounting };
         if (mounting) settleOpen();
-        else latest.current.session.reopen();
+        else latest.current.session.reopen(limits);
       },
       setCounting: (on) => latest.current.runtime?.setCounting(on),
       count: () => latest.current.runtime?.count() ?? null,
@@ -276,29 +278,16 @@ export function useLayerOrderDialog(
 
   const apply = useCallback(() => {
     if (applying.current || !alive.current) return;
-    const now = stateRef.current;
-    const step = layerOrderReducer(now, { type: 'apply', at: Date.now() });
+    const step = layerOrderReducer(stateRef.current, { type: 'apply', at: Date.now() });
     const asked = step.effects.find((effect) => effect.type === 'apply');
-    const live = latest.current.runtime;
-    if (!asked || asked.type !== 'apply' || !live || !now.shown) return;
+    if (!asked || asked.type !== 'apply' || !latest.current.runtime) return;
     applying.current = true;
-    const keepCarried = asked.result.kind === 'changed' ? asked.result.keepCarried : now.rows.carried.map((row) => row.facts.index);
     void (async () => {
       try {
-        // Only a restore carries rows (D10).
-        if (asked.result.kind === 'changed' && now.how === 'restore') {
-          // The carried rows the model removed leave the session before it saves.
-          const keep = new Set(keepCarried);
-          for (const row of await live.engine.carried()) {
-            if (!keep.has(row.index)) await live.engine.removeCarried(row.index);
-          }
-        }
-        const outcome = await latest.current.settle.apply({
-          constraints: committedConstraints(now.rows),
-          carried: keepCarried,
-          stacks: now.shown!,
-        });
-        if (outcome !== 'settled') return;
+        // The model's verdict (D16), and the carried rows it still lists, which the save writes back by
+        // record index: nothing in the session changes before a save that can still be refused.
+        const outcome = await latest.current.settle.apply(asked.result);
+        if (outcome !== 'applied' && outcome !== 'unchanged') return;
         // Answered: the model closes, and says so.
         stateRef.current = step.state;
         if (alive.current) setState(step.state);

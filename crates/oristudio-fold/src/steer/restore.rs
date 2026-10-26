@@ -44,9 +44,12 @@
 //! The rows are the committed constraints ([`ConstraintSession::constraints`])
 //! and the carried ones ([`ConstraintSession::carried`]), each carried row
 //! with its [`ConstraintStatus`] and, when its faces are intact today, the
-//! [`Constraint`] it would be. Removing a row is
-//! [`ConstraintSession::remove_carried`] (or a commit without it, for a
-//! committed one). Applying carried rows is a commit of a list that holds
+//! [`Constraint`] it would be. A dialog removes a carried row from what it
+//! saves by leaving its record index out of
+//! [`ConstraintSession::save_keeping`], so a save that is refused has changed
+//! nothing an undo would need back ([`ConstraintSession::remove_carried`]
+//! removes one from the session itself); a committed row goes by a commit
+//! without it. Applying carried rows is a commit of a list that holds
 //! their constraints: each one committed leaves the carried rows. After a
 //! clash nothing is committed, so the builder previews against the rows it
 //! shows ([`ConstraintSession::preview_list`]), and Apply waits until the
@@ -417,12 +420,16 @@ impl ConstraintSession {
         self.carried_rows()
     }
 
-    /// Remove carried row `index` (into [`Self::carried`]), as the user's
-    /// trash button does, so a save no longer writes it; `None` past the
-    /// last.
+    /// Remove the carried row of record index `index`
+    /// ([`CarriedConstraint::index`], its place among the record's
+    /// constraints, which a removal never shifts), so a save no longer
+    /// writes it; `None` when no carried row has it. A dialog that can still
+    /// take a removal back (undo) leaves the session alone and names the
+    /// rows to keep at the save instead ([`Self::save_keeping`]).
     pub fn remove_carried(&mut self, index: usize) -> Option<CarriedConstraint> {
         let carried = self.carried_mut();
-        (index < carried.len()).then(|| carried.remove(index))
+        let at = carried.iter().position(|row| row.index == index)?;
+        Some(carried.remove(at))
     }
 
     /// Remove every carried row, as Clear all does with the committed ones.

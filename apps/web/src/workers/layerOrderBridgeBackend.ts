@@ -222,8 +222,9 @@ export function createLayerOrderBridgeBackend(
       return bridge.layer_scene(now.handle, side, now.model);
     },
 
-    save() {
-      const saved = bridge.layer_save(current().handle);
+    save(keepCarried) {
+      const keep = keepCarried ? Uint32Array.from(keepCarried) : undefined;
+      const saved = bridge.layer_save(current().handle, keep);
       if (saved.status !== 'ok') return saved;
       const read = readLayerOrderRecord(saved.json);
       if (read === NEWER || !read.ok) {

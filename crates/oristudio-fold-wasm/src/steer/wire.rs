@@ -483,8 +483,9 @@ impl From<RecordFace> for SavedFace {
 
 /// A saved constraint a restore did not apply (`CarriedConstraint`): a row
 /// the dialog shows by its status, and that `layer_save` writes back as
-/// saved, after the committed constraints, until it is removed
-/// (`layer_remove_carried`, `layer_clear_carried`) or a commit applies it.
+/// saved, after the committed constraints, unless the save's `keep` leaves
+/// its `index` out, until it is removed (`layer_remove_carried` by `index`,
+/// `layer_clear_carried`) or a commit applies it.
 /// Its status is flattened in: `{ status: 'intact' | 'ambiguous' |
 /// 'clashing' }` or `{ status: 'gone', cause }`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
