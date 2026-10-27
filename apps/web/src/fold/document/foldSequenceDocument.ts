@@ -31,7 +31,7 @@
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { randomId, type IdFactory } from '../../lib/documentFile';
-import { snapshotDocumentPaperStyle, type ResolvedDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
+import { DEFAULT_DOCUMENT_PAPER_STYLE, type ResolvedDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import {
   evaluateOrieditaRatioExpression,
@@ -966,9 +966,9 @@ export interface FoldSequenceDocument {
 
 /**
  * What a new Fold sequence draws in until its Paper tab picks another:
- * the built-in Default style, saved with the sequence’s own values.
+ * the built-in Diagram style, saved with the sequence’s own values.
  */
-export const FOLD_DEFAULT_PAPER_STYLE: ResolvedDocumentPaperStyle = snapshotDocumentPaperStyle({ preset: 'default' });
+export const FOLD_DEFAULT_PAPER_STYLE: ResolvedDocumentPaperStyle = DEFAULT_DOCUMENT_PAPER_STYLE;
 
 /** A new, empty sequence. */
 export function createFoldSequence(

@@ -171,18 +171,18 @@ describe('setFoldPaperShape', () => {
 describe('setFoldPaperStyle', () => {
   it('draws the sequence in another style and keeps its steps', () => {
     const original = document();
-    const changed = setFoldPaperStyle(original, { preset: 'diagram' });
-    expect(changed.style).toEqual({ preset: 'diagram', style: builtInPaperPreset('diagram').style });
+    const changed = setFoldPaperStyle(original, { preset: 'default' });
+    expect(changed.style).toEqual({ preset: 'default', style: builtInPaperPreset('default').style });
     expect(changed.steps).toBe(original.steps);
     expect(changed.paper).toBe(original.paper);
   });
 
   it('changes nothing for the style it has, the default included', () => {
     const original = document();
-    // A new sequence uses Default: picking it again changes nothing.
-    expect(setFoldPaperStyle(original, { preset: 'default' })).toBe(original);
-    const styled = setFoldPaperStyle(original, { preset: 'diagram' });
-    expect(setFoldPaperStyle(styled, { preset: 'diagram' })).toBe(styled);
+    // A new sequence uses Diagram: picking it again changes nothing.
+    expect(setFoldPaperStyle(original, { preset: 'diagram' })).toBe(original);
+    const styled = setFoldPaperStyle(original, { preset: 'default' });
+    expect(setFoldPaperStyle(styled, { preset: 'default' })).toBe(styled);
   });
 
   it('lets go of a newer build’s style once another is chosen', () => {

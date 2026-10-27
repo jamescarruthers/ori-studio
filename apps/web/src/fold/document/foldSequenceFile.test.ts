@@ -47,14 +47,14 @@ describe('readFoldSequence and writeFoldSequence', () => {
     expect(JSON.parse(JSON.stringify(writeFoldSequence(held!)))).toEqual(JSON.parse(JSON.stringify(migrated)));
   });
 
-  it('reads a sequence’s paper style, draws one with none in the Default style, and carries a newer one back', () => {
+  it('reads a sequence’s paper style, draws one with none in the Diagram style, and carries a newer one back', () => {
     // None: the default, written explicitly so a later default never changes it.
     const none = readSteps([]);
     expect(none.document.style).toEqual(FOLD_DEFAULT_PAPER_STYLE);
     expect(writeFoldSequence(none).style).toEqual(FOLD_DEFAULT_PAPER_STYLE);
     // A built-in by id only (as a hand-written file may say it): its values.
-    const byId = readSteps([], { style: { preset: 'diagram' } });
-    expect(byId.document.style).toEqual({ preset: 'diagram', style: builtInPaperPreset('diagram').style });
+    const byId = readSteps([], { style: { preset: 'default' } });
+    expect(byId.document.style).toEqual({ preset: 'default', style: builtInPaperPreset('default').style });
     expect(writeFoldSequence(byId).style).toEqual(byId.document.style);
     // A resolved style, as the Paper tab stores a Settings one: kept as it is.
     const red = { ...DEFAULT_PAPER_STYLE, paper: { front: '#ff0000', back: '#ffffff' } };

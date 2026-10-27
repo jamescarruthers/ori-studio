@@ -15,7 +15,7 @@ import styles from './FoldPaperPane.module.css';
  * starts from (plan D11).
  *
  * The style is the sequence's own, picked as the Diagram's Page pane picks a
- * diagram's (`PaperStyleChoiceRow`): a built-in — the Default style, which a
+ * diagram's (`PaperStyleChoiceRow`): a built-in — the Diagram style, which a
  * new sequence is drawn in — the export style from Settings, or a preset
  * saved there, copied into the sequence when chosen. The folded form and the
  * step cards paint from it; the crease pattern pane uses its paper colors

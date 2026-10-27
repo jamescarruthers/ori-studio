@@ -76,13 +76,13 @@ describe('the rest of the vocabulary', () => {
     });
   });
 
-  it('starts a sequence at the square, front up, with no steps, in the Default style', () => {
+  it('starts a sequence at the square, front up, with no steps, in the Diagram style', () => {
     expect(createFoldSequence(undefined, 'Crane', sequentialIds())).toEqual({
       formatVersion: 2,
       id: 'fold-1',
       title: 'Crane',
       paper: { shape: { kind: 'square' }, startSide: 'front' },
-      style: { preset: 'default', style: builtInPaperPreset('default').style },
+      style: { preset: 'diagram', style: builtInPaperPreset('diagram').style },
       steps: [],
     });
   });
