@@ -161,6 +161,13 @@ impl Unordered {
         &self.parts
     }
 
+    /// Turn the view every state of these parts is seen in by `angle`
+    /// radians, counter-clockwise on the display, as a rotate step turns
+    /// it. Only the view: no face, crease, letter or constraint moves.
+    pub(crate) fn rotate_view(&mut self, angle: f64) {
+        self.parts.view = self.parts.view.rotated(angle);
+    }
+
     /// The folded creases whose letter the order decides.
     pub fn unknown_letters(&self) -> &BTreeSet<EdgeId> {
         &self.unknown

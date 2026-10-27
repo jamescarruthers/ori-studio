@@ -597,6 +597,17 @@ impl ImportedPattern {
         &self.unordered
     }
 
+    /// Turn the view the import lands in by `angle` radians,
+    /// counter-clockwise on the display, from the target's (which the import
+    /// keeps, plan D16): the imported step is then seen turned, as if a
+    /// rotate step followed it, with no step of its own (the Layer order
+    /// dialog's Rotate, `implementation-plans/layer-order-dialog.md`). Only
+    /// the view turns; the order, the letters and every stored point stay in
+    /// the model frame. A non-finite angle is no turn.
+    pub fn rotate_view(&mut self, angle: f64) {
+        self.unordered.rotate_view(angle);
+    }
+
     /// An input point in sheet coordinates.
     pub fn to_sheet(&self, p: Point) -> Point {
         self.placement.to_sheet(p)

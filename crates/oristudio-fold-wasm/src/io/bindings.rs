@@ -21,6 +21,11 @@
 //!   import_layer_opening(import: number, choice: Uint32Array):
 //!     Outcome<{ source: FoldSource; shown: FoldedPaperScene;
 //!       look: { side: 'front' | 'back'; turn_deg: number } }>;
+//!   /** Turn an import opened onto the dialog so Fold shows it turned
+//!    *  `turn_deg` clockwise from its side's picture (the dialog's Rotate):
+//!    *  every step it lands after stores the turn (`turnDeg` on its op). */
+//!   import_turn(import: number, turn_deg: number):
+//!     { side: 'front' | 'back'; turn_deg: number };
 //!   /** Land the order the dialog's Apply chose: [upper, lower, …] over the
 //!    *  faces of the opening whose source digest is `digest`. */
 //!   import_pick_layer_order(import: number, digest: string, relations: Uint32Array):
@@ -113,6 +118,14 @@ impl FoldEngine {
                 .layer_opening(import, &choice)
                 .map_err(thrown)?,
         )
+    }
+
+    /// Turn a held import opened onto the Layer order dialog so Fold shows
+    /// it turned `turn_deg`, clockwise on screen, from the side's picture
+    /// (the dialog's Rotate); every step it lands after stores the turn.
+    /// Answers its look now.
+    pub fn import_turn(&mut self, import: u32, turn_deg: f64) -> Result<JsValue, JsValue> {
+        to_js_value(&self.imports.turn(import, turn_deg).map_err(thrown)?)
     }
 
     /// Land the order the Layer order dialog's Apply chose: `relations`,

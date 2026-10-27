@@ -41,6 +41,7 @@ export interface FoldWasmIoEngine {
   import_pick(importHandle: number, choice: Uint32Array): unknown;
   import_layer_opening(importHandle: number, choice: Uint32Array): unknown;
   import_pick_layer_order(importHandle: number, digest: string, relations: Uint32Array): unknown;
+  import_turn(importHandle: number, turnDeg: number): unknown;
   import_edit_folded_figure(scene: unknown, target: unknown, limits: unknown): unknown;
   release_imports(imports: Uint32Array): number;
   live_imports(): number;
@@ -121,6 +122,13 @@ export interface FoldEngineIoCalls {
     digest: string,
     relations: Uint32Array
   ): FoldEngineOutcome<FoldImportFingerprinted>;
+  /**
+   * Turn an import opened onto the Layer order dialog so Fold shows it
+   * turned `turnDeg`, clockwise on screen, from its side's picture (the
+   * dialog's Rotate, in its opening's `look` terms). Every step it lands
+   * after stores the turn (`FoldCpJumpOp.turnDeg`). Answers its look now.
+   */
+  importTurn(importHandle: number, turnDeg: number): FoldImportLayerOpening['look'];
   /** Start from Edit's folded figure: the kernel's paper scene of it. */
   importEditFoldedFigure(
     scene: OristudioCpFoldedPaperScene,
@@ -183,6 +191,11 @@ export function createFoldEngineIoCalls(engine: FoldWasmIoEngine): FoldEngineIoC
       }
       const landed = engine.import_pick_layer_order(requireHandle('import', importHandle), digest, relations);
       return fingerprinted(landed as FoldEngineOutcome<FoldImportLanded>);
+    },
+
+    importTurn(importHandle, turnDeg) {
+      if (typeof turnDeg !== 'number' || !Number.isFinite(turnDeg)) throw invalidInput('turnDeg must be a number');
+      return engine.import_turn(requireHandle('import', importHandle), turnDeg) as FoldImportLayerOpening['look'];
     },
 
     importEditFoldedFigure(scene, to, within) {

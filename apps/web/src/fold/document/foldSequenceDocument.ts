@@ -315,6 +315,13 @@ export interface FoldCpJumpOp {
   origin: FoldCpOrigin;
   /** Project-local source. Replay always uses cpJson and orderJson, never the live source. */
   source?: { documentId: string; revision: string; region?: RegionReference };
+  /**
+   * How far the step's view turns, degrees clockwise on screen, from the
+   * view of the step it lands after, in (−180, 180]: the Layer order
+   * dialog's Rotate on the import, so no rotate step need follow it. Left
+   * out for none, as every step from before it.
+   */
+  turnDeg?: number;
 }
 
 // --- Compound folds (plan D4), one block per family -------------------------
