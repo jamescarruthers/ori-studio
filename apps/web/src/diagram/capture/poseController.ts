@@ -93,7 +93,9 @@ import {
   sayStepFoldsIn3d,
   stepLayerOrderGuard,
   stepLayerOrderRequest,
+  stepTurnedRender,
   stillOpenedOn,
+  turnedFlatRender,
   type DiagramStepLayerOrderVia,
   type FlatRender,
   type StepLayerOrderGuard,
@@ -366,8 +368,10 @@ export interface PoseController {
    * no fold of its own (`sourceToEdit`). An Apply replaces it with a new one
    * in the applied order (`fold_with_order`), and writes the record on the
    * step's source in the flat pose it was opened on, one undo step ("Change
-   * layer order", as the Step pane's). `unchanged`, `cancelled`, `busy` and
-   * `unavailable` write nothing, and so does an Apply onto a step or pattern
+   * layer order", as the Step pane's), turned as the dialog's Rotate left
+   * it. An `unchanged` that turned the step's flat fold turns it by Rotate's
+   * own verb (`rotate-to`); `cancelled`, `busy` and `unavailable` write
+   * nothing, and so does an Apply onto a step or pattern
    * that changed while it was open. `surface` is who asked, for the dialog's
    * events: `pose`, Pose's own Edit order…; `diagram_step`, the Step pane's
    * Edit… or Review… on the step open here. Whether it applied an order.
@@ -761,10 +765,16 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     if (disposed || !stillOpenedOn(stepId, opening.guard)) return false;
     // The capture is over before the dialog opens: nothing is held busy while it is up.
     const outcome = await openLayerOrderDialog(opening.request);
+    // Only turned: Rotate's own verb, on the flat fold the step shows; counted by the dialog, not as a pose.
+    if (outcome.kind === 'unchanged' && outcome.turnDeg !== undefined && stepTurnedRender(stepId, outcome.turnDeg)) {
+      await pose({ verb: 'rotate-to', degrees: outcome.turnDeg }, { tracked: false, opened: opening.guard });
+    }
     if (outcome.kind !== 'applied') return false;
-    // One undo step, named as the Step pane's Apply names it; counted by the dialog, not as a pose.
+    // One undo step, named as the Step pane's Apply names it, turned as the dialog left it; counted by the
+    // dialog, not as a pose.
+    const render = turnedFlatRender(opening.render, outcome.turnDeg);
     const applied = await pose(
-      { verb: 'layer-order', applied: outcome.applied, frame: opening.frame, render: opening.render },
+      { verb: 'layer-order', applied: outcome.applied, frame: opening.frame, render },
       { tracked: false, opened: opening.guard, label: APPLY_LAYER_ORDER_LABEL }
     );
     return applied?.status === 'captured';

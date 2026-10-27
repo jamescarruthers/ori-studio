@@ -96,13 +96,20 @@ export function foldImportLayerOrderRequest(ask: FoldImportLayerOrderAsk, view: 
   };
 }
 
+/** The turn an Apply hands back, in the opening's `look` terms, when the dialog's Rotate moved it. */
+function turnOf(outcome: { readonly turnDeg?: number }): { turnDeg?: number } {
+  return outcome.turnDeg === undefined ? {} : { turnDeg: outcome.turnDeg };
+}
+
 /** The dialog's answer as the import flow acts on it (see the module docs). */
 export function foldImportLayerOrderAnswer(outcome: LayerOrderDialogOutcome): FoldImportLayerOrderAnswer {
   switch (outcome.kind) {
-    case 'applied':
-      return { kind: 'applied', relations: outcome.applied.relations, digest: outcome.applied.source.digest };
+    case 'applied': {
+      const { relations, source } = outcome.applied;
+      return { kind: 'applied', relations, digest: source.digest, ...turnOf(outcome) };
+    }
     case 'unchanged':
-      return { kind: 'unchanged' };
+      return { kind: 'unchanged', ...turnOf(outcome) };
     case 'cancelled':
       return { kind: 'cancelled' };
     case 'busy':

@@ -44,7 +44,7 @@ import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldPressMoved } from './foldPress';
 import { isLayerOrderPressRefusal, sayLayerOrderPressRefusal } from './layerOrderPressToasts';
-import { editFigureLook, editFigureView, type EditFigureView } from './openFoldedFigureLayerOrder';
+import { editFigureLook, editFigureView, turnFoldedFigureTo, type EditFigureView } from './openFoldedFigureLayerOrder';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type SelectionLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
@@ -107,10 +107,11 @@ export async function foldSelectionWithLayerOrder(
     let folded: boolean | undefined;
     if (outcome.kind === 'applied') {
       const { source, relations, record } = outcome.applied;
-      folded = await foldWithChosenOrderAsEntry(opening.lineIds, { source, relations, record, press, figure }, t);
+      const withOrder = { source, relations, record, press, figure };
+      folded = await foldWithChosenOrderAsEntry(opening.lineIds, withOrder, t, outcome.turnDeg);
     } else if (outcome.kind === 'unchanged') {
-      const none = new Uint32Array();
-      folded = await foldWithChosenOrderAsEntry(opening.lineIds, { source: request.source, relations: none, record: null, press, figure }, t);
+      const withOrder = { source: request.source, relations: new Uint32Array(), record: null, press, figure };
+      folded = await foldWithChosenOrderAsEntry(opening.lineIds, withOrder, t, outcome.turnDeg);
     }
     // Refused because the creases moved since the press: no fault, so a message.
     if (folded === false && foldPressMoved(press, store.getState())) sayLayerOrderPressRefusal('moved', t);
@@ -120,15 +121,26 @@ export async function foldSelectionWithLayerOrder(
   }
 }
 
-/** The new figure's fold, as Fold's own entry: "Fold model", or nothing when it folds nothing. */
+/**
+ * The new figure's fold, as Fold's own entry: "Fold model", or nothing when
+ * it folds nothing. With `turnDeg`, the dialog's Rotate turned it: the new
+ * figure starts turned so, in the same entry.
+ */
 function foldWithChosenOrderAsEntry(
   lineIds: readonly number[],
   withOrder: OristudioCpFoldWithChosenOrder,
-  t: TFunction
+  t: TFunction,
+  turnDeg?: number
 ): Promise<boolean | undefined> {
-  return foldedFigureGesture.run('verb', t('panels:creasePattern.foldModelAction', 'Fold model'), () =>
-    useWorkspaceStore.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds: [...lineIds], withOrder })
-  );
+  return foldedFigureGesture.run('verb', t('panels:creasePattern.foldModelAction', 'Fold model'), async () => {
+    const store = useWorkspaceStore;
+    const before = new Set(store.getState().oristudioCpFoldedFigures.map((entry) => entry.id));
+    const folded = await store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds: [...lineIds], withOrder });
+    // The figure this fold made: the one the list did not hold before it.
+    const made = folded ? store.getState().oristudioCpFoldedFigures.find((entry) => !before.has(entry.id)) : undefined;
+    if (made && turnDeg !== undefined) turnFoldedFigureTo(made.id, turnDeg);
+    return folded;
+  });
 }
 
 /** How far a new figure is turned on the canvas: upright on screen, as a fold places it. */

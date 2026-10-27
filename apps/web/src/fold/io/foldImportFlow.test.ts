@@ -129,6 +129,11 @@ function fakeIo({
           look: { side: 'back', turn_deg: 90 },
         };
       },
+      importTurn(handle: number, turnDeg: number) {
+        calls.push(`importTurn:${turnDeg}`);
+        if (!held.has(handle)) throw { code: 'unknown_import', message: 'gone' };
+        return { side: 'back' as const, turn_deg: turnDeg };
+      },
       importPickLayerOrder(handle: number, digest: string, relations: Uint32Array) {
         calls.push(`importPickLayerOrder:${digest}:${[...relations].join(',')}`);
         const import_ = opened.get(handle);
@@ -522,6 +527,20 @@ describe('Import CP’s order chosen in the Layer order dialog (row H10)', () =>
     expect(flow.store.getState()).toMatchObject({ phase: 'done' });
     expect(io().calls).toEqual(['importCp:after', 'importLayerOpening:0,0', 'importPick:0,0', 'releaseImports:101']);
     expect(source.commits).toEqual([expect.objectContaining({ op: expect.objectContaining({ orderJson: '[0,0]' }) })]);
+  });
+
+  it.each([
+    ['an Apply', { kind: 'applied', relations: PICKED, digest: DIGEST, turnDeg: 120 }, `importPickLayerOrder:${DIGEST}:3,1,4,1`],
+    ['an Apply that only turned it', { kind: 'unchanged', turnDeg: 120 }, 'importPick:0,0'],
+  ] as const)('turns the import to the dialog’s Rotate before it lands, so the step itself is stored turned: %s', async (_what, answer, pick) => {
+    const { choose } = dialog(answer);
+    const { flow, source, io } = setup(sequenceOf([step('a', null)]), 'a', { orders: [3, 2] }, undefined, undefined, choose);
+    await flow.open(FILE);
+    await settle(10);
+    expect(flow.store.getState()).toMatchObject({ phase: 'done' });
+    expect(io().calls).toEqual(['importCp:after', 'importLayerOpening:0,0', 'importTurn:120', pick, 'releaseImports:101']);
+    // One step, as ever: no rotate step after it.
+    expect(source.commits).toHaveLength(1);
   });
 
   it('cancels the import on Cancel: nothing committed, the import let go', async () => {

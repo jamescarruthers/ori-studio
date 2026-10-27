@@ -430,6 +430,33 @@ describe('Fold with layer order…', () => {
   });
 
   it.each([
+    ['an Apply', 'applied'],
+    ['an Apply that only turned it', 'unchanged'],
+  ] as const)('the new figure starts at the turn the dialog’s Rotate left, in the fold’s one entry: %s', async (_what, kind) => {
+    const plain = { kind: 'unchanged' } as const;
+    // Where a fold with no turn places it, upright on the canvas.
+    dialog.answer = async () => plain;
+    await foldSelectionWithLayerOrder(SELECTION, t);
+    const upright = figures()[0]!.placement.rotation;
+    await state().undo();
+
+    dialog.answer = async (request) =>
+      kind === 'applied'
+        ? {
+            kind,
+            applied: { record: twoConstraintRecord(), relations: new Uint32Array([0, 1]), source: request.source },
+            turnDeg: 30,
+          }
+        : { kind, turnDeg: 30 };
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe(kind);
+    const [figure] = figures();
+    expect(figure!.placement.rotation).toBeCloseTo(upright + Math.PI / 6, 12);
+    expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Fold model']);
+    await state().undo();
+    expect(figures()).toEqual([]);
+  });
+
+  it.each([
     ['refused', 'refuse'],
     ['drawn on other faces', 'other-faces'],
     ['not reached whole', 'unsolved'],
