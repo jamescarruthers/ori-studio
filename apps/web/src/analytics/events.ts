@@ -535,6 +535,12 @@ export type DiagramPulledMode = 'sequence' | 'find';
  */
 export type DiagramPulledInto = 'after' | 'end' | 'fill' | 'replace';
 
+/** A row of the Diagram's Import menu: files through the step import dialog, the References browser, the Fold browser. */
+export type DiagramImportWayName = 'file' | 'references' | 'fold';
+
+/** Where the Import menu was opened: the empty Diagram, or an empty step's card. */
+export type DiagramImportMenuFrom = 'empty_state' | 'card';
+
 /**
  * Whether a pull's marks were lifted into annotations (17d) or left in the
  * picture, as every card was before: `baked` when any card's marks were more
@@ -1905,6 +1911,12 @@ export const ANALYTICS_EVENTS = {
    * `diagram steps pulled from references` is read against.
    */
   diagramReferencesBrowserOpened: 'diagram references browser opened',
+  /**
+   * A row chosen in the Diagram's Import menu, on the empty Diagram or an
+   * empty step's card: which way in, and where the menu was. Whether the
+   * menu is how people bring steps in, and which way.
+   */
+  diagramImportWayChosen: 'diagram import way chosen',
   /**
    * Cards pulled into the diagram from the References browser (D20): from a
    * planned pattern's sequence or the Find answer, how many, and where they

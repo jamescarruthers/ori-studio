@@ -34,8 +34,7 @@ import {
 } from "./snapshotHistory";
 import { trimDiagramHistory } from "./diagramState";
 import {
-  insertionIndex,
-  insertSteps,
+  placeImportedSteps,
   type DiagramStep,
   type KnownDiagramAsset,
 } from "../../diagram/document/diagramDocument";
@@ -269,14 +268,11 @@ export async function commitDiagramImport(
   }
   if (!steps.length) return 0;
   const base = before.diagram ?? newDiagram();
-  const inserted = insertSteps(
-    { ...base, assets },
-    steps,
-    insertionIndex(base, target.anchor),
-  );
+  // An empty anchor step takes the first, as a pull fills it (D2); the rest go after it.
+  const placed = placeImportedSteps({ ...base, assets }, steps, target.anchor);
   const next = settlePlaces(
     base,
-    followPageArrangements(base, retainPageCounts(base, inserted)),
+    followPageArrangements(base, retainPageCounts(base, placed.document)),
   ).document;
   const label = "Import steps",
     compoundId = cpGroups.length ? crypto.randomUUID() : undefined;
@@ -346,7 +342,7 @@ export async function commitDiagramImport(
       diagramImportBusy: false,
     });
     // Through the slice's rule, which also lets go of a part or picker chosen on the anchor.
-    get().selectDiagramStep(steps[0]!.id);
+    get().selectDiagramStep(placed.stepIds[0]!);
     // The foldability overlay keeps its result until the check of the new sheets lands, as after any edit.
     if (cpEntry) get().scheduleOristudioCamvRefresh();
     return steps.length;

@@ -59,7 +59,7 @@ describe('the pattern picker’s Show as', () => {
   it('offers a step with no link the way the nearest linked step before it is shown, past turns, uploads and References steps (review fix 3)', () => {
     const upload: DiagramStep = { ...createStep(() => 'step-u'), source: { kind: 'upload', assetId: 'u', rotationQuarterTurns: 0, mirrored: false } };
     const before: DiagramEntry[] = [
-      cpStep('step-f', { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 }),
+      cpStep('step-p', { mode: 'crease-pattern', rotationDeg: 0 }),
       createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'turn-1'),
       upload,
       referencesStep('step-r'),
@@ -67,12 +67,12 @@ describe('the pattern picker’s Show as', () => {
     const empty = createStep(() => 'step-c');
     useWorkspaceStore.setState({ diagram: insertSteps(createDiagram({ title: 'Picker' }), [...before, empty], 0) });
     act(() => void state().openDiagramPatternPicker('step-c'));
-    expect(seen.link?.picker?.showAs).toBe('folded');
-    // Nothing linked before it: the way the picker last linked, a crease pattern until it has.
+    expect(seen.link?.picker?.showAs).toBe('crease-pattern');
+    // Nothing linked before it: the way the picker last linked, Folded until it has.
     act(() => state().closeDiagramPatternPicker());
     useWorkspaceStore.setState({ diagram: insertSteps(createDiagram({ title: 'Picker' }), [empty, ...before], 0) });
     act(() => void state().openDiagramPatternPicker('step-c'));
-    expect(seen.link?.picker?.showAs).toBe('crease-pattern');
+    expect(seen.link?.picker?.showAs).toBe('folded');
   });
 
   it('forgets a way picked for a step when another step is selected', () => {

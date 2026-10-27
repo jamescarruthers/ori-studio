@@ -1,7 +1,6 @@
 import { memo, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Compass,
   ImagePlus,
   Link2,
   Lock,
@@ -31,6 +30,8 @@ import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { stepPictureSource, type StepPictureSource } from '../../diagram/pictures/paintDiagramStep';
 import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
 import { Button } from '../ui/Button';
+import type { DiagramImportWayId } from '../../diagram/actions/diagramImportWays';
+import { DiagramImportMenu } from './DiagramImportMenu';
 import { DiagramPicturePreview } from './DiagramPicturePreview';
 import {
   StepCard,
@@ -48,8 +49,8 @@ import { capturedStyleChange } from '../../diagram/pictures/lighting';
  * One step in the Steps grid: its number and kind, its picture, and its
  * instruction, on the shared step card (`ui/steps/StepCard`).
  *
- * An empty card's Upload… and Link…, a capture's Stop, and the Adjust pose
- * and Annotate buttons over a picture are a pointer's shortcuts, hidden from
+ * An empty card's Upload…, Link… and Import menu, a capture's Stop, and the
+ * Adjust pose and Annotate buttons over a picture are a pointer's shortcuts, hidden from
  * assistive technology and out of the tab order: the same verbs are in the
  * card's menu and the Step pane, where a keyboard and a screen reader reach
  * them. The card names itself from its number, kind, how
@@ -87,9 +88,10 @@ export const DiagramStepCard = memo(function DiagramStepCard({
   areaChanged = false,
   capture,
   patternOpen,
+  foldSteps,
   onLink,
   onStop,
-  onFromReferences,
+  onImport,
   onOpenIn,
   onGoToEdit,
   onMakeTurn,
@@ -134,11 +136,13 @@ export const DiagramStepCard = memo(function DiagramStepCard({
   capture: { stoppable: boolean } | null;
   /** A crease pattern is open to link an empty step to. */
   patternOpen: boolean;
+  /** The project's Fold sequence has a step to take into an empty step. */
+  foldSteps: boolean;
   /** Choose a pattern for this step. */
   onLink: (stepId: string) => void;
   onStop: (stepId: string) => void;
-  /** Fill this step from the References browser. */
-  onFromReferences: (stepId: string) => void;
+  /** Fill this empty step from files, References or Fold: its Import menu. */
+  onImport: (stepId: string, way: DiagramImportWayId) => void;
   /** Open this step in Pose or Annotate, from the buttons over its picture. */
   onOpenIn: (stepId: string, mode: 'pose' | 'annotate') => void;
   /** Go to Edit: an empty step's way to a pattern when none is open. */
@@ -351,23 +355,14 @@ export const DiagramStepCard = memo(function DiagramStepCard({
                   {t('panels:diagram.card.goToEdit', 'Go to Edit')}
                 </Button>
               )}
-              {patternOpen && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  onMouseDown={keepFocus}
-                  onClick={(event) => {
-                    // It selects the step itself.
-                    event.stopPropagation();
-                    onFromReferences(step.id);
-                  }}
-                >
-                  <Compass size={13} aria-hidden="true" />
-                  {t('panels:diagram.card.fromReferences', 'References…')}
-                </Button>
-              )}
+              <DiagramImportMenu
+                from="card"
+                pointerOnly
+                size="sm"
+                patternOpen={patternOpen}
+                foldSteps={foldSteps}
+                onChoose={(way) => onImport(step.id, way)}
+              />
             </span>
           )}
           {!readOnly && (

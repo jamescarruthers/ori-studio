@@ -60,6 +60,7 @@ import {
 import { linkDescriptorOf } from './capture/diagramLinks';
 import { linkedSourceOf } from './capture/linkStatus';
 import { fillStepFromFold, hasFoldSteps } from './fold/foldBrowserActions';
+import { importStepsInto } from './import/stepImportActions';
 import {
   duplicateFoldStepAs,
   poseDiagramFoldStep,
@@ -368,6 +369,7 @@ function bindStepActions(
       openInFold: () => openLinkedSource(stepId),
       fromReferences: () => fillStepFromReferences(stepId),
       fromFold: () => fillStepFromFold(stepId),
+      importSteps: () => void importStepsInto(stepId),
       replaceFromReferences: () => replaceStepFromReferences(stepId),
       makeMarksEditable: () => {
         makeStepMarksEditable(stepId, via === 'card' ? 'card_menu' : 'step_pane');

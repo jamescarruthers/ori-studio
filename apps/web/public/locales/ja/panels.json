@@ -697,6 +697,7 @@
         "page": "ページ上",
         "picture": "図"
       },
+      "importFromFile": "ファイルから（CP、Defox）…",
       "insert": {
         "rotateAfter": "後ろに回転",
         "stepAfter": "後ろにステップ",
@@ -1009,7 +1010,6 @@
       "capturing": "キャプチャ中…",
       "enlarged": "拡大",
       "enlargedFrom": "拡大 · {{number}}",
-      "fromReferences": "リファレンス…",
       "goToEdit": "編集へ移動",
       "lightingChanged": "照明が変わりました",
       "link": "リンク…",
@@ -1048,9 +1048,7 @@
     },
     "empty": {
       "addStep": "ステップを追加",
-      "fromReferences": "リファレンスから…",
       "goToEdit": "編集へ移動",
-      "import": "インポート…",
       "learn": "折り図は初めてですか？",
       "link": "パターンをリンク…",
       "message": "図解は折る手順を一つずつ示すものです。手順を追加して画像と説明を付けるか、展開図、画像、Defox プロジェクトをインポートしてください。",
@@ -1183,6 +1181,7 @@
       "layout": "編集レイアウトのプレビュー",
       "layoutHeading": "編集レイアウト",
       "menu": "手順をインポート…",
+      "menuButton": "インポート",
       "noCanvas": "インポート先の編集キャンバスを作成できませんでした。",
       "noFiles": "展開図、Defoxプロジェクト、画像が見つかりませんでした。",
       "noRegion": "紙の領域が見つかりませんでした。展開図は編集ワークスペースに追加されます。",
@@ -1795,7 +1794,7 @@
       "readOnlyHint": "新しい Ori Studio で作成されたため、このシーケンスは読み取り専用で開かれます。",
       "replayingHint": "前のステップをまだ折っています。",
       "rotate": "回転…",
-      "sendToEditTitle": "表示中のステップの展開図を編集キャンバスに送る",
+      "sendToEditTitle": "現在のステップの展開図を編集キャンバスに送る",
       "sheetHint": "平らな紙はステップの出発点です。削除するステップはありません。",
       "startsBranch": "新しい分岐を始めます"
     },

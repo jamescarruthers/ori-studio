@@ -41,8 +41,11 @@ const PATTERN_VERBS: readonly DiagramStepActionId[] = [
   'open-in-fold',
 ];
 const FILE_VERBS: readonly DiagramStepActionId[] = ['upload-picture', 'export-picture', 'remove-picture'];
-/** An empty step's: the ways to give it a picture. */
-const WAYS_IN: readonly DiagramStepActionId[] = ['upload-picture', 'link-pattern', 'from-references', 'from-fold'];
+/**
+ * An empty step's: the ways to give it a picture. Linking it is the pattern
+ * picker under them, which stands open for an empty step.
+ */
+const WAYS_IN: readonly DiagramStepActionId[] = ['upload-picture', 'from-references', 'from-fold', 'import-steps'];
 /** Or to make it a turn instead (D24). */
 const TURN_INSTEAD: readonly DiagramStepActionId[] = ['make-turn-over', 'make-rotate'];
 
@@ -56,7 +59,7 @@ const TURN_INSTEAD: readonly DiagramStepActionId[] = ['make-turn-over', 'make-ro
  * out rather than shown dead — Refresh while the pattern row says it is up to
  * date, Adjust Pose in Pose — and one the pane already offers, Make Marks
  * Editable, in Annotate's notice. The pattern picker, when the step's pattern is
- * being chosen, sits under them.
+ * being chosen — always, for an empty step — sits under them.
  */
 export function DiagramStepPicture({
   step,

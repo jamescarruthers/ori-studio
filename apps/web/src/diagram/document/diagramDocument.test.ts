@@ -25,6 +25,7 @@ import {
   setPageStarts,
   setStepBreakBefore,
   setStepText,
+  placeImportedSteps,
   setTitleBlockContent,
   stepHasContent,
   insertPictureSteps,
@@ -151,6 +152,42 @@ describe('insertion', () => {
     expect(stepIds(insertSteps(diagram, [a, b], 1))).toEqual(['step-2', a.id, b.id, 'step-3']);
     expect(stepIds(insertSteps(diagram, [a], 99))).toEqual(['step-2', 'step-3', a.id]);
     expect(insertSteps(diagram, [], 0)).toBe(diagram);
+  });
+});
+
+describe('placeImportedSteps', () => {
+  const imported = (id: string, text = ''): DiagramStep => ({ ...cpStep(id), text });
+
+  it('fills an empty anchor with the first, keeping its id and its words, the rest after it', () => {
+    const { diagram } = diagramWith(2);
+    const written = setStepText(diagram, 'step-2', 'My own words');
+    const placed = placeImportedSteps(written, [imported('a', 'From the file'), imported('b')], 'step-2');
+    expect(stepIds(placed.document)).toEqual(['step-2', 'b', 'step-3']);
+    expect(placed.stepIds).toEqual(['step-2', 'b']);
+    const filled = stepsIn(placed.document)[0]!;
+    expect(filled.source).toEqual(imported('a').source);
+    expect(filled.picture).toEqual(imported('a').picture);
+    expect(filled.text).toBe('My own words');
+    expect(filled.revision).toBe(stepsIn(written)[0]!.revision + 1);
+    // With no words of its own, the file's.
+    expect(stepsIn(placeImportedSteps(diagram, [imported('a', 'From the file')], 'step-2').document)[0]!.text).toBe(
+      'From the file'
+    );
+  });
+
+  it('goes after an anchor that cannot be filled, and at the end with none', () => {
+    const { diagram } = diagramWith(2);
+    const pictured = insertSteps(diagram, [imported('p')], 0);
+    expect(stepIds(placeImportedSteps(pictured, [imported('a')], 'p').document)).toEqual(['p', 'a', 'step-2', 'step-3']);
+    expect(stepIds(placeImportedSteps(diagram, [imported('a')], null).document)).toEqual(['step-2', 'step-3', 'a']);
+    const locked = insertSteps(diagram, [{ ...createStep(() => 'n'), unknown: { id: 'n' } }], 0);
+    expect(stepIds(placeImportedSteps(locked, [imported('a')], 'n').document)).toEqual(['n', 'a', 'step-2', 'step-3']);
+    // Nothing to fill it with: a blank step goes after it, as any other.
+    expect(stepIds(placeImportedSteps(diagram, [createStep(() => 'blank')], 'step-2').document)).toEqual([
+      'step-2',
+      'blank',
+      'step-3',
+    ]);
   });
 });
 

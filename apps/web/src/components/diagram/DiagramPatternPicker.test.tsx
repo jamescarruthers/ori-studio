@@ -1,10 +1,10 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import type { DiagramStepAction } from '../../diagram/actions/diagramActions';
 import type { DiagramPatternSheets } from '../../diagram/capture/useDiagramPatternSheets';
-import { createStep } from '../../diagram/document/diagramDocument';
+import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { twoSquaresIndex } from '../../diagram/capture/capture.fixtures';
 import { DiagramPatternPicker } from './DiagramPatternPicker';
@@ -103,13 +103,27 @@ describe('the picker in the Picture section', () => {
   const link = vi.fn();
   const actions: DiagramStepAction[] = [
     { kind: 'command', id: 'upload-picture', label: 'Upload…', disabled: false, run: vi.fn() },
-    { kind: 'command', id: 'link-pattern', label: 'Link Pattern…', disabled: false, run: link },
+    { kind: 'command', id: 'link-pattern', label: 'Relink Pattern…', disabled: false, run: link },
   ];
 
+  // Its pattern's thumbnail sizes itself to its box.
+  beforeEach(() =>
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    )
+  );
+  afterEach(() => vi.unstubAllGlobals());
+
+  // A linked step, whose picker Relink Pattern… opened: an empty step's stands open, with no verb to return to.
   function section(open: boolean) {
     return (
       <DiagramStepPicture
-        step={createStep(() => 'step-a')}
+        step={cpStep('step-a')}
         asset={null}
         notices={[]}
         actions={actions}
@@ -129,11 +143,11 @@ describe('the picker in the Picture section', () => {
 
   // A pick or Cancel unmounted the focused control, and the page took the
   // focus: the next Tab started from the top of the document.
-  it('hands the focus back to Link Pattern… when the picker closes under it', () => {
+  it('hands the focus back to Relink Pattern… when the picker closes under it', () => {
     mount(section(true));
     options()[2]!.focus();
     mount(section(false));
-    expect(document.activeElement?.textContent).toContain('Link Pattern…');
+    expect(document.activeElement?.textContent).toContain('Relink Pattern…');
   });
 
   it('leaves the focus where the user moved it', () => {

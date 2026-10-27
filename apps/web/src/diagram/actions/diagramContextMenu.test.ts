@@ -50,6 +50,7 @@ function actions(state: Partial<DiagramStepActionState> = {}) {
     replaceFromReferences: vi.fn(),
     fromReferences: vi.fn(),
     fromFold: vi.fn(),
+    importSteps: vi.fn(),
     showAs: vi.fn(),
     duplicateAs: vi.fn(),
     adjustPose: vi.fn(),

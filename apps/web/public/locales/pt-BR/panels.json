@@ -767,6 +767,7 @@
         "page": "Na página",
         "picture": "Imagem"
       },
+      "importFromFile": "De arquivo (CP, Defox)…",
       "insert": {
         "rotateAfter": "Giro depois",
         "stepAfter": "Passo depois",
@@ -1089,7 +1090,6 @@
       "capturing": "Capturando…",
       "enlarged": "Ampliado",
       "enlargedFrom": "Ampliado · {{number}}",
-      "fromReferences": "Referências…",
       "goToEdit": "Ir para Editar",
       "lightingChanged": "A iluminação mudou",
       "link": "Vincular…",
@@ -1128,9 +1128,7 @@
     },
     "empty": {
       "addStep": "Adicionar passo",
-      "fromReferences": "De Referências…",
       "goToEdit": "Ir para Editar",
-      "import": "Importar…",
       "learn": "Primeira vez com diagramas?",
       "link": "Vincular um padrão…",
       "message": "Um diagrama mostra sua sequência de dobras, passo a passo. Adicione um passo com imagem e instrução ou importe padrões de vincos, imagens ou um projeto Defox.",
@@ -1269,6 +1267,7 @@
       "layout": "Prévia da disposição na Edição",
       "layoutHeading": "Disposição na Edição",
       "menu": "Importar passos…",
+      "menuButton": "Importar",
       "noCanvas": "Não foi possível criar uma tela de Edição para a importação.",
       "noFiles": "Nenhum padrão de vincos, projeto Defox ou imagem foi encontrado.",
       "noRegion": "Nenhuma região de papel foi encontrada; o padrão de vincos ainda é adicionado à Edição.",
@@ -1921,7 +1920,7 @@
       "readOnlyHint": "Criada com uma versão mais recente do Ori Studio: esta sequência abre somente para leitura.",
       "replayingHint": "Os passos anteriores ainda estão sendo dobrados.",
       "rotate": "Girar…",
-      "sendToEditTitle": "Enviar o padrão de vincos dos passos mostrados para o canvas de Edição",
+      "sendToEditTitle": "Enviar o padrão de vincos do passo ativo para o canvas de Edição",
       "sheetHint": "A folha plana é onde os passos começam: não há passo para excluir.",
       "startsBranch": "Começa um novo ramo"
     },

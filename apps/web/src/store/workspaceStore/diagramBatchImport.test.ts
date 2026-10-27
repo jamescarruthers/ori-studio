@@ -244,6 +244,29 @@ it("fills a selected empty step when importing one SVG, as the existing picture 
   });
 });
 
+it("fills an empty anchor step with the first of a batch, keeping its words, the rest after it, as one undo step", async () => {
+  const empty = { ...createStep(), text: "My own words" };
+  const other = createStep();
+  useWorkspaceStore.setState({ diagram: { ...createDiagram(), steps: [empty, other] } });
+  const upload = (assetId: string) => ({
+    ...createStep(),
+    source: { kind: "upload" as const, assetId, rotationQuarterTurns: 0 as const, mirrored: false },
+    text: "From the file",
+  });
+  const [first, second] = [upload("asset-1"), upload("asset-2")];
+  // Named, as an empty card's From File… names it: the selection is elsewhere.
+  expect(
+    await commitDiagramImport([{ steps: [first, second] }], { ...importTarget(), anchor: empty.id }, 1, 100),
+  ).toBe(2);
+  const steps = get().diagram!.steps as (typeof empty)[];
+  expect(steps.map((step) => step.id)).toEqual([empty.id, second.id, other.id]);
+  expect(steps[0]).toMatchObject({ source: first.source, text: "My own words" });
+  expect(get().diagramSelectedStepId).toBe(empty.id);
+  get().undoDiagram();
+  expect((get().diagram!.steps as (typeof empty)[]).map((step) => step.id)).toEqual([empty.id, other.id]);
+  expect(get().diagram!.steps[0]).toMatchObject({ source: null, text: "My own words" });
+});
+
 it("provisions an empty Edit canvas through the existing self-provisioning action", async () => {
   const document = createStarterOristudioCpDocument();
   const state = {
