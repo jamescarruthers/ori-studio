@@ -1801,7 +1801,7 @@
       "readOnlyHint": "Mit einem neueren Ori Studio erstellt: Diese Folge wird schreibgeschützt geöffnet.",
       "replayingHint": "Die Schritte davor werden noch gefaltet.",
       "rotate": "Drehen…",
-      "sendToEditTitle": "Das Faltmuster der gezeigten Schritte an die Bearbeiten-Leinwand senden",
+      "sendToEditTitle": "Das Faltmuster des aktiven Schritts an die Bearbeiten-Leinwand senden",
       "sheetHint": "Beim flachen Blatt beginnen die Schritte: Hier gibt es keinen Schritt zu löschen.",
       "startsBranch": "Beginnt einen neuen Zweig"
     },

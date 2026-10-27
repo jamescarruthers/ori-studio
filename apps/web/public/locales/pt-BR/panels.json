@@ -1855,7 +1855,7 @@
       "readOnlyHint": "Criada com uma versão mais recente do Ori Studio: esta sequência abre somente para leitura.",
       "replayingHint": "Os passos anteriores ainda estão sendo dobrados.",
       "rotate": "Girar…",
-      "sendToEditTitle": "Enviar o padrão de vincos dos passos mostrados para o canvas de Edição",
+      "sendToEditTitle": "Enviar o padrão de vincos do passo ativo para o canvas de Edição",
       "sheetHint": "A folha plana é onde os passos começam: não há passo para excluir.",
       "startsBranch": "Começa um novo ramo"
     },

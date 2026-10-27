@@ -1855,7 +1855,7 @@
       "readOnlyHint": "Creada con una versión más reciente de Ori Studio: esta secuencia se abre en modo de solo lectura.",
       "replayingHint": "Todavía se están doblando los pasos anteriores.",
       "rotate": "Girar…",
-      "sendToEditTitle": "Enviar el patrón de pliegues de los pasos mostrados al lienzo de edición",
+      "sendToEditTitle": "Enviar el patrón de pliegues del paso activo al lienzo de edición",
       "sheetHint": "La hoja plana es donde empiezan los pasos: no hay ningún paso que eliminar.",
       "startsBranch": "Empieza una rama nueva"
     },

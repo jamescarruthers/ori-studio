@@ -1855,7 +1855,7 @@
       "readOnlyHint": "Créée avec une version plus récente d’Ori Studio\u00a0: cette séquence s’ouvre en lecture seule.",
       "replayingHint": "Les étapes précédentes sont encore en cours de pliage.",
       "rotate": "Tourner…",
-      "sendToEditTitle": "Envoyer le patron de plis des étapes affichées vers le canevas Édition",
+      "sendToEditTitle": "Envoyer le patron de plis de l’étape active vers le canevas Édition",
       "sheetHint": "La feuille à plat est le point de départ des étapes\u00a0: il n’y a pas d’étape à supprimer.",
       "startsBranch": "Commence une nouvelle branche"
     },
