@@ -18,7 +18,7 @@ import {
 } from './layerPaneMarks';
 import { zScene } from './layerPanes.fixtures';
 
-const FRONT: LayerPanesView = { side: 'front', xray: false, undecided: false };
+const FRONT: LayerPanesView = { side: 'front', xray: false, undecided: false, turnDeg: 0 };
 
 const marks = (over: Partial<LayerFaceMarks>): LayerFaceMarks => ({ ...NO_FACE_MARKS, ...over });
 
@@ -113,7 +113,7 @@ describe('the folded figure’s marks, by role', () => {
     const undecided = marks({ undecided: { front: [1], back: [0] } });
     expect(baseFoldedPaint(undecided, scene, FRONT).tints).toEqual([]);
     expect(read(baseFoldedPaint(undecided, scene, { ...FRONT, undecided: true }).tints)).toEqual([`pick ${TINT.faint}: spots 1`]);
-    const back = baseFoldedPaint(undecided, zScene('back'), { side: 'back', xray: false, undecided: true });
+    const back = baseFoldedPaint(undecided, zScene('back'), { side: 'back', xray: false, undecided: true, turnDeg: 0 });
     expect(read(back.tints)).toEqual([`pick ${TINT.faint}: spots 0`]);
   });
 

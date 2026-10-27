@@ -26,12 +26,20 @@ import type { LayerOrderApplied, LayerOrderRequest } from '../../lib/layerOrder/
  * writes anything:** a host commits `applied.applied` (one fold with the
  * chosen order, one undo step, the record saved) and does nothing at all for
  * every other outcome.
+ *
+ * **The turn.** `applied` and `unchanged` carry `turnDeg` when Rotate left the
+ * folded pane turned from the request's `look.turnDeg`: the host's convention,
+ * degrees clockwise on screen from `look.side`, in [0, 360). The host turns
+ * its picture to it with the Apply (one undo step with the order where it
+ * can, or its own when Apply wrote no order). A turn writes no record: an
+ * Apply that only turned is still `unchanged` (D16). Left out when the turn is
+ * the request's; never on any other outcome.
  */
 export type LayerOrderDialogOutcome =
   /** Apply, with something to write. */
-  | { readonly kind: 'applied'; readonly applied: LayerOrderApplied }
-  /** Apply that changed nothing: the host writes nothing (D16). */
-  | { readonly kind: 'unchanged' }
+  | { readonly kind: 'applied'; readonly applied: LayerOrderApplied; readonly turnDeg?: number }
+  /** Apply that changed no order: the host writes no layer order (D16), only the turn when there is one. */
+  | { readonly kind: 'unchanged'; readonly turnDeg?: number }
   /** Cancel, the close button, Escape, a press on the backdrop, or the app letting go of the dialog. */
   | { readonly kind: 'cancelled' }
   /** Another Layer order dialog is open; this ask never opened one. */

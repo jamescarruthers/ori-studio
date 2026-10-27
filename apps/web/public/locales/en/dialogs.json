@@ -721,7 +721,9 @@
       "foldedBar": "Folded figure view",
       "foldedIn": "Zoom in the folded figure",
       "foldedOut": "Zoom out the folded figure",
-      "foldedReset": "Reset the folded figure zoom"
+      "foldedReset": "Reset the folded figure zoom",
+      "foldedRotateLeft": "Rotate Left",
+      "foldedRotateRight": "Rotate Right"
     }
   },
   "number": {

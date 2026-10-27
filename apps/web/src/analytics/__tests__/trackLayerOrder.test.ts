@@ -66,12 +66,13 @@ describe('trackLayerOrderFact', () => {
   });
 
   it('sends the dialog closed, with what was on screen and how long it stayed', () => {
-    trackLayerOrderFact(dialogClosedFact('applied', 1, solutionsBucket({ n: 9, exact: true }, true), 12_000));
+    trackLayerOrderFact(dialogClosedFact('applied', 1, solutionsBucket({ n: 9, exact: true }, true), 12_000, null, true));
     expect(runtime.track).toHaveBeenCalledWith('layer order dialog closed', {
       outcome: 'applied',
       constraint_count_bucket: '<=1',
       solutions_bucket: '<=10',
       elapsed_ms_bucket: '<=15000',
+      rotated: true,
     });
   });
 
@@ -83,6 +84,7 @@ describe('trackLayerOrderFact', () => {
       constraint_count_bucket: '<=0',
       solutions_bucket: 'pending',
       elapsed_ms_bucket: '<=5000',
+      rotated: false,
     });
     trackLayerOrderFact(dialogClosedFact('crashed', 2, 'pending', 2_000, 'session_timed_out'));
     expect(runtime.track).toHaveBeenLastCalledWith('layer order dialog closed', expect.not.objectContaining({ refusal: expect.anything() }));

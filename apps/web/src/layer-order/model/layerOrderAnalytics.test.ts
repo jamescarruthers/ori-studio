@@ -41,8 +41,11 @@ describe('the analytics facts', () => {
         constraint_count_bucket: '<=0',
         solutions_bucket: '<=10',
         elapsed_ms_bucket: '<=60000',
+        rotated: false,
       },
     });
+    // Rotate's turn, as a boolean: never the angle.
+    expect(dialogClosedFact('unchanged', 0, '<=10', 42_000, null, true).properties).toMatchObject({ rotated: true });
     expect(needsAttentionFact('edit_figure', 2)).toEqual({
       event: 'layer constraints need attention',
       properties: { surface: 'edit_figure', broken_count_bucket: '<=2' },

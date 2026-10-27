@@ -120,6 +120,7 @@ export function useLayerOrderDialog(
       // Apply still writes (D10, D12), the flagged rows from Review… (D14).
       ...layerOrderRequestInit(request),
       side: request.look.side,
+      turnDeg: request.look.turnDeg,
       at: Date.now(),
     })
   );
@@ -286,7 +287,7 @@ export function useLayerOrderDialog(
       try {
         // The model's verdict (D16), and the carried rows it still lists, which the save writes back by
         // record index: nothing in the session changes before a save that can still be refused.
-        const outcome = await latest.current.settle.apply(asked.result);
+        const outcome = await latest.current.settle.apply(asked.result, asked.turnDeg);
         if (outcome !== 'applied' && outcome !== 'unchanged') return;
         // Answered: the model closes, and says so.
         stateRef.current = step.state;
@@ -339,6 +340,7 @@ export function useLayerOrderDialog(
         if (input === 'tap') dispatch({ type: 'face_hovered', face: null });
       },
       onFlashEnded: (n) => dispatch({ type: 'flash_ended', n }),
+      onTurn: (direction) => dispatch({ type: 'turned', direction }),
     }),
     [dispatch]
   );

@@ -133,7 +133,7 @@ export interface LayerPaneChannels {
   readonly pickable: ReadonlySet<LayerFace>;
   /** What a fit frames: the pane's own content (see the module docs). */
   readonly contentBounds: UserBounds | null;
-  /** What the content is: the side shown, on the folded pane, so turning it over keeps the view while it shows. */
+  /** What the content is: the side shown and its turn, on the folded pane, so turning it over or rotating it keeps the view while it shows. */
   readonly keepInViewKey: string | null;
   /** What must still show across a new {@link keepInViewKey}: the folded figure itself. */
   readonly keepInViewBounds: UserBounds | null;
@@ -194,7 +194,7 @@ export function useLayerPaneInks(element: Element | null, themeKey: string): Lay
 
 /** The view the dialog opens with: the host's side, X-ray as the host says (D18), Undecided off. */
 export function layerOrderOpeningView(request: LayerOrderRequest): LayerPanesView {
-  return { side: request.look.side, xray: request.look.xray, undecided: false };
+  return { side: request.look.side, xray: request.look.xray, undecided: false, turnDeg: request.look.turnDeg };
 }
 
 /** What the session has to draw from, or the request's own until it is open. */
@@ -428,16 +428,17 @@ export function useLayerFoldedPane({
 }: LayerPaneInputs): LayerPaneChannels | null {
   const { look } = request;
   const figure = figureOf(status, request);
-  const { side, xray } = view;
+  const { side, xray, turnDeg } = view;
   const scenes = figure.scenes;
   const pair = useMemo(() => sideScene(scenes, stacks, side), [scenes, stacks, side]);
   const kernel = pair?.kernel ?? null;
   const shown = pair?.shown ?? null;
-  // The turn, about the paper's middle, from the side shown.
-  const modelToSvg = useMemo(() => {
-    const turn = paneTurnDeg(look.turnDeg, look.side, side);
-    return foldedPaneToUser(turn, kernel ? foldedPivot(kernel) : { x: 0, y: 0 });
-  }, [look.turnDeg, look.side, side, kernel]);
+  // The turn, about the paper's middle, from the side shown: the host's, or wherever Rotate moved it.
+  const turn = paneTurnDeg(turnDeg, look.side, side);
+  const modelToSvg = useMemo(
+    () => foldedPaneToUser(turn, kernel ? foldedPivot(kernel) : { x: 0, y: 0 }),
+    [turn, kernel]
+  );
   const scene = useMemo(
     () =>
       shown
@@ -541,7 +542,8 @@ export function useLayerFoldedPane({
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,
     contentBounds: figureBounds,
-    keepInViewKey: side,
+    // Turned over or rotated, the figure stays in view.
+    keepInViewKey: `${side}:${turn}`,
     keepInViewBounds: figureBounds,
     rings,
     litCrease,

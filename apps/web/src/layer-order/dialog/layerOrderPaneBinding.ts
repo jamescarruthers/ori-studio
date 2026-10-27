@@ -26,9 +26,9 @@ import type { LayerFaceMarks, LayerPanesView } from '../panes/layerPaneMarks';
 const NO_FACES: readonly LayerFace[] = [];
 const NO_SPOTS = { front: [], back: [] } as const;
 
-/** The panes' view: the model's side and X-ray, and its Undecided switch. */
+/** The panes' view: the model's side, X-ray and turn, and its Undecided switch. */
 export function layerOrderPanesView(view: LayerView): LayerPanesView {
-  return { side: view.side, xray: view.xray, undecided: view.openSpots };
+  return { side: view.side, xray: view.xray, undecided: view.openSpots, turnDeg: view.turnDeg };
 }
 
 /** The face D19's notice names, lit while nothing else is: the one the host's order puts inside a fold. */

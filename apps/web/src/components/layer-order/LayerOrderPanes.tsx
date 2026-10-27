@@ -39,6 +39,9 @@ import styles from './LayerOrderPanes.module.css';
  *   switched from the title row, and nothing floats over it: pinch zooms, a
  *   double tap fits (D6). Both panes stay mounted, the other one hidden, so a
  *   switch keeps each pane's camera and makes no new canvas.
+ * - **Rotate.** The folded pane's bar has Rotate Left and Right after Fit,
+ *   15° a press, when the dialog listens (`onTurn`): the view's turn, which
+ *   the host takes with Apply. The crease pattern never turns.
  * - **The flash** of the spots the last change moved is one 1.6 s fade;
  *   `onFlashEnded` hears when it is over, whichever pane is showing.
  */
@@ -97,6 +100,19 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const framingKey = request.source.digest;
   const shared = { events, framingKey, wheelGesture, snapRadius, themeKey, onFit: fitBoth };
   const fitLabel = t('dialogs:layerOrder.zoom.fit', 'Fit both views');
+  // The folded figure turns for the host to take with Apply; the crease pattern never does.
+  const { onTurn } = props;
+  const rotate = useMemo(
+    () =>
+      onTurn
+        ? {
+            leftLabel: t('dialogs:layerOrder.zoom.foldedRotateLeft', 'Rotate Left'),
+            rightLabel: t('dialogs:layerOrder.zoom.foldedRotateRight', 'Rotate Right'),
+            onTurn,
+          }
+        : undefined,
+    [onTurn, t]
+  );
 
   return (
     <div ref={setRoot} className={styles.panes} data-layer-order-panes="">
@@ -152,6 +168,7 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
                   onZoomIn={() => cameras.current.folded?.zoomIn()}
                   onReset={() => cameras.current.folded?.setZoomPercent(100)}
                   onFit={fitBoth}
+                  rotate={rotate}
                 />
               )}
             </LayerOrderPane>

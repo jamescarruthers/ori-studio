@@ -748,7 +748,9 @@
       "foldedBar": "Vista de la figura plegada",
       "foldedIn": "Acercar la figura plegada",
       "foldedOut": "Alejar la figura plegada",
-      "foldedReset": "Restablecer el zoom de la figura plegada"
+      "foldedReset": "Restablecer el zoom de la figura plegada",
+      "foldedRotateLeft": "Girar a la izquierda",
+      "foldedRotateRight": "Girar a la derecha"
     }
   },
   "number": {
