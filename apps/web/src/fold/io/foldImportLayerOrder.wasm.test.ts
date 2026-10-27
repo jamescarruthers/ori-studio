@@ -90,17 +90,21 @@ function sceneSpots(scene: OristudioCpFoldedPaperScene): number[][] {
  * either Applies untouched or commits one constraint that turns over a pair
  * the creases leave open, as Add does, then Applies.
  */
-function dialogOf(wasm: Wasm, touch: boolean) {
+function dialogOf(wasm: Wasm, touch: boolean, turnBy?: number) {
   const engine = new wasm.FoldEngine();
-  const seen: { opened?: LayerOpenOutcome; front?: number[][] } = {};
+  const seen: { opened?: LayerOpenOutcome; front?: number[][]; look?: FoldImportLayerOpening['look'] } = {};
   const choose = async ({ opening }: FoldImportLayerOrderAsk): Promise<FoldImportLayerOrderAnswer> => {
     const shown = layerOrderSceneRelations(opening.shown);
     const opened = engine.layer_open_showing(opening.source, shown, undefined) as LayerOpenOutcome;
     seen.opened = opened;
+    seen.look = opening.look;
     if (opened.status !== 'ok') return { kind: 'cancelled' };
     if (!touch) {
       seen.front = spots(engine.layer_stacks(opened.session, 'front') as LayerStacks);
-      return { kind: 'unchanged' };
+      // Rotate pressed: the host's turn, from the side the dialog opened on.
+      return turnBy === undefined
+        ? { kind: 'unchanged' }
+        : { kind: 'unchanged', turnDeg: (opening.look.turn_deg + turnBy + 360) % 360 };
     }
     const upper = new Map<string, number>();
     for (let i = 0; i < shown.length; i += 2) {
@@ -126,15 +130,19 @@ function dialogOf(wasm: Wasm, touch: boolean) {
   return { choose, seen };
 }
 
-async function importThroughDialog(wasm: Wasm, relative: string, touch: boolean) {
-  const runtime = inProcessFoldRuntime(() => {
+function runtimeOf(wasm: Wasm) {
+  return inProcessFoldRuntime(() => {
     const engine = new wasm.FoldEngine();
     return { ...createFoldEngineCalls(engine), ...createFoldEngineIoCalls(engine) };
   }, wasm.fold_engine_version());
+}
+
+async function importThroughDialog(wasm: Wasm, relative: string, touch: boolean, turnBy?: number) {
+  const runtime = runtimeOf(wasm);
   const source = memoryFoldDocument();
   const session = createFoldSession({ document: source, runtime });
   sessions.push(session);
-  const dialog = dialogOf(wasm, touch);
+  const dialog = dialogOf(wasm, touch, turnBy);
   const flow = createFoldImportFlow({ session, editFoldedFigure: async () => null, chooseLayerOrder: dialog.choose });
   flows.push(flow);
   await flow.open(file(relative));
@@ -200,6 +208,29 @@ describe.skipIf(!available)('Import CP’s order chosen in the Layer order dialo
       const chooser = choosersPick(wasm, relative, seen.front!);
       expect(chooser.choice.every((k) => k === 0)).toBe(true);
       expect(committedStep(source)?.expect).toBe(chooser.fingerprint);
+    });
+
+    it(`${relative}: an Apply the dialog's Rotate turned stores the imported step itself at the turn`, async () => {
+      const wasm = await bridge();
+      // Rotate Left twice: 30° anticlockwise as seen.
+      const { source, state, seen } = await importThroughDialog(wasm, relative, false, -30);
+      expect(state).toMatchObject({ phase: 'done' });
+      const step = committedStep(source);
+      expect(step?.op).toMatchObject({ kind: 'cp-jump', turnDeg: -30 });
+      // The same order as the untouched pick, seen turned: only the view's key differs.
+      const chooser = choosersPick(wasm, relative, seen.front!);
+      expect(chooser.choice.every((k) => k === 0)).toBe(true);
+      expect(step?.expect).not.toBe(chooser.fingerprint);
+      // Opened again, the stored step replays to the step as it landed, turned.
+      const again = createFoldSession({ document: source, runtime: runtimeOf(wasm) });
+      sessions.push(again);
+      const release = again.retain();
+      for (let round = 0; round < 200 && selectFoldCursorNode(again.store.getState()).status === 'pending'; round += 1) {
+        await settle(1);
+      }
+      const node = selectFoldCursorNode(again.store.getState());
+      expect(node).toMatchObject({ status: 'ok', fingerprint: step?.expect });
+      release();
     });
   }
 });

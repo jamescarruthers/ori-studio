@@ -1335,6 +1335,40 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
   });
 
+  it('an Apply the dialog’s Rotate turned lands at the turn, in its one undo step', async () => {
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    dialog.outcome = (request) => ({
+      kind: 'applied',
+      applied: { record: CHOSEN, relations: CHOSEN_RELATIONS, source: request.source },
+      turnDeg: 330,
+    });
+    const entries = state().diagramHistory.past.length;
+    expect(await controller.editLayerOrder()).toBe(true);
+    expect(labelsSince(entries)).toEqual(['Change layer order']);
+    expect(render(stepId)).toMatchObject({ render: { mode: 'folded-flat', rotationDeg: 330 } });
+    expect(asked().look.turnDeg).toBe(0);
+    controller.dispose();
+  });
+
+  it('an Apply that only turned the step turns it with Rotate’s own verb, counted by the dialog', async () => {
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    await controller.run({ verb: 'rotate-right' });
+    analytics.trackDiagramPicturePosed.mockClear();
+    dialog.outcome = () => ({ kind: 'unchanged', turnDeg: 45 });
+    const entries = state().diagramHistory.past.length;
+    expect(await controller.editLayerOrder()).toBe(false);
+    expect(asked().look.turnDeg).toBe(15);
+    expect(render(stepId)).toMatchObject({ render: { mode: 'folded-flat', rotationDeg: 45 } });
+    expect(labelsSince(entries)).toEqual(['Adjust pose']);
+    expect(layerOrderOf(stepId)).toBeUndefined();
+    expect(analytics.trackDiagramPicturePosed).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
   it('Apply → undo → Turn Over draws the order before Apply; redo brings the applied one back', async () => {
     const stepId = await linkedStep();
     const controller = createPoseController(stepId, listener());

@@ -22,7 +22,7 @@ use oristudio_cp::CreasePatternDocument;
 use oristudio_cp::folding::{FoldedFigureModel, folded_paper_scene_with_order};
 use oristudio_cp::session::{CpSession, EngineError, FoldSource};
 use oristudio_fold::complete::Completions;
-use oristudio_fold::steer::{ImportedFaces, LayerSource};
+use oristudio_fold::steer::{ImportedFaces, ImportedLook, LayerSource};
 use oristudio_fold::{
     Check, CompletionRefusal, CompletionSession, CreasePatternInput, FaceId, FixedKind, FixedPair,
     ImportRefusal, ImportTarget, ImportedPattern, Sheet, StartSide, State,
@@ -59,6 +59,10 @@ struct Held {
     session: Option<Checking>,
     /// Opened by [`Imports::layer_opening`].
     layer: Option<LayerLink>,
+    /// How far [`Imports::turn`] has turned the import's view, degrees
+    /// clockwise on screen from the target's, in (−180, 180]: what every
+    /// step it lands stores (`CpJump::turn_deg`).
+    turn_deg: f64,
 }
 
 /// A held import opened onto the Layer order dialog's faces (row H10): the
@@ -164,6 +168,7 @@ impl Imports {
             limits: *limits,
             session: None,
             layer: None,
+            turn_deg: 0.0,
         });
         Ok(Outcome::Ok(Opened {
             import,
@@ -256,10 +261,38 @@ impl Imports {
                     cp_json: held.cp_json.clone(),
                     order_json,
                     origin: held.origin,
+                    turn_deg: held.turn_deg,
                 },
             ),
             Err(refusal) => Ok(Outcome::Refused(refusal.into())),
         }
+    }
+
+    /// Turn a held import opened onto the Layer order dialog
+    /// ([`Imports::layer_opening`]) so that Fold shows it turned `turn_deg`,
+    /// clockwise on screen, from Oriedita's picture of the side it shows: the
+    /// dialog's Rotate, in its opening's `look` terms, which the import's
+    /// look reads back. Every step it lands after this stores the turn
+    /// (`CpJump::turn_deg`), so the imported step is drawn turned, with no
+    /// rotate step after it. Answers the look it has now. Not opened onto
+    /// the dialog, or a turn that is not a number, is the caller's mistake.
+    pub fn turn(&mut self, import: u32, turn_deg: f64) -> Result<ImportedLook, IoCallError> {
+        let held = self
+            .held
+            .get_mut(&import)
+            .ok_or(IoCallError::UnknownImport(import))?;
+        if !turn_deg.is_finite() {
+            return Err(IoCallError::invalid("the turn must be a number of degrees"));
+        }
+        let link = held.layer.as_ref().ok_or_else(|| {
+            IoCallError::invalid(format!(
+                "import {import} is not open in the Layer order dialog: open it first"
+            ))
+        })?;
+        let by = link.faces.turn_to(&mut held.pattern, turn_deg);
+        // Stored to a millionth of a degree, so a turn of whole steps stores whole degrees.
+        held.turn_deg = shorter_turn(((held.turn_deg + by) * 1e6).round() / 1e6);
+        Ok(link.faces.look(&held.pattern))
     }
 
     /// Open a held import onto the Layer order dialog (row H10): the fold the
@@ -375,6 +408,7 @@ impl Imports {
                     cp_json: held.cp_json.clone(),
                     order_json,
                     origin: held.origin,
+                    turn_deg: held.turn_deg,
                 },
             ),
             Err(refusal) => Ok(Outcome::Refused(refusal.into())),
@@ -580,6 +614,18 @@ fn edit_fold_source(cp_json: &str) -> Result<FoldSource, &'static str> {
 
 /// The face Edit's Fold starts from when no other is chosen.
 const EDIT_STARTING_FACE: i32 = 1;
+
+/// A turn in degrees, the shorter way round: in (−180, 180], with a hair
+/// either side of none as none.
+fn shorter_turn(degrees: f64) -> f64 {
+    let wrapped = degrees.rem_euclid(360.0);
+    let shorter = if wrapped > 180.0 {
+        wrapped - 360.0
+    } else {
+        wrapped
+    };
+    if shorter.abs() < 1e-9 { 0.0 } else { shorter }
+}
 
 fn internal(message: &str) -> IoRefusal {
     IoRefusal::Import(ImportRefusal::Internal {

@@ -377,6 +377,87 @@ fn the_look_is_the_side_fold_shows_and_turns_over_with_the_start_side() {
     );
 }
 
+/// A state's canonical keys but its view's (`v:`): its faces, creases and order.
+fn unviewed(state: &State) -> BTreeSet<String> {
+    keys(state)
+        .into_iter()
+        .filter(|key| !key.starts_with("v:"))
+        .collect()
+}
+
+#[test]
+fn a_turned_import_lands_turned_and_its_look_reads_the_turn_back() {
+    // The dialog's Rotate on an import (Zach, 2026-10-27): the imported step
+    // itself is stored at the turn, so no rotate step need follow it.
+    for relative in [KABUTO, SAMPLE_1] {
+        for start in [StartSide::Front, StartSide::Back] {
+            let mut imported = import(relative, start);
+            let opening = imported.opening();
+            let plain = imported.pick(&imported.first_choice());
+            let handle = imported.opened.import;
+            // Rotate Right three times, from the side the dialog opened on.
+            let want = (opening.look.turn_deg + 45.0) % 360.0;
+            let look = imported.imports.turn(handle, want).expect("turned");
+            assert_eq!(look.side, opening.look.side, "{relative} {start:?}");
+            assert!(
+                (look.turn_deg - want).abs() < 1e-9,
+                "{relative} {start:?}: {look:?}"
+            );
+            assert_eq!(imported.opening().look, look, "a new opening reads it too");
+
+            // An untouched Apply's pick and the dialog's own Apply both store the turn.
+            let shown = flat(&oristudio_fold::steer::scene_relations(
+                &imported.opening().shown,
+            ));
+            let digest = imported.opening().source.digest;
+            for landed in [
+                imported.pick(&imported.first_choice()),
+                match imported.pick_layer_order(&digest, &shown) {
+                    Outcome::Ok(landed) => landed,
+                    Outcome::Refused(refusal) => panic!("{relative}: {refusal:?}"),
+                },
+            ] {
+                let JumpOp::CpJump(jump) = &landed.op;
+                assert!(
+                    (jump.turn_deg - 45.0).abs() < 1e-9,
+                    "{relative} {start:?}: {}",
+                    jump.turn_deg
+                );
+                let (was, now) = (imported.state(&plain), imported.state(&landed));
+                // Seen 45° clockwise more: the view's turn the other way.
+                let turned = was.view().rotated(-45f64.to_radians());
+                assert!(
+                    (now.view().rotation - turned.rotation).abs() < 1e-9,
+                    "{relative} {start:?}: {:?} {:?}",
+                    was.view(),
+                    now.view()
+                );
+                assert_eq!(now.view().flipped, was.view().flipped);
+                assert_eq!(
+                    unviewed(now),
+                    unviewed(was),
+                    "{relative}: only the view turns"
+                );
+                assert_ne!(keys(now), keys(was), "{relative}: the view's key says so");
+            }
+
+            // Back to where it opened: no turn is stored.
+            imported
+                .imports
+                .turn(handle, opening.look.turn_deg)
+                .expect("turned back");
+            let JumpOp::CpJump(jump) = imported.pick(&imported.first_choice()).op;
+            assert_eq!(jump.turn_deg, 0.0, "{relative} {start:?}");
+        }
+    }
+    // Only an import opened onto the dialog turns, and only by a number.
+    let mut imported = import(KABUTO, StartSide::Front);
+    let handle = imported.opened.import;
+    assert!(imported.imports.turn(handle, 15.0).is_err());
+    imported.opening();
+    assert!(imported.imports.turn(handle, f64::NAN).is_err());
+}
+
 #[test]
 fn a_pick_that_is_not_the_dialogs_is_a_mistake_and_a_clash_lands_nothing() {
     let mut imported = import(KABUTO, StartSide::Front);

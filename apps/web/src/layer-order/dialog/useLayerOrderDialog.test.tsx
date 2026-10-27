@@ -114,6 +114,26 @@ describe('useLayerOrderDialog', () => {
     expect(analytics.track).toHaveBeenCalledWith('layer order dialog closed', expect.objectContaining({ outcome: 'unchanged' }));
   });
 
+  it('Rotate alone: Apply answers unchanged with the host’s new turn, and says it was rotated', async () => {
+    const turned = { ...REQUEST, record: null, look: { ...REQUEST.look, turnDeg: 90 } };
+    const h = await mount(turned, () => createFakeLayerOrderBackend());
+    await vi.waitFor(() => expect(h.out.current?.state.phase.kind).toBe('open'));
+    expect(h.out.current!.view.turnDeg).toBe(90);
+    await act(async () => h.out.current!.events.onTurn?.('right'));
+    await act(async () => h.out.current!.events.onTurn?.('right'));
+    expect(h.out.current!.view.turnDeg).toBe(120);
+    expect(applyState(h.out.current!.state)).toEqual({ enabled: true });
+    analytics.track.mockClear();
+    await act(async () => h.out.current!.apply());
+    const outcome = await h.outcome;
+    await h.done();
+    expect(outcome).toEqual({ kind: 'unchanged', turnDeg: 120 });
+    expect(analytics.track).toHaveBeenCalledWith(
+      'layer order dialog closed',
+      expect.objectContaining({ outcome: 'unchanged', rotated: true })
+    );
+  });
+
   it('a carried row removed, an Apply refused, the removal undone: the next Apply writes the row back', async () => {
     let refuse = true;
     const saves: (readonly number[] | undefined)[] = [];

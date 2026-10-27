@@ -33,8 +33,8 @@ export type LayerOrderApplyOutcome = 'applied' | 'unchanged' | 'refused' | 'skip
 
 export interface LayerOrderSettle {
   readonly cancel: () => void;
-  /** Apply what the model decided Apply writes. Resolves how it went. */
-  readonly apply: (result: LayerOrderApplyResult) => Promise<LayerOrderApplyOutcome>;
+  /** Apply what the model decided Apply writes, and the turn it hands back, if any. Resolves how it went. */
+  readonly apply: (result: LayerOrderApplyResult, turnDeg?: number | null) => Promise<LayerOrderApplyOutcome>;
   /** An Apply is saving: Apply waits, Cancel still closes. */
   readonly applying: boolean;
   /** Why the last Apply could not save, until the next. */
@@ -52,10 +52,11 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
   }, [id]);
 
   const apply = useCallback(
-    async (result: LayerOrderApplyResult): Promise<LayerOrderApplyOutcome> => {
+    async (result: LayerOrderApplyResult, turnDeg: number | null = null): Promise<LayerOrderApplyOutcome> => {
       if (applying || status.kind !== 'ready') return 'skipped';
+      const turn = turnDeg === null ? {} : { turnDeg };
       if (result.kind === 'no_change') {
-        settleLayerOrderDialog(id, { kind: 'unchanged' });
+        settleLayerOrderDialog(id, { kind: 'unchanged', ...turn });
         return 'unchanged';
       }
       setApplying(true);
@@ -68,7 +69,7 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
         setApplyRefusal(answer.refusal);
         return 'refused';
       }
-      settleLayerOrderDialog(id, { kind: 'applied', applied: answer.applied });
+      settleLayerOrderDialog(id, { kind: 'applied', applied: answer.applied, ...turn });
       return 'applied';
     },
     [applying, id, save, status]

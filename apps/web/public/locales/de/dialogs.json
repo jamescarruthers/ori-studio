@@ -721,7 +721,9 @@
       "foldedBar": "Ansicht der gefalteten Figur",
       "foldedIn": "Gefaltete Figur vergrößern",
       "foldedOut": "Gefaltete Figur verkleinern",
-      "foldedReset": "Zoom der gefalteten Figur zurücksetzen"
+      "foldedReset": "Zoom der gefalteten Figur zurücksetzen",
+      "foldedRotateLeft": "Nach links drehen",
+      "foldedRotateRight": "Nach rechts drehen"
     }
   },
   "number": {

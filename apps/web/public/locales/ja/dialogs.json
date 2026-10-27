@@ -694,7 +694,9 @@
       "foldedBar": "折り上がり図の表示",
       "foldedIn": "折り上がり図を拡大",
       "foldedOut": "折り上がり図を縮小",
-      "foldedReset": "折り上がり図のズームをリセット"
+      "foldedReset": "折り上がり図のズームをリセット",
+      "foldedRotateLeft": "左に回転",
+      "foldedRotateRight": "右に回転"
     }
   },
   "number": {

@@ -167,6 +167,38 @@ describe('opening the Layer order dialog on a step', () => {
     expect(step(stepId).picture).toEqual(before.picture);
   });
 
+  it('turns the step as the dialog’s Rotate left it, in the Apply’s one undo step', async () => {
+    const stepId = await flatStep();
+    dialog.outcome = (request) => ({
+      kind: 'applied',
+      applied: { record: inSource, relations: new Uint32Array([1, 0]), source: request.source },
+      turnDeg: 75,
+    });
+    const entries = state().diagramHistory.past.length;
+    expect(await openDiagramStepLayerOrder(stepId)).toBe(true);
+    expect(source(stepId).render).toMatchObject({ mode: 'folded-flat', side: 'back', rotationDeg: 75 });
+    expect(state().diagramHistory.past.slice(entries).map((entry) => entry.label)).toEqual(['Change layer order']);
+    state().undoDiagram();
+    expect(source(stepId).render).toEqual(FLAT);
+    expect(source(stepId).layerOrder).toBeUndefined();
+  });
+
+  it('an Apply that only turned the step captures it at the turn, writing no order, as a pose’s one undo step', async () => {
+    // A record would be carried as a Refresh carries it (`layerOrderOf`); this one has none to resolve.
+    const stepId = await flatStep();
+    const before = step(stepId);
+    dialog.outcome = () => ({ kind: 'unchanged', turnDeg: 345 });
+    const entries = state().diagramHistory.past.length;
+    expect(await openDiagramStepLayerOrder(stepId)).toBe(false);
+    expect([toasts.error.mock.calls, toasts.message.mock.calls]).toEqual([[], []]);
+    expect(source(stepId).render).toMatchObject({ mode: 'folded-flat', side: 'back', rotationDeg: 345 });
+    expect(source(stepId).layerOrder).toBeUndefined();
+    expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
+    expect(state().diagramHistory.past.slice(entries).map((entry) => entry.label)).toEqual(['Adjust pose']);
+    state().undoDiagram();
+    expect(step(stepId)).toEqual(before);
+  });
+
   it.each([
     [{ kind: 'unchanged' } as const],
     [{ kind: 'cancelled' } as const],

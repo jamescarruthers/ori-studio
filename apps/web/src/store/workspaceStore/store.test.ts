@@ -11619,6 +11619,38 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Set layer order']);
     });
 
+    it('turns the figure as the dialog’s Rotate left it, in the Apply’s one entry, and an undo turns it back', async () => {
+      const figure = seedFigure({ layerOrder: held(twoConstraintRecord({ constraints: [[0, 1, 1]] })) });
+      // The canvas turned an eighth: the dialog's 90° is the figure's own 45°.
+      useWorkspaceStore.setState({ oristudioCpCamera: { centerX: 0, centerY: 0, zoom: 1, rotation: Math.PI / 4 } });
+      dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind: 'applied', applied: applied(), turnDeg: 90 });
+
+      await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('applied');
+
+      expect(figureNow()).toMatchObject({ handle: 9, layerOrder: held() });
+      expect(figureNow().placement.rotation).toBeCloseTo(Math.PI / 4, 12);
+      expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Set layer order']);
+      endOpenCanvasSessions('history');
+      await state().undo();
+      expect(figureNow()).toMatchObject({ handle: 3, placement: figure.placement });
+    });
+
+    it('an Apply that only turned the figure is its own “Rotate folded form” entry, and writes no order', async () => {
+      const figure = seedFigure();
+      dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind: 'unchanged', turnDeg: 345 });
+
+      await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('unchanged');
+
+      expect(oristudioCpMocks.foldOristudioCpWithOrder).not.toHaveBeenCalled();
+      expect(figureNow()).toMatchObject({ handle: 3 });
+      expect(figureNow().layerOrder).toBeUndefined();
+      expect(figureNow().placement.rotation).toBeCloseTo(-Math.PI / 12, 12);
+      expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Rotate folded form']);
+      endOpenCanvasSessions('history');
+      await state().undo();
+      expect(figureNow().placement).toEqual(figure.placement);
+    });
+
     it('opens on the order the figure shows when an undo left its kernel on another, on a fold of its own', async () => {
       // Another solution, then Undo: the entry is back on solution 1, the handle still on 2.
       const figure = seedFigure({ snapshot: solvedSnapshot({ discovered_fold_cases: 2, current_fold_case: 1 }) });

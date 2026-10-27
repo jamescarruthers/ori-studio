@@ -240,6 +240,36 @@ impl ImportedFaces {
             turn_deg: wrap_degrees(turn),
         }
     }
+
+    /// Turn `pattern`'s view so that Fold shows the imported state turned
+    /// `turn_deg`, clockwise on screen, from Oriedita's picture of the side
+    /// it shows: what the Layer order dialog's Rotate hands back, in
+    /// [`ImportedLook`]'s terms, so [`ImportedFaces::look`] reads it back.
+    /// The side never changes. Answers how far it turned, in degrees
+    /// clockwise on screen, the shorter way: in (−180, 180]. A non-finite
+    /// turn turns nothing.
+    pub fn turn_to(&self, pattern: &mut ImportedPattern, turn_deg: f64) -> f64 {
+        if !turn_deg.is_finite() {
+            return 0.0;
+        }
+        let now = self.look(pattern).turn_deg;
+        let by = shorter_turn(turn_deg - now);
+        // The view turns counter-clockwise on the display, the screen's y
+        // down: a turn clockwise on screen is the view's the other way, from
+        // either side (a turned-over view's rotation follows its mirror).
+        pattern.rotate_view(-by.to_radians());
+        by
+    }
+}
+
+/// A turn in degrees, the shorter way round: in (−180, 180].
+fn shorter_turn(degrees: f64) -> f64 {
+    let wrapped = wrap_degrees(degrees);
+    if wrapped > 180.0 {
+        wrapped - 360.0
+    } else {
+        wrapped
+    }
 }
 
 /// The match rule (see the module docs), over faces by index: `oriedita`

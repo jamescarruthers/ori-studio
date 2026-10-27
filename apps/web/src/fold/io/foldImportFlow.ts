@@ -92,11 +92,13 @@ export interface FoldImportLayerOrderAsk {
  * Apply's order (`relations` over the faces of the opening's source, whose
  * digest is `digest`); an Apply that changed nothing; Cancel; or no dialog
  * (`fallback`: another one is open, or its code didn't load), and the
- * import keeps its own chooser.
+ * import keeps its own chooser. Apply carries `turnDeg` when the dialog's
+ * Rotate turned the import, in its opening's `look` terms: the step lands
+ * turned so.
  */
 export type FoldImportLayerOrderAnswer =
-  | { readonly kind: 'applied'; readonly relations: Uint32Array; readonly digest: string }
-  | { readonly kind: 'unchanged' }
+  | { readonly kind: 'applied'; readonly relations: Uint32Array; readonly digest: string; readonly turnDeg?: number }
+  | { readonly kind: 'unchanged'; readonly turnDeg?: number }
   | { readonly kind: 'cancelled' }
   | { readonly kind: 'fallback' };
 
@@ -387,6 +389,23 @@ export function createFoldImportFlow({
     await commitLandedStep(request, import_.where, picked, import_.opened.paper, mine, import_.project);
   };
 
+  /**
+   * A land that turns the held import first, to the dialog's `turnDeg`, on
+   * the same ask: the step it lands stores the turn, so it is drawn turned
+   * with no rotate step after it. As it was with no turn.
+   */
+  const turnedFirst = <T>(
+    import_: Held,
+    turnDeg: number | undefined,
+    land: (engine: FoldSessionWorker) => Promise<T>
+  ): ((engine: FoldSessionWorker) => Promise<T>) =>
+    turnDeg === undefined
+      ? land
+      : async (engine) => {
+          await engine.importTurn(import_.handle, turnDeg);
+          return land(engine);
+        };
+
   /** Land `choice` of the held import and commit it. */
   const pickAndCommit = (request: FoldImportRequest, import_: Held, choice: readonly number[], mine: number) =>
     landAndCommit(request, import_, (engine) => engine.importPick(import_.handle, choice), mine);
@@ -426,16 +445,18 @@ export function createFoldImportFlow({
         letGo();
         store.setState(IDLE, true);
         return true;
-      case 'unchanged':
-        // The dialog opened on the default choice and Apply kept it.
+      case 'unchanged': {
+        // The dialog opened on the default choice and Apply kept it, turned as its Rotate left it.
         store.setState({ phase: 'working', request }, true);
-        await pickAndCommit(request, import_, choice, mine);
+        const land = turnedFirst(import_, answer.turnDeg, (engine) => engine.importPick(import_.handle, choice));
+        await landAndCommit(request, import_, land, mine);
         return true;
+      }
       case 'applied': {
         store.setState({ phase: 'working', request }, true);
         const { digest, relations } = answer;
-        const land = (engine: FoldSessionWorker) => engine.importPickLayerOrder(import_.handle, digest, relations);
-        await landAndCommit(request, import_, land, mine, 'layer_order');
+        const pick = (engine: FoldSessionWorker) => engine.importPickLayerOrder(import_.handle, digest, relations);
+        await landAndCommit(request, import_, turnedFirst(import_, answer.turnDeg, pick), mine, 'layer_order');
         return true;
       }
     }

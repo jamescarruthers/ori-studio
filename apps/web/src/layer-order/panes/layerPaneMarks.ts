@@ -68,6 +68,12 @@ export interface LayerPanesView {
   readonly xray: boolean;
   /** Tint the spots whose face on top isn't decided yet ({@link LayerFaceMarks.undecided}). */
   readonly undecided: boolean;
+  /**
+   * How far the folded pane turns the paper, in the host's terms
+   * (`LayerOrderLook.turnDeg`, from `look.side`): the host's turn as the
+   * dialog opens, then wherever Rotate has moved it.
+   */
+  readonly turnDeg: number;
 }
 
 /**

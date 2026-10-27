@@ -694,7 +694,9 @@
       "foldedBar": "折叠图视图",
       "foldedIn": "放大折叠图",
       "foldedOut": "缩小折叠图",
-      "foldedReset": "重置折叠图缩放"
+      "foldedReset": "重置折叠图缩放",
+      "foldedRotateLeft": "向左旋转",
+      "foldedRotateRight": "向右旋转"
     }
   },
   "number": {

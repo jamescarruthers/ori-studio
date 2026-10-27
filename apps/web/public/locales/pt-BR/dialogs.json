@@ -748,7 +748,9 @@
       "foldedBar": "Visualização da figura dobrada",
       "foldedIn": "Ampliar a figura dobrada",
       "foldedOut": "Reduzir a figura dobrada",
-      "foldedReset": "Redefinir o zoom da figura dobrada"
+      "foldedReset": "Redefinir o zoom da figura dobrada",
+      "foldedRotateLeft": "Girar à esquerda",
+      "foldedRotateRight": "Girar à direita"
     }
   },
   "number": {

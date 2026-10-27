@@ -694,7 +694,9 @@
       "foldedBar": "접힌 도형 보기",
       "foldedIn": "접힌 도형 확대",
       "foldedOut": "접힌 도형 축소",
-      "foldedReset": "접힌 도형 확대/축소 초기화"
+      "foldedReset": "접힌 도형 확대/축소 초기화",
+      "foldedRotateLeft": "왼쪽으로 회전",
+      "foldedRotateRight": "오른쪽으로 회전"
     }
   },
   "number": {

@@ -11,10 +11,14 @@
  *   and says why in its own frames. Only an engine that never loaded at all
  *   is a toast, the one the gateway says (`sayLayerOrderUnavailable`).
  * - **One door.** The dialog is reached through its gateway alone, which
- *   answers every open; only `applied` writes. `unchanged`, `cancelled`,
- *   `busy` and `unavailable` leave the figure and the history as they were.
+ *   answers every open; only `applied` writes an order. `unchanged`,
+ *   `cancelled`, `busy` and `unavailable` leave the figure and the history as
+ *   they were, but for the dialog's Rotate: an Apply that turned the folded
+ *   figure turns the figure on the canvas to match.
  * - **One undo entry.** Apply runs inside the folded layer's bracket, so it
- *   lands as "Set layer order" — or as nothing, when it changed nothing.
+ *   lands as "Set layer order", its turn with it — or, when it only turned
+ *   the figure, as "Rotate folded form", the Rotation row's; or as nothing,
+ *   when it changed nothing.
  *
  * React-free, as the figure's other verbs are (`foldedFigureVerbs.ts`), so the
  * toolbar, the context menu and the Properties pane run the same one.
@@ -40,7 +44,7 @@ import type {
   LayerOrderRequest,
 } from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
-import { radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
+import { degreesToRadians, radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
 import {
   DEFAULT_ORISTUDIO_CP_LINE_STYLE,
   DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
@@ -182,6 +186,28 @@ export function editFigureLook(
 }
 
 /**
+ * The figure rotation, radians, that shows a figure turned `turnDeg`
+ * clockwise on screen on a canvas turned `cameraRotation`: the look's turn
+ * ({@link editFigureLook}) solved for the figure's own.
+ */
+export function figureRotationForTurn(turnDeg: number, cameraRotation: number): number {
+  return degreesToRadians(turnDeg) - cameraRotation;
+}
+
+/**
+ * Turn figure `id` to the dialog's `turnDeg` on Edit's canvas as it is now
+ * (Rotate in the Layer order dialog), with no undo entry of its own: the
+ * caller's bracket takes it. Whether the figure was there to turn.
+ */
+export function turnFoldedFigureTo(id: string, turnDeg: number): boolean {
+  const state = useWorkspaceStore.getState();
+  if (!state.oristudioCpFoldedFigures.some((figure) => figure.id === id)) return false;
+  const rotation = figureRotationForTurn(turnDeg, editFigureView(state).cameraRotation);
+  state.setOristudioCpFoldedFigurePlacement(id, { rotation });
+  return true;
+}
+
+/**
  * Open the Layer order dialog on figure `id`, and commit its Apply. Answers
  * how the press ended; every way but `applied` leaves the figure as it was.
  */
@@ -228,13 +254,19 @@ export async function openFoldedFigureLayerOrder(
     const request = foldedFigureLayerOrderRequest(shown, opening, editFigureView(state), region);
     // From the flag's Review…: the dialog opens on the rows that need attention (D14).
     const outcome = await openLayerOrderDialog(via === 'review' ? { ...request, review: true } : request);
-    if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, press, t, opening.refold);
+    if (outcome.kind === 'applied') {
+      await applyFoldedFigureLayerOrder(id, outcome.applied, press, t, opening.refold, outcome.turnDeg);
+    }
     // A stale figure with no record, its Apply untouched: the order a plain
     // Refold draws (the dialog opened on it), so the Apply is that Refold (D12),
     // on the crease pattern the press found, as any Apply.
     if (outcome.kind === 'unchanged' && opening.refold && request.record === null) {
       if (foldPressMoved(press, store.getState())) sayLayerOrderPressRefusal('moved', t);
       else await refoldFoldedFigure(id, t);
+    }
+    // Only turned: the turn is the Apply's one entry, as the Rotation row's is (a refold before it has its own).
+    if (outcome.kind === 'unchanged' && outcome.turnDeg !== undefined) {
+      await turnFoldedFigureAsEntry(id, outcome.turnDeg, press, t);
     }
     return outcome.kind;
   } finally {
@@ -249,24 +281,50 @@ export async function openFoldedFigureLayerOrder(
  * taken it (`foldedFigureGesture.ts`). Nothing, and why, when the crease
  * pattern changed or was replaced since `press`. With `refold`, the dialog
  * was opened on creases that changed since the fold (D12), and the one
- * entry is the figure's refold too: "Refold with layer order".
+ * entry is the figure's refold too: "Refold with layer order". With
+ * `turnDeg`, the dialog's Rotate turned it: the figure lands turned so, in
+ * the same entry.
  */
 export async function applyFoldedFigureLayerOrder(
   id: string,
   applied: LayerOrderApplied,
   press: FoldPress,
   t: TFunction,
-  refold?: OristudioCpFigureLayerOrderRefold
+  refold?: OristudioCpFigureLayerOrderRefold,
+  turnDeg?: number
 ): Promise<boolean> {
   const done = await foldedFigureGesture.run(
     'verb',
     refold
       ? t('panels:creasePattern.refoldWithLayerOrderAction', 'Refold with layer order')
       : t('panels:creasePattern.setLayerOrderAction', 'Set layer order'),
-    () =>
-      useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied, press, refold ? { refold } : undefined)
+    async () => {
+      const landed = await useWorkspaceStore
+        .getState()
+        .applyOristudioCpFigureLayerOrder(id, applied, press, refold ? { refold } : undefined);
+      if (landed && turnDeg !== undefined) turnFoldedFigureTo(id, turnDeg);
+      return landed;
+    }
   );
   // Refused because the creases moved since the press: no fault, so a message.
   if (done === false && foldPressMoved(press, useWorkspaceStore.getState())) sayLayerOrderPressRefusal('moved', t);
+  return done === true;
+}
+
+/**
+ * An Apply that only turned figure `id` (`unchanged` with a turn): one undo
+ * entry, "Rotate folded form", as the Rotation row's. Nothing, and why, when
+ * the crease pattern changed or was replaced since `press`, as any Apply.
+ */
+export async function turnFoldedFigureAsEntry(id: string, turnDeg: number, press: FoldPress, t: TFunction): Promise<boolean> {
+  if (foldPressMoved(press, useWorkspaceStore.getState())) {
+    sayLayerOrderPressRefusal('moved', t);
+    return false;
+  }
+  const done = await foldedFigureGesture.run(
+    'verb',
+    t('panels:creasePattern.rotateFoldedForm', 'Rotate folded form'),
+    async () => turnFoldedFigureTo(id, turnDeg)
+  );
   return done === true;
 }

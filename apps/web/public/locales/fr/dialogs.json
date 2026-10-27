@@ -748,7 +748,9 @@
       "foldedBar": "Vue de la figure pliée",
       "foldedIn": "Zoom avant sur la figure pliée",
       "foldedOut": "Zoom arrière sur la figure pliée",
-      "foldedReset": "Réinitialiser le zoom de la figure pliée"
+      "foldedReset": "Réinitialiser le zoom de la figure pliée",
+      "foldedRotateLeft": "Tourner à gauche",
+      "foldedRotateRight": "Tourner à droite"
     }
   },
   "number": {

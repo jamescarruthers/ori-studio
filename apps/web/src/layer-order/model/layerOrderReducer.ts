@@ -91,22 +91,24 @@ import {
   setVerb,
   type LayerSentence,
 } from './layerOrderSentence';
-import type {
-  LayerCarriedRow,
-  LayerClash,
-  LayerExplainState,
-  LayerCommitAsk,
-  LayerCommittedRow,
-  LayerOrderAction,
-  LayerOrderDialogInit,
-  LayerOrderDialogState,
-  LayerOrderEffect,
-  LayerOrderStep,
-  LayerPreviewEntry,
-  LayerRows,
-  LayerSentenceEntry,
-  LayerSettle,
-  LayerUndoEntry,
+import {
+  LAYER_TURN_STEP_DEG,
+  type LayerCarriedRow,
+  type LayerClash,
+  type LayerExplainState,
+  type LayerCommitAsk,
+  type LayerCommittedRow,
+  type LayerOrderAction,
+  type LayerOrderDialogInit,
+  type LayerOrderDialogState,
+  type LayerOrderEffect,
+  type LayerOrderStep,
+  type LayerPreviewEntry,
+  type LayerRows,
+  type LayerSentenceEntry,
+  type LayerSettle,
+  type LayerTurnDirection,
+  type LayerUndoEntry,
 } from './layerOrderState';
 
 const NO_ROWS: LayerRows = { committed: [], carried: [] };
@@ -163,7 +165,8 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     blocked: null,
     solutions: freshSolutions(true, 0),
     hover: { face: null, slot: null, row: null, reason: false },
-    view: { side: init.side ?? 'front', xray: init.xray, openSpots: false },
+    view: { side: init.side ?? 'front', xray: init.xray, openSpots: false, turnDeg: wrapTurn(init.turnDeg ?? 0) },
+    hostTurn: { side: init.side ?? 'front', deg: wrapTurn(init.turnDeg ?? 0) },
     flash: null,
     baseline: null,
   };
@@ -407,6 +410,9 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
       return repositioned(state, { ...state, view: { ...state.view, xray: action.on } }, effects);
     case 'open_spots_set':
       return state.view.openSpots === action.on ? state : { ...state, view: { ...state.view, openSpots: action.on } };
+    case 'turned':
+      // A lens, as Side and X-ray are: nothing the engine answers changes, and nothing goes on the history.
+      return { ...state, view: { ...state.view, turnDeg: turnedBy(state, action.direction) } };
     case 'step':
       return step(state, action.direction, effects);
     case 'flash_ended':
@@ -1320,9 +1326,11 @@ function apply(state: LayerOrderDialogState, at: number, effects: LayerOrderEffe
   const constraints = committedConstraints(state.rows);
   const keepCarried = state.rows.carried.map((row) => row.facts.index);
   const unchanged = applyChangedNothing(state.baseline, { constraints, carried: keepCarried, stacks: state.shown });
+  // A turn alone writes no record (D16): the host turns its picture, and that is all.
   effects.push({
     type: 'apply',
     result: unchanged ? { kind: 'no_change' } : { kind: 'changed', constraints, keepCarried },
+    turnDeg: appliedTurn(state),
   });
   effects.push({ type: 'track', fact: closedFact(state, unchanged ? 'unchanged' : 'applied', at) });
   return { ...state, phase: { kind: 'closed', outcome: 'applied' } };
@@ -1341,6 +1349,35 @@ function closedFact(
     state.rows.committed.length,
     solutionsBucket(count, solutions.runs),
     at - state.openedAt,
-    refusal
+    refusal,
+    appliedTurn(state) !== null
   );
+}
+
+// ---------------------------------------------------------------------------
+// The turn
+
+/** An angle in degrees, in [0, 360). */
+function wrapTurn(degrees: number): number {
+  const wrapped = ((degrees % 360) + 360) % 360;
+  // A hair under a whole turn, from float drift, is no turn.
+  return wrapped > 360 - 1e-9 ? 0 : wrapped;
+}
+
+/**
+ * The view's turn after one press of Rotate `direction`: 15° anticlockwise
+ * (Left) or clockwise (Right) as the folded pane shows the paper, so, in the
+ * host's terms, the same way from the host's side and the other way from the
+ * other (`paneTurnDeg`).
+ */
+function turnedBy(state: LayerOrderDialogState, direction: LayerTurnDirection): number {
+  const seen = direction === 'right' ? LAYER_TURN_STEP_DEG : -LAYER_TURN_STEP_DEG;
+  const delta = state.view.side === state.hostTurn.side ? seen : -seen;
+  return wrapTurn(state.view.turnDeg + delta);
+}
+
+/** The view's turn, in the host's terms, when Rotate moved it from the host's; null when it did not. */
+export function appliedTurn(state: LayerOrderDialogState): number | null {
+  const moved = wrapTurn(state.view.turnDeg - state.hostTurn.deg);
+  return moved > 1e-6 && moved < 360 - 1e-6 ? state.view.turnDeg : null;
 }

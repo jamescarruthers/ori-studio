@@ -47,6 +47,7 @@ import {
   statusView,
 } from './layerOrderSelectors';
 import { EMPTY_SENTENCE } from './layerOrderSentence';
+import { paneTurnDeg } from '../panes/layerPaneFigure';
 import type { LayerOrderDialogState } from './layerOrderState';
 
 const sentence = (subject: number | null, verb: 'in_front_of' | 'behind' | null, object: number | null) => ({
@@ -1182,7 +1183,68 @@ describe('Apply and Cancel (spec §6.8)', () => {
   it('an untouched Apply is closed as unchanged (D16)', () => {
     const applied = play(opened().state, { type: 'apply', at: 5_000 });
     expect(lastOf(applied.effects, 'apply').result).toEqual({ kind: 'no_change' });
+    expect(lastOf(applied.effects, 'apply').turnDeg).toBeNull();
     expect(lastOf(applied.effects, 'track').fact).toEqual(dialogClosedFact('unchanged', 0, 'pending', 4_000));
+  });
+});
+
+describe('Rotate (the folded pane’s turn, 2026-10-27)', () => {
+  it('opens at the host’s turn and turns 15° a press, the host’s way from its side', () => {
+    const start = opened(undefined, { side: 'front', turnDeg: 350 });
+    expect(start.state.view.turnDeg).toBe(350);
+    // Right is clockwise as seen: from the host's side, the host's way.
+    expect(play(start.state, { type: 'turned', direction: 'right' }).state.view.turnDeg).toBe(5);
+    expect(play(start.state, { type: 'turned', direction: 'left' }).state.view.turnDeg).toBe(335);
+  });
+
+  it('from the other side a press turns the host’s turn the other way, as the pane draws it', () => {
+    const back = play(opened(undefined, { side: 'front', turnDeg: 30 }).state, { type: 'side_set', side: 'back' });
+    const right = play(back.state, { type: 'turned', direction: 'right' });
+    // Seen from the back the pane is turned 330°; Right makes it 345°, the host's 15°.
+    expect(right.state.view.turnDeg).toBe(15);
+    expect(paneTurnDeg(right.state.view.turnDeg, 'front', 'back')).toBe(345);
+    // Turned back over, the host sees its own 15°.
+    expect(paneTurnDeg(play(right.state, { type: 'side_set', side: 'front' }).state.view.turnDeg, 'front', 'front')).toBe(15);
+  });
+
+  it('is a view action: nothing goes on the history and nothing is asked of the engine', () => {
+    const one = withOneConstraint();
+    const turned = layerOrderReducer(one.state, { type: 'turned', direction: 'right' });
+    expect(turned.effects).toEqual([]);
+    expect(turned.state.history).toBe(one.state.history);
+    // An undo moves the list, never the turn.
+    expect(play(turned.state, { type: 'undo' }).state.view.turnDeg).toBe(15);
+  });
+
+  it('a turn alone writes no record: Apply is unchanged, with the turn, and counted as rotated', () => {
+    const turned = play(opened(undefined, { turnDeg: 90 }).state, { type: 'turned', direction: 'left' });
+    const applied = play(turned.state, { type: 'apply', at: 5_000 });
+    expect(lastOf(applied.effects, 'apply')).toEqual({ type: 'apply', result: { kind: 'no_change' }, turnDeg: 75 });
+    expect(lastOf(applied.effects, 'track').fact).toEqual(dialogClosedFact('unchanged', 0, 'pending', 4_000, null, true));
+  });
+
+  it('Apply hands the turn with the order, and none once turned back to the host’s', () => {
+    const one = withOneConstraint();
+    const right = play(one.state, { type: 'turned', direction: 'right' });
+    expect(lastOf(play(right.state, { type: 'apply', at: 5_000 }).effects, 'apply')).toMatchObject({
+      result: { kind: 'changed' },
+      turnDeg: 15,
+    });
+    const back = play(right.state, { type: 'turned', direction: 'left' });
+    const applied = play(back.state, { type: 'apply', at: 5_000 });
+    expect(lastOf(applied.effects, 'apply').turnDeg).toBeNull();
+    expect(lastOf(applied.effects, 'track').fact).toEqual(dialogClosedFact('applied', 1, 'pending', 4_000));
+    // A whole turn round is the host's turn too.
+    let round = one.state;
+    for (let press = 0; press < 24; press += 1) round = play(round, { type: 'turned', direction: 'right' }).state;
+    expect(lastOf(play(round, { type: 'apply', at: 5_000 }).effects, 'apply').turnDeg).toBeNull();
+  });
+
+  it('Cancel hands back no turn, and says it was rotated', () => {
+    const turned = play(withOneConstraint().state, { type: 'turned', direction: 'right' });
+    const cancelled = play(turned.state, { type: 'cancel', at: 4_000 });
+    expect(effectsOf(cancelled.effects, 'apply')).toEqual([]);
+    expect(lastOf(cancelled.effects, 'track').fact).toEqual(dialogClosedFact('cancelled', 1, 'pending', 3_000, null, true));
   });
 
   it('closing on a refused open says refused, with the refusal’s code and nothing of its details', () => {

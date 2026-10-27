@@ -72,6 +72,11 @@ export interface LayerPanesEvents {
    * can say to zoom in.
    */
   readonly onUnlettered?: (pane: LayerPaneId, faces: readonly LayerFace[]) => void;
+  /**
+   * The folded pane's Rotate Left or Right: 15° anticlockwise or clockwise as
+   * seen. Left out, the folded pane's bar offers no Rotate.
+   */
+  readonly onTurn?: (direction: 'left' | 'right') => void;
 }
 
 /** A pointer type as the events name it: a finger taps; a mouse and a pen point. */

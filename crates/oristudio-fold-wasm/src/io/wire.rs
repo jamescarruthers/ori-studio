@@ -89,7 +89,7 @@ impl CpFile {
 }
 
 /// Import CP's step (`FoldCpJumpOp` without its `kind`): see [`crate::io`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CpJump {
     /// The crease pattern, as the kernel's FOLD writer writes it
@@ -98,6 +98,18 @@ pub struct CpJump {
     /// The order, as a [`oristudio_fold::WitnessOrder`].
     pub order_json: String,
     pub origin: CpOrigin,
+    /// How far the step's view turns, in degrees clockwise on screen, from
+    /// the view of the step it lands after (which an import keeps, plan D16):
+    /// the Layer order dialog's Rotate on the import
+    /// ([`crate::io::Imports::turn`]), so no rotate step need follow it. In
+    /// (−180, 180]; 0, and left out of the op, for none, as every step from
+    /// before it was.
+    #[serde(default, skip_serializing_if = "is_unturned")]
+    pub turn_deg: f64,
+}
+
+fn is_unturned(turn_deg: &f64) -> bool {
+    *turn_deg == 0.0
 }
 
 /// Where an import lands.
@@ -291,7 +303,7 @@ impl AdoptedPaper {
 }
 
 /// A `cp-jump` op as the document stores it: `{ kind: 'cp-jump', … }`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind")]
 pub enum JumpOp {
     #[serde(rename = "cp-jump")]
@@ -550,6 +562,7 @@ mod tests {
             cp_json: "{}".to_string(),
             order_json: "[]".to_string(),
             origin: CpOrigin::EditFoldedFigure,
+            turn_deg: 0.0,
         });
         assert_eq!(
             serde_json::to_value(&op).unwrap_or_default(),
@@ -558,6 +571,19 @@ mod tests {
                 "origin": "edit_folded_figure"
             })
         );
+        // A turned one says how far; one from before the turn reads as none.
+        let JumpOp::CpJump(jump) = &op;
+        let turned = JumpOp::CpJump(CpJump {
+            turn_deg: -15.0,
+            ..jump.clone()
+        });
+        assert_eq!(
+            serde_json::to_value(&turned).unwrap_or_default()["turnDeg"],
+            json!(-15.0)
+        );
+        let before: Result<CpJump, _> =
+            serde_json::from_value(json!({ "cpJson": "{}", "orderJson": "[]", "origin": "fold" }));
+        assert_eq!(before.map(|jump| jump.turn_deg).ok(), Some(0.0));
         let target: Target = serde_json::from_value(json!({ "kind": "empty" }))
             .unwrap_or(Target::After { state: 0 });
         assert_eq!(

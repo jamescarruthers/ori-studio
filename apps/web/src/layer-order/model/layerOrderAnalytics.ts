@@ -99,6 +99,8 @@ export type LayerOrderFact =
         readonly constraint_count_bucket: string;
         readonly solutions_bucket: LayerOrderSolutionsBucket;
         readonly elapsed_ms_bucket: string;
+        /** Whether Rotate left the folded pane turned from the host's turn as it closed. Never the angle. */
+        readonly rotated: boolean;
       };
     }
   | {
@@ -163,7 +165,8 @@ export function dialogClosedFact(
   constraints: number,
   solutions: LayerOrderSolutionsBucket,
   elapsedMs: number,
-  refusal: LayerOrderRefusalCode | null = null
+  refusal: LayerOrderRefusalCode | null = null,
+  rotated = false
 ): LayerOrderFact {
   return {
     event: 'layer order dialog closed',
@@ -173,6 +176,7 @@ export function dialogClosedFact(
       constraint_count_bucket: bucketCount(constraints, LAYER_ORDER_CONSTRAINT_COUNT_BUCKETS),
       solutions_bucket: solutions,
       elapsed_ms_bucket: bucketCount(Math.max(0, elapsedMs), LAYER_ORDER_ELAPSED_MS_BUCKETS),
+      rotated,
     },
   };
 }

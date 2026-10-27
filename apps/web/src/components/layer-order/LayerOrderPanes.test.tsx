@@ -223,6 +223,34 @@ describe('the Layer order panes', () => {
     expect(folded.fills.count).toBeGreaterThan(0);
   });
 
+  it('the folded figure’s bar has Rotate Left and Right after Fit; the crease pattern’s has none', () => {
+    const onTurn = vi.fn();
+    render({ onTurn });
+    const crease = byRole(host, 'toolbar', 'Crease pattern view');
+    const folded = byRole(host, 'toolbar', 'Folded figure view');
+    expect(queryByRole(crease, 'button', 'Rotate Left')).toBeNull();
+    expect(queryByRole(crease, 'button', 'Rotate Right')).toBeNull();
+    const labels = allByRole(folded, 'button').map((button) => button.getAttribute('aria-label'));
+    expect(labels.slice(labels.indexOf('Fit both views'))).toEqual(['Fit both views', 'Rotate Left', 'Rotate Right']);
+    act(() => byRole(folded, 'button', 'Rotate Left').click());
+    act(() => byRole(folded, 'button', 'Rotate Right').click());
+    expect(onTurn.mock.calls).toEqual([['left'], ['right']]);
+    // Nothing listening, nothing offered.
+    render({ onTurn: undefined });
+    expect(queryByRole(host, 'button', 'Rotate Left')).toBeNull();
+  });
+
+  it('draws the folded figure at the view’s turn, its letters with it; the crease pattern never turns', () => {
+    render({ marks: PICKED });
+    runFrames();
+    const [folded, pattern] = [letterAt('folded', 'A'), letterAt('pattern', 'A')];
+    render({ marks: PICKED, view: { side: 'front', xray: false, undecided: false, turnDeg: 90 } });
+    runFrames();
+    const turned = letterAt('folded', 'A');
+    expect(Math.hypot(turned.x - folded.x, turned.y - folded.y)).toBeGreaterThan(1);
+    expect(letterAt('pattern', 'A')).toEqual(pattern);
+  });
+
   it('marks nothing until it is told to', () => {
     render();
     expect(lettersOn('pattern')).toEqual([]);
@@ -440,10 +468,10 @@ describe('the Layer order panes', () => {
     });
 
     it('the folded figure from the back, and see-through, framed as itself', () => {
-      render({ view: { side: 'back', xray: false, undecided: false } });
+      render({ view: { side: 'back', xray: false, undecided: false, turnDeg: 0 } });
       zoomThenFit();
       expect(readouts()[1]).toBe(fitted(20, 10));
-      render({ view: { side: 'front', xray: true, undecided: false } });
+      render({ view: { side: 'front', xray: true, undecided: false, turnDeg: 0 } });
       zoomThenFit();
       expect(readouts()[1]).toBe(fitted(20, 10));
     });
@@ -469,7 +497,7 @@ describe('the Layer order panes', () => {
   it('X-ray draws every layer see-through, the buried ones too', () => {
     render();
     const opaque = channels.last.get(canvasOf('folded')!)?.get('setFolded') as { fills: { count: number; color: Float32Array } };
-    render({ view: { side: 'front', xray: true, undecided: false } });
+    render({ view: { side: 'front', xray: true, undecided: false, turnDeg: 0 } });
     const xray = channels.last.get(canvasOf('folded')!)?.get('setFolded') as { fills: { count: number; color: Float32Array } };
     expect(xray.fills.count).toBeGreaterThan(opaque.fills.count);
     expect(xray.fills.color[3]).toBeCloseTo(1 - 0.4 ** (1 / 3), 5);

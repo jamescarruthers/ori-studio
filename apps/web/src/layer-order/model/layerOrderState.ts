@@ -325,7 +325,27 @@ export interface LayerView {
   readonly side: LayerSide;
   readonly xray: boolean;
   readonly openSpots: boolean;
+  /**
+   * How far the folded pane turns the paper, in degrees in [0, 360), in the
+   * host's terms (`LayerOrderLook.turnDeg`): clockwise on screen from the
+   * host's side ({@link LayerHostTurn.side}), the other way round from the
+   * other side (`paneTurnDeg`). It opens at the host's turn; Rotate Left and
+   * Right move it, and Apply hands it back when it moved.
+   */
+  readonly turnDeg: number;
 }
+
+/** The turn the host opened the dialog at, and the side it is read from (`look.turnDeg`, `look.side`). */
+export interface LayerHostTurn {
+  readonly side: LayerSide;
+  readonly deg: number;
+}
+
+/** Which way a press of Rotate turns the folded pane, as seen: Left anticlockwise, Right clockwise. */
+export type LayerTurnDirection = 'left' | 'right';
+
+/** How far one press of Rotate Left or Right turns the folded pane, as the Diagram's Pose controls do. */
+export const LAYER_TURN_STEP_DEG = 15;
 
 /** The changed spots' one fade, after a commit or a step. `n` tells one flash from the next. */
 export interface LayerFlash {
@@ -398,6 +418,8 @@ export interface LayerOrderDialogState {
   readonly solutions: LayerSolutionsState;
   readonly hover: LayerHover;
   readonly view: LayerView;
+  /** The host's turn: what the view's turn opened at, and what Apply compares it with. */
+  readonly hostTurn: LayerHostTurn;
   readonly flash: LayerFlash | null;
   /** What the dialog opened on, for an Apply that changed nothing (D16). */
   readonly baseline: LayerOrderBaseline | null;
@@ -489,8 +511,12 @@ export type LayerOrderEffect =
     }
   /** Fade the changed spots once; answer `flash_ended` with `n` when the fade is over. */
   | { readonly type: 'flash'; readonly n: number }
-  /** Apply: hand the host its result (or nothing to write), then close. */
-  | { readonly type: 'apply'; readonly result: LayerOrderApplyResult }
+  /**
+   * Apply: hand the host its result (or nothing to write), then close.
+   * `turnDeg` is the folded pane's turn in the host's terms when Rotate moved
+   * it from the host's, else null: the host turns its picture to it.
+   */
+  | { readonly type: 'apply'; readonly result: LayerOrderApplyResult; readonly turnDeg: number | null }
   /** Cancel: close and leave the host untouched. */
   | { readonly type: 'close' }
   | { readonly type: 'track'; readonly fact: LayerOrderFact };
@@ -559,6 +585,8 @@ export type LayerOrderAction =
   | { readonly type: 'side_set'; readonly side: LayerSide }
   | { readonly type: 'xray_set'; readonly on: boolean }
   | { readonly type: 'open_spots_set'; readonly on: boolean }
+  /** Rotate Left or Right on the folded pane: a view action, on no undo history. */
+  | { readonly type: 'turned'; readonly direction: LayerTurnDirection }
   | { readonly type: 'step'; readonly direction: LayerStepDirection }
   | { readonly type: 'flash_ended'; readonly n: number }
   /** The failed state's Try again. */
@@ -581,5 +609,7 @@ export interface LayerOrderDialogInit {
   readonly xray: boolean;
   /** The side the host's picture shows (`look.side`): the folded pane opens on it. The front when left out. */
   readonly side?: LayerSide;
+  /** How far the host turns its picture from that side (`look.turnDeg`). None when left out. */
+  readonly turnDeg?: number;
   readonly at: number;
 }
