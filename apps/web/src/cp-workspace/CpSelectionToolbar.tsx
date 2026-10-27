@@ -24,6 +24,8 @@ import { FoldWithLayerOrderIcon } from '../components/ui/FoldWithLayerOrderIcon'
 import { selectionCoversEntireCp, useOpenReferences } from './references/useOpenReferences';
 import type { AnnotationBox } from './annotations/annotationTransform';
 import { useWorkspaceStore } from '../store/workspaceStore/store';
+import { useShortcutResolution } from '../store/shortcutStore';
+import { shortcutLabelForAction } from '../keyboard/shortcuts';
 import { cpLineSelectionBounds, selectedCpLineSegments } from '../lib/creasePatternClipboard';
 import { SEGMENT_EXPORT_FORMATS, type SegmentExportFormat } from '../lib/creaseSegmentExport';
 import { ensureCpSheetIndex, peekCpSheetIndex } from './sheets/cpSheetIndex';
@@ -113,6 +115,7 @@ export function CpSelectionToolbar({ container, fold, foldWithLayerOrder }: CpSe
   const clearSelection = useWorkspaceStore((s) => s.clearOristudioCpSelection);
   const simulateSelectionInline = useSimulateSelection();
   const openReferences = useOpenReferences();
+  const shortcutResolution = useShortcutResolution();
 
   // The sheet index: which sheet each line is in, built by the engine in tens of
   // milliseconds from the border lines alone, so a selection is matched in one
@@ -199,20 +202,24 @@ export function CpSelectionToolbar({ container, fold, foldWithLayerOrder }: CpSe
         route: foldRoute,
         fold: () => runAndDismiss(() => fold(cpLineIds)),
         foldWithLayerOrder: () => runAndDismiss(() => foldWithLayerOrder(cpLineIds)),
-      }).map((action) => (
-        <IconButton
-          key={action.id}
-          size="sm"
-          variant="toolbar"
-          aria-label={action.label}
-          // While it cannot act, its tooltip says why.
-          title={(action.disabled ? action.hint : undefined) ?? action.label}
-          disabled={action.disabled}
-          onClick={action.run}
-        >
-          {action.id === 'fold' ? <Origami size={14} /> : <FoldWithLayerOrderIcon size={14} />}
-        </IconButton>
-      ))}
+      }).map((action) => {
+        const key = shortcutLabelForAction(action.shortcutId, shortcutResolution);
+        return (
+          <IconButton
+            key={action.id}
+            size="sm"
+            variant="toolbar"
+            aria-label={action.label}
+            // While it cannot act, its tooltip says why; otherwise it names
+            // the key, as the viewport bar's Fold does.
+            title={(action.disabled ? action.hint : undefined) ?? (key ? `${action.label} (${key})` : action.label)}
+            disabled={action.disabled}
+            onClick={action.run}
+          >
+            {action.id === 'fold' ? <Origami size={14} /> : <FoldWithLayerOrderIcon size={14} />}
+          </IconButton>
+        );
+      })}
       <ExportMenu
         label={t('panels:creasePattern.selectionToolbar.export', 'Export…')}
         onExport={(format) => runAndDismiss(() => void exportSheet(format, sheet))}
