@@ -25,6 +25,7 @@ export interface LayerOrderStatusProps {
  */
 function spokenStatus(text: LayerStatusText, countDone: boolean): LayerStatusText {
   if ((text.key === 'solutions' || text.key === 'layer_orders') && !text.count.exact && !countDone) return { key: 'none' };
+  if (text.key === 'pictures_and_orders' && !(text.pictures.exact && text.orders.exact) && !countDone) return { key: 'none' };
   return text;
 }
 

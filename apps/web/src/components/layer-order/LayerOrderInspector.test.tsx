@@ -123,8 +123,8 @@ const spoken = () => statusRegion().querySelector('[role="status"]')!;
 describe('the status and its stepper', () => {
   it('counts the solutions, and steps through them in a stable order (A3)', () => {
     draw(counted(opened()));
-    expect(status().textContent).toBe('9 solutions');
-    expect(spoken().textContent).toBe('9 solutions');
+    expect(status().textContent).toBe('9 pictures · 24 layer orders');
+    expect(spoken().textContent).toBe('9 pictures · 24 layer orders');
     const stepper = byRole(host, 'group', 'Solution shown');
     expect(stepper.textContent).toBe('4 of 9');
     click(byRole(stepper, 'button', 'Next solution'));
@@ -133,7 +133,7 @@ describe('the status and its stepper', () => {
 
   it('reads “at least N” while the count runs (Round4-States, counting)', () => {
     draw(counted(opened(), count(4, 4, 10, false), position(2, 4, false)));
-    expect(status().textContent).toBe('At least 4 solutions');
+    expect(status().textContent).toBe('At least 4 pictures · at least 10 layer orders');
     // The running number stays out of the live region: it says the count is running, once.
     expect(spoken().textContent).toBe('Counting solutions…');
     // Not "2 of 4+": until the count ends, the index counts the solutions found so far, not their rank (E9).
@@ -159,6 +159,14 @@ describe('the status and its stepper', () => {
     expect(hint().textContent).toContain('Couldn’t find the next solution in time.');
     click(button('Keep trying'));
     expect(sent).toEqual([{ type: 'keep_trying' }]);
+  });
+
+  it('names the pictures and the layer orders when hidden layers tell orders apart (the owner, 2026-10-27)', () => {
+    draw(counted(opened(), count(4, 4, 256), position(1, 4)));
+    expect(status().textContent).toBe('4 pictures · 256 layer orders');
+    expect(spoken().textContent).toBe('4 pictures · 256 layer orders');
+    // The stepper still steps by picture; X-ray steps through every layer order.
+    expect(byRole(host, 'group', 'Solution shown').textContent).toBe('1 of 4');
   });
 
   it('announces a count that stopped at its cap as its lower bound, once it has stopped', () => {

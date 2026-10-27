@@ -19,6 +19,7 @@
 import type { TFunction } from 'i18next';
 import type { FaceLetters, LayerFace } from '../../layer-order/engine/faceIndex';
 import type { LayerVerb } from '../../layer-order/engine/layerOrderEngine';
+import type { LayerTally } from '../../layer-order/engine/layerOrderWire';
 import type { LayerOpenNotice } from '../../layer-order/model/layerOrderDecisions';
 import type { LayerCommitVia } from '../../layer-order/model/layerOrderState';
 import type {
@@ -330,8 +331,40 @@ export function layerOrderCopy(
     }
   };
 
+  const pictures = (count: LayerTally): string =>
+    count.exact
+      ? t('dialogs:layerOrder.status.pictures', {
+          count: count.n,
+          defaultValue_one: '{{count}} picture',
+          defaultValue_other: '{{count}} pictures',
+        })
+      : t('dialogs:layerOrder.status.atLeastPictures', {
+          count: count.n,
+          defaultValue_one: 'At least {{count}} picture',
+          defaultValue_other: 'At least {{count}} pictures',
+        });
+
+  // The second half of "4 pictures · 256 layer orders": mid-line, so "at least" is lower-case.
+  const andLayerOrders = (count: LayerTally): string =>
+    count.exact
+      ? t('dialogs:layerOrder.status.andLayerOrders', {
+          count: count.n,
+          defaultValue_one: '{{count}} layer order',
+          defaultValue_other: '{{count}} layer orders',
+        })
+      : t('dialogs:layerOrder.status.andAtLeastLayerOrders', {
+          count: count.n,
+          defaultValue_one: 'at least {{count}} layer order',
+          defaultValue_other: 'at least {{count}} layer orders',
+        });
+
   const status = (text: LayerStatusText, counting: boolean): string => {
     switch (text.key) {
+      case 'pictures_and_orders':
+        return t('dialogs:layerOrder.status.picturesAndOrders', '{{pictures}} · {{orders}}', {
+          pictures: pictures(text.pictures),
+          orders: andLayerOrders(text.orders),
+        });
       case 'solutions':
         return text.count.exact
           ? t('dialogs:layerOrder.status.solutions', {
