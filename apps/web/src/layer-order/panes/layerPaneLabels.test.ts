@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../lib/geometry';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
-import { restackedScene, type LayerPaneSegment } from './layerPaneFigure';
+import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
+import { foldedPaneLines, restackedScene, type LayerPaneSegment } from './layerPaneFigure';
 import {
   BESIDE_CLEAR_REACH_CHIPS,
   cappedFaces,
@@ -522,6 +523,105 @@ describe('placing the letters', () => {
       expect(far.some((segment) => covers(kept[0]!, segment, 0))).toBe(true);
     });
 
+    /** Whether two placed chips overlap, the gap between letters included. */
+    const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+      Math.abs(a.x - b.x) < (a.width + b.width) / 2 + 2 && Math.abs(a.y - b.y) < (a.height + b.height) / 2 + 2;
+
+    it('with no clear spot, keeps two letters apart beside one small face, each over a crease', () => {
+      // The subject and an object on one 8 px face, under a crease every 6 px.
+      const labels: LayerPaneLabel[] = [
+        { face: 0, tone: 'pick', keep: true },
+        { face: 1, tone: 'pick', keep: true },
+      ];
+      const placed = placeLabels(labels, spotsOf, (f) => 'AB'[f]!, (p) => p, { lines: labelLineIndex([...sides(thin), ...mesh]) });
+      expect(placed).toHaveLength(2);
+      expect(placed.every((chip) => chip.off)).toBe(true);
+      expect(overlap(placed[0]!, placed[1]!)).toBe(false);
+      // As with no lines, where nothing is clear of a crease either.
+      expect(at(placed)).toEqual(at(placeLabels(labels, spotsOf, (f) => 'AB'[f]!, (p) => p)));
+    });
+
+    it('with no clear spot, keeps the letters of two small faces 10 px apart from each other', () => {
+      const other = square(110, 100, 8);
+      const labels: LayerPaneLabel[] = [
+        { face: 0, tone: 'pick', keep: true },
+        { face: 1, tone: 'pick', keep: true },
+      ];
+      const twoOf = (face: number): LayerLabelSpots =>
+        face === 0 ? spotsOf() : { visible: true, spots: [{ at: { x: 114, y: 104 }, region: other }], outline: other };
+      const lines = labelLineIndex([...sides(thin), ...sides(other), ...mesh]);
+      const placed = placeLabels(labels, twoOf, (f) => 'AB'[f]!, (p) => p, { lines });
+      expect(placed).toHaveLength(2);
+      expect(placed.every((chip) => chip.off)).toBe(true);
+      expect(overlap(placed[0]!, placed[1]!)).toBe(false);
+    });
+
+    it('takes a spot beside the face over a crease before the one crease-free spot another letter holds', () => {
+      // Clear of creases only straight over the face, where the first letter goes; the second must not land on it.
+      const above = mesh.filter(([a, b]) => !(Math.max(a.y, b.y) < 92 && Math.min(a.y, b.y) < 92 && a.y === b.y) && !(a.x === b.x && a.x > 80 && a.x < 128));
+      const lines = labelLineIndex([...sides(thin), ...above.map(([a, b]): LayerPaneSegment => (a.x === b.x ? [a, { x: b.x, y: Math.min(b.y, 600) }] : [a, b]))]);
+      const labels: LayerPaneLabel[] = [
+        { face: 0, tone: 'pick', keep: true },
+        { face: 1, tone: 'pick', keep: true },
+      ];
+      const placed = placeLabels(labels, spotsOf, (f) => 'AB'[f]!, (p) => p, { lines });
+      expect(placed).toHaveLength(2);
+      expect(overlap(placed[0]!, placed[1]!)).toBe(false);
+      expect(placed.every((chip) => chip.off)).toBe(true);
+    });
+
+    it('keeps clear of the widest line the pane draws, an aux pen wider than the line along a face', () => {
+      // A crease 25 px right of the face: 4.3 px clear of the chip set beside it, by the face's 0 px line.
+      const crease = down(133);
+      const lines = labelLineIndex([...sides(thin), across(88), across(120), crease]);
+      const narrow = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines })[0]!;
+      expect([narrow.x, narrow.y]).toEqual([120, 104]);
+      expect(covers(narrow, crease, 3)).toBe(false);
+      expect(covers(narrow, crease, 3 + 4)).toBe(true);
+      // Drawn 8 px wide, it needs 4 + 3 px: the letter goes the other way; the room inside a face is unchanged.
+      const wide = placeLabels(label, spotsOf, () => 'A', (p) => p, { lines, linesPx: 8 })[0]!;
+      expect(covers(wide, crease, 4 + 3)).toBe(false);
+      expect(wide.off).toBe(true);
+      const roomy30 = placeLabels(label, () => roomy(30, 30), () => 'A', (p) => p, { lines, linesPx: 8 });
+      expect(at(roomy30)).toEqual([[0, 30, 30, false, false]]);
+    });
+
+    it('does not dodge an aux line the paper leaves out', () => {
+      // Face 0 is the small face; face 1, over it on the paper, carries an aux line 12 px over face 0.
+      const big = [
+        { x: 60, y: 60 },
+        { x: 160, y: 60 },
+        { x: 160, y: 100 },
+        { x: 60, y: 100 },
+      ];
+      const scene: OristudioCpFoldedPaperScene = {
+        schema_version: 3,
+        flipped: false,
+        sheet: 200,
+        faces: [thin, big].map((outline) => ({
+          outline,
+          points: [],
+          front_up: true,
+          edges: outline.map((from, i) => ({ from, to: outline[(i + 1) % outline.length]!, kind: 'border' as const })),
+        })),
+        subfaces: [
+          { polygon: thin, faces_top_to_bottom: [0] },
+          { polygon: big, faces_top_to_bottom: [1] },
+        ],
+        aux_lines: [{ from: { x: 60, y: 88 }, to: { x: 160, y: 88 }, face: 1 }],
+        sheet_points: [],
+      };
+      const spots = foldedLabelIndex(scene);
+      const place = (aux: boolean) =>
+        placeLabels(label, spots, () => 'A', (p) => p, { lines: labelLineIndex(foldedPaneLines(scene, false, aux)) })[0]!;
+      const shown = place(true);
+      expect(covers(shown, across(88, 60, 160), 3)).toBe(false);
+      // With the aux pen left out, the line is not there to dodge: straight over the face, as with no lines.
+      const hidden = place(false);
+      expect([hidden.x, hidden.y]).toEqual([104, 88]);
+      expect([hidden.x, hidden.y]).not.toEqual([shown.x, shown.y]);
+    });
+
     it('with no clear spot, falls back as before: beside the face, whatever it covers', () => {
       const lines = labelLineIndex([...sides(thin), ...mesh]);
       const plain = placeLabels(label, spotsOf, () => 'A', (p) => p);
@@ -530,7 +630,7 @@ describe('placing the letters', () => {
       expect(meshed[0]!.off).toBe(true);
     });
 
-    it('with no clear spot, inside its face over another letter comes before beside it across a crease', () => {
+    it('with no clear spot, beside its face over a crease comes before inside it over another letter, as before', () => {
       // The subject's letter takes the one spot of a roomy face; the object's face is the same face.
       const labels: LayerPaneLabel[] = [
         { face: 0, tone: 'pick', keep: true },
@@ -538,10 +638,12 @@ describe('placing the letters', () => {
       ];
       const face = roomy(200, 200, 40);
       const plain = placeLabels(labels, () => face, (f) => 'AB'[f]!, (p) => p);
-      expect(plain.find((chip) => chip.face === 1)?.off).toBe(true);
       const meshed = placeLabels(labels, () => face, (f) => 'AB'[f]!, (p) => p, { lines: labelLineIndex(mesh) });
       const object = meshed.find((chip) => chip.face === 1)!;
-      expect([object.x, object.y, object.off]).toEqual([200, 200, false]);
+      expect(object.off).toBe(true);
+      expect(overlap(object, meshed.find((chip) => chip.face === 0)!)).toBe(false);
+      // Where it went with no lines: nothing near is clear of a crease, so the lines change nothing.
+      expect(at(meshed)).toEqual(at(plain));
     });
 
     it('changes no letter with no lines, nor one that fits inside its face', () => {

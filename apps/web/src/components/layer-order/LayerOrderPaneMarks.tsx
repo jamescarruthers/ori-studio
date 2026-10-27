@@ -130,14 +130,16 @@ export function LayerOrderPaneMarks({
     [pane.flash, project]
   );
   const anchorLinePx = pane.lineWidthCss(anchor.widthBoost);
+  const anchorLinesPx = pane.labelLinesWidthCss(anchor.widthBoost);
   const labels: LayerPlacedLabel[] = useMemo(
     () =>
       placeLabels(pane.labels, pane.labelSpots, pane.letterOf, anchorProject, {
         frame,
         linePx: anchorLinePx,
         lines: pane.labelLines,
+        linesPx: anchorLinesPx,
       }),
-    [pane.labels, pane.labelSpots, pane.labelLines, pane.letterOf, anchorProject, frame, anchorLinePx]
+    [pane.labels, pane.labelSpots, pane.labelLines, pane.letterOf, anchorProject, frame, anchorLinePx, anchorLinesPx]
   );
   // The faces on offer whose chips found no room at this zoom: tinted, unlettered, until zoomed in.
   const unlettered = useMemo(() => {

@@ -129,11 +129,29 @@ describe('the order on screen', () => {
     const ends = (segments: ReturnType<typeof foldedPaneLines>) => segments.map(([a, b]) => `${a.x},${a.y}-${b.x},${b.y}`);
     const sides = (face: number) =>
       scene.faces[face]!.outline.map((from, i, ring) => `${from.x},${from.y}-${ring[(i + 1) % ring.length]!.x},${ring[(i + 1) % ring.length]!.y}`);
-    expect(ends(foldedPaneLines(scene, false))).toEqual([...sides(0), ...sides(2), '1,1-9,9']);
-    expect(ends(foldedPaneLines(scene, true))).toEqual([...sides(0), ...sides(1), ...sides(2), '1,1-9,9', '11,1-19,9']);
+    expect(ends(foldedPaneLines(scene, false, true))).toEqual([...sides(0), ...sides(2), '1,1-9,9']);
+    expect(ends(foldedPaneLines(scene, true, true))).toEqual([...sides(0), ...sides(1), ...sides(2), '1,1-9,9', '11,1-19,9']);
     // The order on screen decides what shows.
     const turned = restackedScene(scene, { offsets: new Uint32Array([0, 1, 4]), faces: new Uint32Array([0, 1, 2, 0]) });
-    expect(ends(foldedPaneLines(turned, false))).toEqual([...sides(0), ...sides(1), '1,1-9,9', '11,1-19,9']);
+    expect(ends(foldedPaneLines(turned, false, true))).toEqual([...sides(0), ...sides(1), '1,1-9,9', '11,1-19,9']);
+  });
+
+  it('leaves out the lines the paper draws in the aux pen when the style leaves that pen out', () => {
+    // Face 0's first edge is a flat crease: the paper draws it in the aux pen, as it does the aux lines.
+    const base = zScene();
+    const flat = base.faces[0]!.edges.map((edge, i) => (i === 0 ? { ...edge, kind: 'flat' as const } : edge));
+    const scene: OristudioCpFoldedPaperScene = {
+      ...base,
+      faces: base.faces.map((face, k) => (k === 0 ? { ...face, edges: flat } : face)),
+      aux_lines: [{ from: { x: 1, y: 1 }, to: { x: 9, y: 9 }, face: 0 }],
+    };
+    const count = (aux: boolean) => foldedPaneLines(scene, true, aux).length;
+    expect(count(true)).toBe(12 + 1);
+    // Without the aux pen: neither the aux line nor the flat edge.
+    expect(count(false)).toBe(12 - 1);
+    const kept = foldedPaneLines(scene, true, false).map(([a, b]) => `${a.x},${a.y}-${b.x},${b.y}`);
+    const [from, to] = [scene.faces[0]!.outline[0]!, scene.faces[0]!.outline[1]!];
+    expect(kept).not.toContain(`${from.x},${from.y}-${to.x},${to.y}`);
   });
 });
 

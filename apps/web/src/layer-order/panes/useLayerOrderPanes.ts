@@ -48,6 +48,8 @@ import type { UserBounds } from '../../cp-workspace/renderer/camera';
 import { readCssVarColor } from '../../cp-workspace/renderer/cssColor';
 import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
 import { ptToDevicePx } from '../../lib/paper/paperStyle';
+import { surfacePaperStyle } from '../../lib/paper/paperStyleResolve';
+import { penForRole } from '../../lib/paper/paperSvg';
 import type { FillGeometry, Rgba } from '../../cp-workspace/renderer/types';
 import type { PaperLook, PaperPaneOverlay } from '../../cp-workspace/surface/PaperPane';
 import type { LayerOrderSessionStatus } from '../dialog/useLayerOrderSession';
@@ -144,6 +146,13 @@ export interface LayerPaneChannels {
   readonly labelSpots: (face: LayerFace) => LayerLabelSpots | null;
   /** Every line the pane draws, in its frame: a letter set beside its face keeps clear of them all (D20). */
   readonly labelLines: LayerLabelLines | null;
+  /**
+   * How wide, CSS px, the widest of {@link labelLines} is drawn at a frame's
+   * line boost: the aux pen may be wider than the line along a face's edge,
+   * which {@link lineWidthCss} is and which the rings and the room inside a
+   * face keep to.
+   */
+  readonly labelLinesWidthCss: (widthBoost: number) => number;
   readonly letterOf: (face: LayerFace) => string;
 }
 
@@ -389,6 +398,8 @@ export function useLayerPatternPane({
     labels: letters,
     labelSpots,
     labelLines,
+    // Edit draws every line of the pattern, aux lines too, at the crease's width.
+    labelLinesWidthCss: lineWidthCss,
     letterOf,
   };
 }
@@ -468,11 +479,17 @@ export function useLayerFoldedPane({
   );
   const overlay = useOverlay(pointerFills, 'fills');
   // The paper's pens hold their width on screen (pt), whatever the zoom.
-  const lineWidthCss = useMemo(() => {
+  const edgePx = useMemo(() => {
     const { edges, mountainFolds, valleyFolds } = look.style;
-    const widest = ptToDevicePx(Math.max(edges.width, mountainFolds.width, valleyFolds.width), 1);
-    return () => widest;
+    return ptToDevicePx(Math.max(edges.width, mountainFolds.width, valleyFolds.width), 1);
   }, [look.style]);
+  const lineWidthCss = useMemo(() => () => edgePx, [edgePx]);
+  // The aux pen as the paper draws it (`PaperPane`'s painter): null when the style leaves aux lines out.
+  const auxPen = useMemo(() => penForRole(surfacePaperStyle(look.style, look.policy), 'aux'), [look.style, look.policy]);
+  const labelLinesWidthCss = useMemo(() => {
+    const widest = Math.max(edgePx, auxPen ? ptToDevicePx(auxPen.width, 1) : 0);
+    return () => widest;
+  }, [edgePx, auxPen]);
   const faces = useMemo(() => (figure.faces ? paneFacesOf(figure.faces) : null), [figure.faces]);
   const baseLetters = useMemo(() => (faces ? paneLetters(base, faces.patternCentroids) : null), [base, faces]);
   const letters = useMemo(
@@ -480,8 +497,13 @@ export function useLayerFoldedPane({
     [baseLetters, marks, faces]
   );
   const labelSpots = useMemo(() => (shown ? foldedLabelIndex(shown) : NO_SPOTS), [shown]);
-  // What the paper draws changes with the order shown, and with X-ray, which draws the buried faces too.
-  const labelLines = useMemo(() => (shown ? labelLineIndex(foldedPaneLines(shown, xray)) : null), [shown, xray]);
+  // What the paper draws changes with the order shown, with X-ray, which draws the buried faces too, and with
+  // the style, which may leave the aux lines out.
+  const auxShown = auxPen !== null;
+  const labelLines = useMemo(
+    () => (shown ? labelLineIndex(foldedPaneLines(shown, xray, auxShown)) : null),
+    [shown, xray, auxShown]
+  );
   const flashSpots = base.flash?.changed[side];
   const flash = useMemo(() => {
     if (!base.flash || !kernel || !flashSpots || flashSpots.length === 0) return null;
@@ -527,6 +549,7 @@ export function useLayerFoldedPane({
     labels: letters,
     labelSpots,
     labelLines,
+    labelLinesWidthCss,
     letterOf,
   };
 }
