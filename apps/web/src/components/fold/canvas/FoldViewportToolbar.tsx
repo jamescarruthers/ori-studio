@@ -4,7 +4,6 @@ import { Layers, PenLine } from 'lucide-react';
 import type { LayerSpreadToggle } from '../../../cp-workspace/folded/layerSpreadControls';
 import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/ViewportToolbar';
-import { FoldCpSideIcon } from './FoldCpSideIcon';
 import { FoldFlatCreasesIcon } from './FoldFlatCreasesIcon';
 
 /**
@@ -26,8 +25,6 @@ export function FoldViewportToolbar({
   camera,
   display,
   onDisplay,
-  cpSide,
-  onTurnCpOver,
   spread = null,
   phoneGroups = [],
   sendToEdit,
@@ -41,8 +38,6 @@ export function FoldViewportToolbar({
   };
   display: FoldPaneDisplay;
   onDisplay: (display: FoldPaneDisplay) => void;
-  cpSide: 'front' | 'back';
-  onTurnCpOver: () => void;
   /** The step on screen's Spread Layers (`useFoldStepSpread`); null at the flat sheet, which has none. */
   spread?: LayerSpreadToggle | null;
   /** A phone's: the starred tools and the pane switch (`useFoldPhoneBarGroups`), at the head of the bar. */
@@ -57,23 +52,11 @@ export function FoldViewportToolbar({
       items: [
         {
           kind: 'action',
-          id: 'turn-cp-over',
-          label: cpSide === 'front'
-            ? t('panels:fold.canvas.showCpBack', 'Show back of crease pattern')
-            : t('panels:fold.canvas.showCpFront', 'Show front of crease pattern'),
-          icon: <FoldCpSideIcon side={cpSide} size={14} />,
-          checked: cpSide === 'back',
-          pinned: true,
-          onPhone: 'collapse',
-          onSelect: onTurnCpOver,
-        },
-        {
-          kind: 'action',
           id: 'step-creases',
           label: t('panels:fold.canvas.stepCreases', 'Step creases'),
           title: t(
             'panels:fold.canvas.stepCreasesTitle',
-            'Draw this step’s creases with the paper’s instruction pens'
+            'Draw the creases the step on show made in bold, as its instruction'
           ),
           icon: <PenLine size={14} />,
           checked: display.stepCreases,
