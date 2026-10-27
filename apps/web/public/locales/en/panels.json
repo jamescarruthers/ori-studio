@@ -1801,7 +1801,7 @@
       "readOnlyHint": "Made with a newer Ori Studio: this sequence opens read-only.",
       "replayingHint": "Still folding the steps before this one.",
       "rotate": "Rotate…",
-      "sendToEditTitle": "Send the crease pattern of the steps shown to the Edit canvas",
+      "sendToEditTitle": "Send the active step’s crease pattern to the Edit canvas",
       "sheetHint": "The flat sheet is where the steps start: there is no step to delete.",
       "startsBranch": "Starts a new branch"
     },

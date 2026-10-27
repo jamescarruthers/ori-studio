@@ -1749,7 +1749,7 @@
       "readOnlyHint": "由更新版本的 Ori Studio 创建：此序列以只读方式打开。",
       "replayingHint": "仍在折叠此前的步骤。",
       "rotate": "旋转…",
-      "sendToEditTitle": "将所显示步骤的折痕图发送到编辑画布",
+      "sendToEditTitle": "将当前步骤的折痕图发送到编辑画布",
       "sheetHint": "步骤从平整的纸开始：这里没有可删除的步骤。",
       "startsBranch": "开始新的分支"
     },

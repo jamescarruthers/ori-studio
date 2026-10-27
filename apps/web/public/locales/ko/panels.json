@@ -1749,7 +1749,7 @@
       "readOnlyHint": "최신 Ori Studio에서 만들어져 이 시퀀스는 읽기 전용으로 열립니다.",
       "replayingHint": "아직 이전 단계를 접는 중입니다.",
       "rotate": "회전…",
-      "sendToEditTitle": "표시된 단계의 전개도를 편집 캔버스로 보냅니다",
+      "sendToEditTitle": "현재 단계의 전개도를 편집 캔버스로 보냅니다",
       "sheetHint": "평평한 종이에서 단계가 시작됩니다. 삭제할 단계가 없습니다.",
       "startsBranch": "새 분기를 시작합니다"
     },

@@ -1749,7 +1749,7 @@
       "readOnlyHint": "新しい Ori Studio で作成されたため、このシーケンスは読み取り専用で開かれます。",
       "replayingHint": "前のステップをまだ折っています。",
       "rotate": "回転…",
-      "sendToEditTitle": "表示中のステップの展開図を編集キャンバスに送る",
+      "sendToEditTitle": "現在のステップの展開図を編集キャンバスに送る",
       "sheetHint": "平らな紙はステップの出発点です。削除するステップはありません。",
       "startsBranch": "新しい分岐を始めます"
     },
