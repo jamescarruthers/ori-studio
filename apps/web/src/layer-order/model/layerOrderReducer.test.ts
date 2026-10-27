@@ -814,7 +814,7 @@ describe('solutions: the count and the stepper', () => {
     ]);
     expect(statusView(counting.state)).toEqual({
       dot: 'open',
-      text: { key: 'solutions', count: { n: 4, exact: false } },
+      text: { key: 'pictures_and_orders', pictures: { n: 4, exact: false }, orders: { n: 6, exact: false } },
       tooltip: null,
       stepper: {
         index: 2,
@@ -838,7 +838,7 @@ describe('solutions: the count and the stepper', () => {
     });
     expect(done.effects).toEqual([]);
     expect(statusView(done.state)).toMatchObject({
-      text: { key: 'solutions', count: { n: 9, exact: true } },
+      text: { key: 'pictures_and_orders', pictures: { n: 9, exact: true }, orders: { n: 12, exact: true } },
       tooltip: { orders: 12, hidden: 3 },
       stepper: { index: 9, previous: true, next: false },
     });

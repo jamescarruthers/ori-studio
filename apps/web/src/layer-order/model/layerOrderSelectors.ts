@@ -643,6 +643,12 @@ export type LayerStatusText =
   | { readonly key: 'solutions'; readonly count: LayerTally }
   /** With X-ray on, the stepper steps through every layer order, and the status counts those (D5). */
   | { readonly key: 'layer_orders'; readonly count: LayerTally }
+  /**
+   * Without X-ray, when more layer orders fit than make different pictures:
+   * both, "4 pictures · 256 layer orders" (the owner, 2026-10-27), so the
+   * orders hidden layers tell apart are never only in a tooltip.
+   */
+  | { readonly key: 'pictures_and_orders'; readonly pictures: LayerTally; readonly orders: LayerTally }
   /** The count is skipped (D7): the status names the solution shown, "Solution 3". */
   | { readonly key: 'solution_n'; readonly index: number }
   /** Nothing counted yet. */
@@ -693,7 +699,9 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
   let text: LayerStatusText = { key: 'none' };
   if (!solutions.runs) text = position ? { key: 'solution_n', index: position.index } : { key: 'none' };
   else if (count && view.xray) text = { key: 'layer_orders', count: count.orders };
-  else if (count) text = { key: 'solutions', count: count[view.side] };
+  else if (count && count.orders.n > count[view.side].n) {
+    text = { key: 'pictures_and_orders', pictures: count[view.side], orders: count.orders };
+  } else if (count) text = { key: 'solutions', count: count[view.side] };
 
   const pictures = count?.[view.side];
   const tooltip =
