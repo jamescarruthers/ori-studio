@@ -26,4 +26,5 @@ including only the creases present at that step.
 - [x] Add regressions and implement cursor-based Send to Edit.
 - [x] Run focused tests, web lint, typecheck and translation checks (106 tests;
   all WASM bridges and the simulator rebuilt by `npm run typecheck:web`).
-- [ ] Open a draft PR against main and start the local app for testing.
+- [x] Open draft PR #554 against main and start the local app for testing at
+  `http://localhost:5236/` (welcome screen verified in the browser).
