@@ -1,9 +1,9 @@
 export { prepareFoldModel, EDGES_FACET_KEY } from './prepare.js';
 export { createOrigamiSimulator } from './simulator.js';
 export { ReferenceSolver } from './referenceSolver.js';
-export { SimulationClock } from './simulationClock.js';
+export { AsyncMotionSampleError, SimulationClock } from './simulationClock.js';
 export type { SimulationClockOptions, SimulationRecovery, SimulationTick } from './simulationClock.js';
-export type { SolverBackend, SolverBackendInfo, SolverShape } from './solverBackend.js';
+export type { MotionSample, SolverBackend, SolverBackendInfo, SolverShape } from './solverBackend.js';
 export { createSolverShape, InvalidFixedNodeMaskError, InvalidSolverShapeError } from './solverBackend.js';
 export {
   InvalidPullGripError,

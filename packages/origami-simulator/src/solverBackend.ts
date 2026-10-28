@@ -129,16 +129,35 @@ export interface SolverBackend {
   readDiagnostics(): SimulatorDiagnostics;
 
   /**
-   * Largest absolute vertex velocity component. The scheduler uses this for
-   * convergence detection; it is separate from `readDiagnostics` because it is
-   * needed every tick and must stay cheap.
+   * How fast the paper is moving and how far it is stretched, as of every step
+   * queued so far. The scheduler acts on this every tick, for convergence and
+   * for the blow-up guard, so it must stay cheap.
+   *
+   * A backend that can answer at once returns the sample. One whose state lives
+   * on a device that reads back only asynchronously (WebGPU's `mapAsync`)
+   * returns a promise instead, and {@link SimulationClock} acts on each sample
+   * when it lands rather than waiting for it.
    */
-  maxVelocity(): number;
+  sampleMotion(): MotionSample | Promise<MotionSample>;
 
   /** Steps executed since construction or the last `reset`. */
   readonly stepCount: number;
 
   dispose(): void;
+}
+
+/**
+ * One reading of how much the paper is moving. A non-finite node makes at least
+ * the velocity NaN: a blown-up model must never read as a still one.
+ */
+export interface MotionSample {
+  /** Largest absolute velocity component over all nodes. */
+  readonly maxVelocity: number;
+  /**
+   * Largest per-node mean axial strain, defined as in
+   * {@link SolverBackend.readStrain} — the same on every backend.
+   */
+  readonly maxStrain: number;
 }
 
 /** A fixed-node mask that does not describe this model's nodes. */

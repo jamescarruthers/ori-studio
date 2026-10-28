@@ -248,7 +248,14 @@ case ANGLE merges and the real solver never hits. It is withdrawn.
 Order of work, each step gated by parity against `WebglSolver`:
 
 1. Async readback in `SolverBackend` and `SimulationClock`: the clock acts on
-   the latest motion sample that has landed (`MotionReduction`).
+   the latest motion sample that has landed (`MotionReduction`). **Done:**
+   `SolverBackend.sampleMotion()` replaces `maxVelocity()` and may return a
+   promise; the clock keeps one sample in flight, acts on each once when it
+   lands, and drops one asked for before `invalidate`, `reset` or a recovery.
+   `settle()` is the headless loop for either kind of backend. Still
+   synchronous, for a later step: `readPositions`, `readShape` and
+   `readStrain` (pins, picks, pulls, export), and the session's
+   `runToConvergence` calls, which move to `settle()` with the backend.
 2. The full Euler step, from the earlier port's kernels on Ori Studio's
    packing, with the NaN guards `WebglSolver` adds (beam skip, `acos` clamp,
    safe normalize), which those kernels lack.
@@ -288,7 +295,8 @@ Order of work, each step gated by parity against `WebglSolver`:
 - [x] Go/no-go recorded here: go
 - [ ] Full-step comparison on Windows
 - [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux
-- [ ] Async readback in `SolverBackend` and `SimulationClock`
+- [x] Async motion samples in `SolverBackend` and `SimulationClock`
+- [ ] Async `readPositions`, `readShape`, `readStrain`; session onto `settle()`
 - [ ] Full Euler step on Ori Studio's packing, with `WebglSolver`'s NaN guards
 - [ ] Verlet, fixed nodes, pull and pose
 - [ ] WGSL `MeshRenderer`
