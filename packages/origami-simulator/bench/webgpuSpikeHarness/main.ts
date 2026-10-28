@@ -20,10 +20,13 @@ import { GpuCore } from '../../src/webgpu/gpuCore.js';
 import { NormalsPass } from '../../src/webgpu/normalsPass.js';
 import { MotionReduction } from '../../src/webgpu/motionReduction.js';
 import { FIXTURES } from '../fixtures.js';
+import { runBackendChecks } from './backend.js';
 import { FullStepSolver, type Encoding } from './fullStep.js';
 import {
+  formatBackend,
   formatFullStep,
   formatReport,
+  type BackendReport,
   type FullStepOptions,
   type FullStepReport,
   type FullStepRow,
@@ -36,6 +39,7 @@ declare global {
   interface Window {
     runWebgpuSpike: (options?: Partial<SpikeOptions>) => Promise<SpikeReport>;
     runFullStep: (options?: Partial<FullStepOptions>) => Promise<FullStepReport>;
+    runWebgpuBackend: () => Promise<BackendReport | { error: string }>;
   }
 }
 
@@ -324,6 +328,20 @@ window.runFullStep = async (overrides = {}) => {
   return { adapter, options, rows };
 };
 
+window.runWebgpuBackend = async () => {
+  let core: GpuCore;
+  try {
+    core = await GpuCore.create();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+  try {
+    return await runBackendChecks(core);
+  } finally {
+    core.dispose();
+  }
+};
+
 const button = document.getElementById('run');
 const out = document.getElementById('out');
 if (button && out) {
@@ -331,6 +349,9 @@ if (button && out) {
     out.textContent = 'running…';
     const passes = formatReport(await window.runWebgpuSpike());
     out.textContent = `${passes}\n\nrunning full step…`;
-    out.textContent = `${passes}\n\n${formatFullStep(await window.runFullStep())}`;
+    const fullStep = formatFullStep(await window.runFullStep());
+    out.textContent = `${passes}\n\n${fullStep}\n\nrunning WebgpuSolver checks…`;
+    const backend = await window.runWebgpuBackend();
+    out.textContent = `${passes}\n\n${fullStep}\n\n${'error' in backend ? `ERROR: ${backend.error}` : formatBackend(backend)}`;
   });
 }

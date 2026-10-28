@@ -112,3 +112,46 @@ export function formatFullStep(report: FullStepReport): string {
   );
   return [...head, ...lines].join('\n');
 }
+
+/** One fixture's checks of WebgpuSolver; see backend.ts. */
+export interface BackendRow {
+  fixture: string;
+  vertices: number;
+  /** Largest position difference from ReferenceSolver, by steps from flat. */
+  vsReference: Record<number, number>;
+  /** Largest position difference from WebglSolver after the most steps. */
+  vsWebgl: number;
+  /** From ReferenceSolver, through a fold and material change mid-run. */
+  retarget: number;
+  /** reset() put every node back on the flat sheet, exactly. */
+  resetExact: boolean;
+  /** arrestDynamics() left the paper with zero velocity. */
+  arrestStill: boolean;
+  /** Steps SimulationClock took to settle; -1 for no convergence, null if not run. */
+  settle: { gpu: number | null; webgl: number | null };
+  /** Steps a second, synced on a motion sample every 8 solves of 100 steps, as the clock does. */
+  stepsPerSecond: { gpu: number; webgl: number };
+  error?: string;
+}
+
+export interface BackendReport {
+  rows: BackendRow[];
+}
+
+export function formatBackend(report: BackendReport): string {
+  const exp = (value: number) => (Number.isFinite(value) ? value.toExponential(1) : String(value));
+  const lines = report.rows.map((row) => {
+    if (row.error) return `${row.fixture.padEnd(14)} ERROR: ${row.error}`;
+    const reference = Object.entries(row.vsReference)
+      .map(([steps, delta]) => `${steps}:${exp(delta)}`)
+      .join(' ');
+    const rate = row.stepsPerSecond;
+    return (
+      `${row.fixture.padEnd(14)} v=${String(row.vertices).padStart(5)} | vs reference ${reference} | ` +
+      `vs WebGL2 ${exp(row.vsWebgl)} | retarget ${exp(row.retarget)} | reset ${row.resetExact ? 'exact' : 'OFF'} | ` +
+      `arrest ${row.arrestStill ? 'still' : 'MOVING'} | settle gpu ${row.settle.gpu} gl ${row.settle.webgl} | ` +
+      `steps/s gpu ${Math.round(rate.gpu)} gl ${Math.round(rate.webgl)} ${(rate.gpu / rate.webgl).toFixed(2)}x`
+    );
+  });
+  return ['WebgpuSolver', ...lines].join('\n');
+}

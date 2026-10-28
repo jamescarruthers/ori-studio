@@ -98,6 +98,12 @@ export class GpuCore {
     return buffer;
   }
 
+  /** Write `data` into `buffer` at `byteOffset`, ordered after everything already submitted. */
+  write(buffer: GPUBuffer, byteOffset: number, data: Float32Array): void {
+    this.assertLive();
+    this.device.queue.writeBuffer(buffer, byteOffset, uploadable(data));
+  }
+
   /** Any other buffer this core should free on dispose. */
   buffer(descriptor: GPUBufferDescriptor): GPUBuffer {
     this.assertLive();

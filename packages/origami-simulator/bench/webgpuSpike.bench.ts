@@ -16,7 +16,14 @@ import { createServer, type ViteDevServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatFullStep, formatReport, type FullStepReport, type SpikeReport } from './webgpuSpikeHarness/report.js';
+import {
+  formatBackend,
+  formatFullStep,
+  formatReport,
+  type BackendReport,
+  type FullStepReport,
+  type SpikeReport,
+} from './webgpuSpikeHarness/report.js';
 
 const HARNESS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), 'webgpuSpikeHarness');
 /** Two float32 normal passes over the same input differ by a few ULP of a unit vector. */
@@ -43,7 +50,8 @@ async function hasAdapter(browser: Browser, url: string): Promise<boolean> {
 }
 
 describe('WebGPU spike', () => {
-  it('matches the WebGL2 solver on every fixture', async () => {
+  // Long: WebgpuSolver's checks settle models to rest, on a software adapter in CI.
+  it('matches the WebGL2 solver on every fixture', { timeout: 1_800_000 }, async () => {
     const server: ViteDevServer = await createServer({
       root: resolve(HARNESS_ROOT, '../..'),
       server: { port: 0 },
@@ -103,6 +111,27 @@ describe('WebGPU spike', () => {
       for (const row of fullStep.rows) {
         expect(row.error, `${row.fixture} full step failed`).toBeUndefined();
         expect(row.maxAbs, `${row.fixture} full step diverged from WebglSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
+      }
+
+      // WebgpuSolver itself, held to the WebGL2 solver's own gate.
+      const backend = (await page.evaluate(() =>
+        (window as unknown as { runWebgpuBackend: () => Promise<BackendReport | { error: string }> }).runWebgpuBackend()
+      )) as BackendReport | { error: string };
+      if ('error' in backend) throw new Error(`WebgpuSolver checks did not start: ${backend.error}`);
+      process.stdout.write(`${formatBackend(backend)}\n\n`);
+      for (const row of backend.rows) {
+        expect(row.error, `${row.fixture} WebgpuSolver failed`).toBeUndefined();
+        for (const [steps, delta] of Object.entries(row.vsReference)) {
+          expect(delta, `${row.fixture} @ ${steps} steps diverged from ReferenceSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
+        }
+        expect(row.vsWebgl, `${row.fixture} diverged from WebglSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
+        expect(row.retarget, `${row.fixture} diverged after a mid-run change`).toBeLessThan(FULL_STEP_TOLERANCE);
+        expect(row.resetExact, `${row.fixture} reset left the flat sheet`).toBe(true);
+        expect(row.arrestStill, `${row.fixture} still moving after arrest`).toBe(true);
+        // Where WebGL2 settles, WebGPU must too.
+        if (row.settle.webgl !== null && row.settle.webgl >= 0) {
+          expect(row.settle.gpu, `${row.fixture} never settled`).toBeGreaterThanOrEqual(0);
+        }
       }
     } finally {
       await browser?.close();
