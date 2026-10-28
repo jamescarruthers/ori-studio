@@ -130,10 +130,10 @@ npm run bench:webgpu-spike:serve -w @treemaker/origami-simulator
 # the harness page opens; press Run
 ```
 
-**Apple M1 Pro, ANGLE on Metal (2026-10-28).** Two runs by hand in a desktop
-browser, which agreed to within noise; the first is shown, with the second's
-figure in brackets where it moved by more than 0.1 ms. The WebGPU adapter line
-was not captured.
+**Apple M1 Pro, ANGLE on Metal (2026-10-28).** Two runs by hand in one desktop
+browser (not named; its WebGPU adapter line was not captured), which agreed to
+within noise. The first is shown, with the second's figure in brackets where it
+moved by more than 0.1 ms.
 
 | Fixture | Vertices | Normals Δ | Motion | Non-finite | `maxVelocity` gl / gpu (ms) | 1000 normal passes gl / gpu (ms) |
 | --- | ---: | ---: | --- | --- | ---: | ---: |
@@ -143,9 +143,23 @@ was not captured.
 | miura-56x56 | 3249 | 0 | exact | caught | 0.175 / 0.355 | 1.5 (1.8) / 4.9 |
 | miura-80x80 | 6561 | 0 | exact | caught | 0.275 / 0.280 | 1.6 / 5.7 |
 
+A third run in **Safari** (WebGPU adapter `apple / metal-3`), which matters
+because WKWebView, the Tauri app's webview on macOS, uses the same engine:
+
+| Fixture | Vertices | `maxVelocity` gl / gpu (ms) | 1000 normal passes gl / gpu (ms) |
+| --- | ---: | ---: | ---: |
+| miura-8x8 | 81 | 0.105 / 0.445 | 1.8 / 4.7 |
+| miura-32x32 | 1089 | 0.115 / 0.435 | 2.1 / 4.9 |
+| boxpleat-24 | 625 | 0.060 / 0.305 | 1.6 / 4.4 |
+| miura-56x56 | 3249 | 0.145 / 0.400 | 1.7 / 5.2 |
+| miura-80x80 | 6561 | 0.220 / 0.385 | 1.7 / 6.2 |
+
+Parity was again exact on every fixture. Safari's WebGPU round trip is slower
+than the other browser's (0.3–0.6 ms), and its per-dispatch cost about the same.
+
 What it shows:
 
-- **Parity holds on a real GPU.** Exact normals and bit-identical motion on
+- **Parity holds on a real GPU, in both browsers.** Exact normals and bit-identical motion on
   Metal, as on SwiftShader.
 - **Both APIs are bound by per-pass overhead, not by GPU work.** The 1000-pass
   times barely move from 81 to 6561 vertices, so even the largest fixture
@@ -193,8 +207,9 @@ example).
 - [x] Spike harness: parity against WebGL2, NaN case, timings
 - [x] Run the harness headless here (SwiftShader); record results — parity
       exact, timings not meaningful
-- [x] Run the harness on real hardware: Apple M1 Pro, twice (Windows and Linux
-      not run; not needed for a no-go, needed to reopen)
+- [x] Run the harness on real hardware: Apple M1 Pro, twice in one browser and
+      once in Safari (Windows and Linux not run; not needed for a no-go,
+      needed to reopen)
 - [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux (moot
       after the no-go; needed to reopen)
 - [x] Profile on real hardware: per-pass overhead dominates; the GPU is
