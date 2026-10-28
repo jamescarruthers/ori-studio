@@ -143,8 +143,10 @@ moved by more than 0.1 ms.
 | miura-56x56 | 3249 | 0 | exact | caught | 0.175 / 0.355 | 1.5 (1.8) / 4.9 |
 | miura-80x80 | 6561 | 0 | exact | caught | 0.275 / 0.280 | 1.6 / 5.7 |
 
-A third run in **Safari** (WebGPU adapter `apple / metal-3`), which matters
-because WKWebView, the Tauri app's webview on macOS, uses the same engine:
+A third run, first reported as Safari (WebGPU adapter `apple / metal-3`). Its
+WebGL2 renderer string, `ANGLE (Apple, ANGLE Metal Renderer …)`, is Chrome's;
+Safari reports `Apple GPU` and an adapter of `apple / apple / apple / apple`
+(see the full-step runs below). So this was most likely Chrome again:
 
 | Fixture | Vertices | `maxVelocity` gl / gpu (ms) | 1000 normal passes gl / gpu (ms) |
 | --- | ---: | ---: | ---: |
@@ -154,8 +156,7 @@ because WKWebView, the Tauri app's webview on macOS, uses the same engine:
 | miura-56x56 | 3249 | 0.145 / 0.400 | 1.7 / 5.2 |
 | miura-80x80 | 6561 | 0.220 / 0.385 | 1.7 / 6.2 |
 
-Parity was again exact on every fixture. Safari's WebGPU round trip is slower
-than the other browser's (0.3–0.6 ms), and its per-dispatch cost about the same.
+Parity was again exact on every fixture.
 
 What the single-pass runs show, and what they do not:
 
@@ -188,7 +189,7 @@ model:
 - the port as written: a compute pass and a new bind group per dispatch;
 - the port, cached: bind groups built once, one compute pass per solve.
 
-**Apple M1 Pro, Metal (2026-10-28).** Steps per second, 100 steps per solve,
+**Apple M1 Pro, Chrome (2026-10-28).** Steps per second, 100 steps per solve,
 synced every 8 solves. Δ is the largest position difference from
 `WebglSolver` after 100 steps from flat.
 
@@ -201,6 +202,22 @@ synced every 8 solves. Δ is the largest position difference from
 | miura-56x56 | 3249 | 9.3e-9 | 3,815 | 3,761 (0.99×) | 16,581 (4.35×) | 17,853 (4.68×) |
 | miura-80x80 | 6561 | 7.5e-9 | 3,199 | 3,113 (0.97×) | 9,877 (3.09×) | 10,113 (3.16×) |
 
+**Apple M1 Pro, Safari (2026-10-28).** Same settings. Safari's engine is the
+one WKWebView, the Tauri app's macOS webview, uses.
+
+| Fixture | Vertices | Δ | WebGL2 | WebGL2 + readback | Port as written | Port, cached |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| miura-8x8 | 81 | 2.2e-8 | 5,079 | 5,043 (0.99×) | 12,948 (2.55×) | 24,420 (4.81×) |
+| miura-16x16 | 289 | 1.5e-8 | 5,123 | 5,055 (0.99×) | 11,736 (2.29×) | 23,910 (4.67×) |
+| boxpleat-24 | 625 | 1.1e-8 | 5,053 | 4,902 (0.97×) | 12,963 (2.57×) | 20,664 (4.09×) |
+| miura-32x32 | 1089 | 7.5e-9 | 5,063 | 4,920 (0.97×) | 13,054 (2.58×) | 20,870 (4.12×) |
+| miura-56x56 | 3249 | 7.5e-9 | 3,922 | 3,879 (0.99×) | 12,352 (3.15×) | 17,225 (4.39×) |
+| miura-80x80 | 6561 | 7.2e-9 | 3,236 | 3,159 (0.98×) | 9,050 (2.80×) | 9,938 (3.07×) |
+
+Safari's timer is coarse (whole tenths of a millisecond in places), so its
+single-pass readings are not worth comparing; the full-step runs last long
+enough for it not to matter.
+
 What it shows:
 
 - **WebGPU is 3–5× faster than WebGL2 for a whole step** on every realistic
@@ -210,8 +227,10 @@ What it shows:
 - **WebGL2's cost is per pass, and fixed.** It runs at about 5,000 steps a
   second whatever the size up to 1089 vertices: about 40 µs a pass, which is
   render-pass setup, not arithmetic.
-- **Encoding barely matters on WebGPU.** Caching bind groups and sharing one
-  compute pass adds 3–10%.
+- **Encoding matters in Safari.** Chrome gains only 3–10% from caching bind
+  groups and sharing one compute pass; Safari roughly doubles, from 2.3–3.2×
+  to 3–4.8×. So the backend builds its bind groups once and records a whole
+  solve into one compute pass.
 - **It reaches the performance plan's stretch goal.** That plan asks for 200+
   steps a frame at 60 fps on large models, 12,000 steps a second. WebGL2 gives
   3,200 at 6561 vertices; WebGPU gives about 10,000.
@@ -260,11 +279,12 @@ Order of work, each step gated by parity against `WebglSolver`:
 - [x] Spike harness: parity against WebGL2, NaN case, timings
 - [x] Run the harness headless here (SwiftShader); record results — parity
       exact, timings not meaningful
-- [x] Run the single-pass harness on an Apple M1 Pro (three runs, one in
-      Safari)
+- [x] Run the single-pass harness on an Apple M1 Pro (three runs, all most
+      likely Chrome)
 - [x] Full-step comparison against the earlier WebGPU port: parity 1e-7 on
       SwiftShader and on Metal
-- [x] Full-step comparison on the M1 Pro: WebGPU 3–5× faster
+- [x] Full-step comparison on the M1 Pro: WebGPU 3–5× faster in Chrome and in
+      Safari (cached encoding)
 - [x] Go/no-go recorded here: go
 - [ ] Full-step comparison on Windows
 - [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux
