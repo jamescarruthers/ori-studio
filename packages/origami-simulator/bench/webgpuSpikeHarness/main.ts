@@ -20,11 +20,22 @@ import { GpuCore } from '../../src/webgpu/gpuCore.js';
 import { NormalsPass } from '../../src/webgpu/normalsPass.js';
 import { MotionReduction } from '../../src/webgpu/motionReduction.js';
 import { FIXTURES } from '../fixtures.js';
-import { formatReport, type SpikeOptions, type SpikeReport, type SpikeRow } from './report.js';
+import { FullStepSolver, type Encoding } from './fullStep.js';
+import {
+  formatFullStep,
+  formatReport,
+  type FullStepOptions,
+  type FullStepReport,
+  type FullStepRow,
+  type SpikeOptions,
+  type SpikeReport,
+  type SpikeRow,
+} from './report.js';
 
 declare global {
   interface Window {
     runWebgpuSpike: (options?: Partial<SpikeOptions>) => Promise<SpikeReport>;
+    runFullStep: (options?: Partial<FullStepOptions>) => Promise<FullStepReport>;
   }
 }
 
@@ -192,11 +203,134 @@ window.runWebgpuSpike = async (overrides = {}) => {
   return { adapter, webglRenderer, rows };
 };
 
+const FULL_STEP_DEFAULTS: FullStepOptions = { foldPercent: 60, stepsPerSolve: 100, solvesPerSync: 8, durationMs: 800 };
+
+/**
+ * Wait for WebglSolver's queued work by reading one texel of its position
+ * texture: a sync as cheap as GL offers, so WebGL2 is not charged for a whole
+ * readback that WebGPU's onSubmittedWorkDone does not make.
+ */
+function syncWebgl(gl: GlCore): void {
+  const record = (gl as unknown as { textures: Map<string, { framebuffer: WebGLFramebuffer | null }> }).textures.get(
+    'u_lastPosition'
+  );
+  const context = gl.gl;
+  context.bindFramebuffer(context.FRAMEBUFFER, record?.framebuffer ?? null);
+  context.readPixels(0, 0, 1, 1, context.RGBA, context.FLOAT, new Float32Array(4));
+  context.bindFramebuffer(context.FRAMEBUFFER, null);
+}
+
+/** Steps per second: `run` queues one solve, `sync` waits for everything queued. */
+async function stepsPerSecond(options: FullStepOptions, run: () => void, sync: () => unknown): Promise<number> {
+  for (let i = 0; i < 3; i += 1) run();
+  await sync();
+  let solves = 0;
+  const start = performance.now();
+  while (performance.now() - start < options.durationMs) {
+    for (let i = 0; i < options.solvesPerSync; i += 1) run();
+    await sync();
+    solves += options.solvesPerSync;
+  }
+  return (solves * options.stepsPerSolve * 1000) / (performance.now() - start);
+}
+
+/** Dispose a solver and give its GL context back: a page holds only about 16. */
+function release(solver: WebglSolver): void {
+  const { gl } = solver as unknown as SolverInternals;
+  solver.dispose();
+  gl.gl.getExtension('WEBGL_lose_context')?.loseContext();
+}
+
+function freshSolver(fixture: (typeof FIXTURES)[number], foldPercent: number): WebglSolver {
+  const model = new OrigamiModel(prepareFoldModel(fixture.build(), { triangulate: true }));
+  const canvas = document.createElement('canvas');
+  canvas.width = 2;
+  canvas.height = 2;
+  return new WebglSolver(canvas, model, { foldPercent });
+}
+
+async function runFullStepFixture(
+  core: GpuCore,
+  fixture: (typeof FIXTURES)[number],
+  options: FullStepOptions
+): Promise<FullStepRow> {
+  const solver = freshSolver(fixture, options.foldPercent);
+  const { gl, packed } = solver as unknown as SolverInternals;
+  const row: FullStepRow = { fixture: fixture.name, vertices: packed.dims.nodes, maxAbs: Number.NaN, webgl: 0, webglReadback: 0, asWritten: 0, cached: 0 };
+  try {
+    // Parity: both from the same flat sheet, the same number of steps.
+    const parity = await FullStepSolver.create(core, solver);
+    parity.solve(options.stepsPerSolve, 'cached');
+    solver.step(options.stepsPerSolve);
+    const gpu = await parity.readLastPosition();
+    const reference = gl.readTexture('u_lastPosition');
+    let maxAbs = 0;
+    for (let node = 0; node < packed.dims.nodes; node += 1) {
+      for (let axis = 0; axis < 3; axis += 1) {
+        const delta = Math.abs(gpu[node * 4 + axis]! - reference[node * 4 + axis]!);
+        if (!(delta <= maxAbs)) maxAbs = Number.isNaN(delta) ? Number.POSITIVE_INFINITY : delta;
+      }
+    }
+    row.maxAbs = maxAbs;
+
+    row.webgl = await stepsPerSecond(options, () => solver.step(options.stepsPerSolve), () => syncWebgl(gl));
+    row.webglReadback = await stepsPerSecond(
+      { ...options, solvesPerSync: 1 },
+      () => {
+        solver.step(options.stepsPerSolve);
+        gl.readTexture('u_lastPosition');
+      },
+      () => undefined
+    );
+    for (const encoding of ['as-written', 'cached'] as Encoding[]) {
+      const source = freshSolver(fixture, options.foldPercent);
+      let timed: FullStepSolver;
+      try {
+        timed = await FullStepSolver.create(core, source);
+      } finally {
+        release(source);
+      }
+      const rate = await stepsPerSecond(options, () => timed.solve(options.stepsPerSolve, encoding), () => timed.finish());
+      if (encoding === 'cached') row.cached = rate;
+      else row.asWritten = rate;
+    }
+  } catch (error) {
+    row.error = error instanceof Error ? error.message : String(error);
+  } finally {
+    release(solver);
+  }
+  return row;
+}
+
+window.runFullStep = async (overrides = {}) => {
+  const options = { ...FULL_STEP_DEFAULTS, ...overrides };
+  let core: GpuCore;
+  try {
+    core = await GpuCore.create();
+  } catch (error) {
+    return { adapter: 'none', options, rows: [], error: error instanceof Error ? error.message : String(error) };
+  }
+  const info = core.adapterInfo;
+  const adapter = [info.vendor, info.architecture, info.device, info.description].filter(Boolean).join(' / ') || 'unknown';
+  const rows: FullStepRow[] = [];
+  try {
+    for (const fixture of FIXTURES) {
+      if (fixture.degenerate) continue;
+      rows.push(await runFullStepFixture(core, fixture, options));
+    }
+  } finally {
+    core.dispose();
+  }
+  return { adapter, options, rows };
+};
+
 const button = document.getElementById('run');
 const out = document.getElementById('out');
 if (button && out) {
   button.addEventListener('click', async () => {
     out.textContent = 'running…';
-    out.textContent = formatReport(await window.runWebgpuSpike());
+    const passes = formatReport(await window.runWebgpuSpike());
+    out.textContent = `${passes}\n\nrunning full step…`;
+    out.textContent = `${passes}\n\n${formatFullStep(await window.runFullStep())}`;
   });
 }
