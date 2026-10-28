@@ -8,10 +8,9 @@
 //
 // Headless in this repo's containers both APIs run on SwiftShader, a CPU
 // emulation, so the timings there show nothing about real GPUs. Open the page in
-// a browser on real hardware for those:
+// a browser on real hardware for those. From the repo root, after `npm ci`:
 //
-//   npx vite packages/origami-simulator
-//   → http://localhost:5173/bench/webgpuSpikeHarness/index.html
+//   npm run bench:webgpu-spike:serve -w @treemaker/origami-simulator
 import { prepareFoldModel } from '../../src/prepare.js';
 import { OrigamiModel } from '../../src/model.js';
 import { WebglSolver } from '../../src/webgl/webglSolver.js';

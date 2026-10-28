@@ -121,11 +121,13 @@ What it does not settle:
 - **The Tauri webviews.** No source documents WebGPU in WKWebView or WebKitGTK.
   Both need a `navigator.gpu` probe inside the app.
 
-To get the real numbers, open the harness page on each machine:
+To get the real numbers, open the harness page on each machine. From the repo
+root:
 
 ```bash
-npx vite packages/origami-simulator
-# then open http://localhost:5173/bench/webgpuSpikeHarness/index.html and press Run
+npm ci   # once; a bare `npx vite` without it fetches its own Vite, which cannot resolve earcut
+npm run bench:webgpu-spike:serve -w @treemaker/origami-simulator
+# the harness page opens; press Run
 ```
 
 ## Affected Areas
