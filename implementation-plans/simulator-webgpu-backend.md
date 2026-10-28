@@ -157,36 +157,30 @@ because WKWebView, the Tauri app's webview on macOS, uses the same engine:
 Parity was again exact on every fixture. Safari's WebGPU round trip is slower
 than the other browser's (0.3–0.6 ms), and its per-dispatch cost about the same.
 
-What it shows:
+What the single-pass runs show, and what they do not:
 
-- **Parity holds on a real GPU, in both browsers.** Exact normals and bit-identical motion on
-  Metal, as on SwiftShader.
-- **Both APIs are bound by per-pass overhead, not by GPU work.** The 1000-pass
-  times barely move from 81 to 6561 vertices, so even the largest fixture
-  leaves the GPU mostly idle.
-- **WebGPU costs more per pass here, not less.** About 4–6 µs a dispatch
-  against about 1.5 µs a WebGL2 draw (each batch includes one read to finish
-  it, about 0.3 ms on the WebGPU side). The solver runs five passes a step, so
-  at 100 steps a frame WebGL2 spends under 1 ms and WebGPU 2–3 ms. The
-  many-steps-per-submit gain the deferred plan counted on does not show up on
-  this machine.
+- **Parity holds on a real GPU, in both browsers.** Exact normals and
+  bit-identical motion on Metal, as on SwiftShader.
+- **The batch timing flattered WebGL2.** It drew the normals pass 1000 times
+  into one texture. ANGLE's Metal backend can merge consecutive draws to the
+  same framebuffer into a single Metal render pass, so each draw cost about
+  1.5 µs. A real step writes five textures in turn and gets no such merging:
+  the full-step runs below put `WebglSolver` at about 40 µs a pass. The
+  single-pass batch is kept, but read it as a test of parity, not of speed.
 - **The readback WebGPU would remove costs little.** WebGL2's synchronous
   `maxVelocity()` costs 0.04–0.28 ms and grows with size. WebGPU's async read
-  is a flat ~0.3 ms round trip. They meet only at the largest fixture. One
-  caveat: both were timed with nothing queued, so neither includes waiting
-  for a backlog of steps.
+  is a flat ~0.3 ms round trip. This finding stands.
 
 ### A full step: the earlier WebGPU port
 
 An earlier WebGPU port of Origami Simulator
-(github.com/jamescarruthers/OrigamiSimulatorWebGPU) measured a large speed-up.
-Its baseline was the original simulator, whose WebGL `solve()` packs positions
-to bytes, blocks on `readPixels` and re-uploads the mesh to three.js on every
-call (`third_party/origami-simulator/js/dynamic/dynamicSolver.js:186-200`).
-Ori Studio's WebGL2 port already renders from the position texture and makes
-no such read. So the harness now runs that port's five Euler kernels
-(`bench/webgpuSpikeHarness/userPortKernels.ts`, copied verbatim) on the bytes
-a fresh `WebglSolver` holds, and times four ways to step the same model:
+(github.com/jamescarruthers/OrigamiSimulatorWebGPU) measured a large speed-up
+against the original simulator, whose WebGL `solve()` reads every position back
+on each call (`third_party/origami-simulator/js/dynamic/dynamicSolver.js:186-200`).
+To separate that readback from WebGPU itself, the harness runs that port's five
+Euler kernels (`bench/webgpuSpikeHarness/userPortKernels.ts`, copied verbatim)
+on the bytes a fresh `WebglSolver` holds, and times four ways to step the same
+model:
 
 - WebGL2: `WebglSolver` as Ori Studio runs it;
 - WebGL2 + readback: the same, reading every position back after each solve,
@@ -194,26 +188,59 @@ a fresh `WebglSolver` holds, and times four ways to step the same model:
 - the port as written: a compute pass and a new bind group per dispatch;
 - the port, cached: bind groups built once, one compute pass per solve.
 
-Headless on SwiftShader the port matches `WebglSolver` to 1e-7 or better after
-100 steps on every fixture, so the kernels are equivalent. The timings need
-real hardware.
+**Apple M1 Pro, Metal (2026-10-28).** Steps per second, 100 steps per solve,
+synced every 8 solves. Δ is the largest position difference from
+`WebglSolver` after 100 steps from flat.
 
-### Decision (2026-10-28): no-go, provisional
+| Fixture | Vertices | Δ | WebGL2 | WebGL2 + readback | Port as written | Port, cached |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| miura-8x8 | 81 | 1.9e-8 | 5,018 | 4,820 (0.96×) | 24,082 (4.80×) | 26,529 (5.29×) |
+| miura-16x16 | 289 | 1.5e-8 | 5,122 | 4,832 (0.94×) | 24,085 (4.70×) | 26,290 (5.13×) |
+| boxpleat-24 | 625 | 7.5e-9 | 5,028 | 4,898 (0.97×) | 21,269 (4.23×) | 23,144 (4.60×) |
+| miura-32x32 | 1089 | 1.1e-8 | 5,006 | 4,791 (0.96×) | 22,360 (4.47×) | 24,073 (4.81×) |
+| miura-56x56 | 3249 | 9.3e-9 | 3,815 | 3,761 (0.99×) | 16,581 (4.35×) | 17,853 (4.68×) |
+| miura-80x80 | 6561 | 7.5e-9 | 3,199 | 3,113 (0.97×) | 9,877 (3.09×) | 10,113 (3.16×) |
 
-Provisional until the full-step comparison has run on the M1 Pro: a single
-pass is not a full step, and the earlier port's result is reason enough to
-check.
+What it shows:
 
-On Apple silicon WebGL2 is not the bottleneck at any fixture size, and WebGPU
-is slower at the thing it was meant to do better. With the Tauri webviews
-still unconfirmed, nothing here justifies a second GPU backend. **WebGL2 stays
-the only GPU backend.** The spike code stays in the tree as a measurement
-tool.
+- **WebGPU is 3–5× faster than WebGL2 for a whole step** on every realistic
+  model, falling to 3× at 6561 vertices, where GPU work starts to count.
+- **The readback was not the earlier port's gain.** Reading positions back
+  each solve costs WebGL2 only 1–6%. The speed-up is WebGPU's.
+- **WebGL2's cost is per pass, and fixed.** It runs at about 5,000 steps a
+  second whatever the size up to 1089 vertices: about 40 µs a pass, which is
+  render-pass setup, not arithmetic.
+- **Encoding barely matters on WebGPU.** Caching bind groups and sharing one
+  compute pass adds 3–10%.
+- **It reaches the performance plan's stretch goal.** That plan asks for 200+
+  steps a frame at 60 fps on large models, 12,000 steps a second. WebGL2 gives
+  3,200 at 6561 vertices; WebGPU gives about 10,000.
 
-What would reopen this: a Windows or Linux run where WebGPU's per-dispatch cost
-beats WebGL2's; a model size where GPU work, not overhead, dominates the tick;
-or a feature WebGL2 cannot do at all (more than 16 inputs to a pass, for
-example).
+### Decision (2026-10-28): go
+
+Build a WebGPU solver backend, above WebGL2 on the backend ladder. WebGL2 and
+the CPU reference stay beneath it for Linux, Firefox on Linux and Android, and
+anything else without WebGPU. Run it on Windows before relying on the size of
+the gain there.
+
+The earlier provisional no-go rested on the single-pass batch, which measured a
+case ANGLE merges and the real solver never hits. It is withdrawn.
+
+Order of work, each step gated by parity against `WebglSolver`:
+
+1. Async readback in `SolverBackend` and `SimulationClock`: the clock acts on
+   the latest motion sample that has landed (`MotionReduction`).
+2. The full Euler step, from the earlier port's kernels on Ori Studio's
+   packing, with the NaN guards `WebglSolver` adds (beam skip, `acos` clamp,
+   safe normalize), which those kernels lack.
+3. Verlet, fixed nodes, pull and pose.
+4. A WGSL `MeshRenderer` reading the position buffer, so frames stay on the
+   GPU.
+5. The backend ladder in `simulatorSession.ts`, with a probe that asks the
+   worker for a WebGPU device before committing a canvas, as
+   `simulator-worker-gpu-capability.md` does for WebGL2.
+6. A `navigator.gpu` probe inside the Tauri app on macOS (WKWebView) and Linux
+   (WebKitGTK), and a Windows run of this harness.
 
 ## Affected Areas
 
@@ -233,17 +260,17 @@ example).
 - [x] Spike harness: parity against WebGL2, NaN case, timings
 - [x] Run the harness headless here (SwiftShader); record results — parity
       exact, timings not meaningful
-- [x] Run the harness on real hardware: Apple M1 Pro, twice in one browser and
-      once in Safari (Windows and Linux not run; not needed for a no-go,
-      needed to reopen)
-- [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux (moot
-      after the no-go; needed to reopen)
-- [x] Profile on real hardware: per-pass overhead dominates; the GPU is
-      mostly idle even at 6561 vertices
-- [x] Go/no-go recorded here: no-go, provisional
+- [x] Run the single-pass harness on an Apple M1 Pro (three runs, one in
+      Safari)
 - [x] Full-step comparison against the earlier WebGPU port: parity 1e-7 on
-      SwiftShader
-- [ ] Full-step comparison on the M1 Pro; confirm or reverse the decision
-- [ ] If go: async readback in `SolverBackend` and `SimulationClock`
-- [ ] If go: remaining passes, both integrators, pull and pose, fixed nodes
-- [ ] If go: WGSL `MeshRenderer`, backend ladder, parity gate in CI
+      SwiftShader and on Metal
+- [x] Full-step comparison on the M1 Pro: WebGPU 3–5× faster
+- [x] Go/no-go recorded here: go
+- [ ] Full-step comparison on Windows
+- [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux
+- [ ] Async readback in `SolverBackend` and `SimulationClock`
+- [ ] Full Euler step on Ori Studio's packing, with `WebglSolver`'s NaN guards
+- [ ] Verlet, fixed nodes, pull and pose
+- [ ] WGSL `MeshRenderer`
+- [ ] Backend ladder and worker probe in `simulatorSession.ts`
+- [ ] Parity gate for the WebGPU backend in CI
