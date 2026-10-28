@@ -16,11 +16,13 @@ import { createServer, type ViteDevServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatReport, type SpikeReport } from './webgpuSpikeHarness/report.js';
+import { formatFullStep, formatReport, type FullStepReport, type SpikeReport } from './webgpuSpikeHarness/report.js';
 
 const HARNESS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), 'webgpuSpikeHarness');
 /** Two float32 normal passes over the same input differ by a few ULP of a unit vector. */
 const NORMALS_TOLERANCE = 1e-5;
+/** The GPU parity gate's Tier C: float32 CPU-vs-GPU divergence of this algorithm, gpuParity.bench.ts. */
+const FULL_STEP_TOLERANCE = 1e-3;
 
 const GL_ARGS = ['--use-gl=angle', '--use-angle=default', '--enable-unsafe-swiftshader', '--enable-unsafe-webgpu'];
 const SOFTWARE_WEBGPU_ARGS = ['--enable-features=Vulkan', '--use-webgpu-adapter=swiftshader'];
@@ -90,6 +92,17 @@ describe('WebGPU spike', () => {
           true
         );
         expect(row.nonFiniteCaught, `${row.fixture} missed a non-finite node`).toBe(true);
+      }
+
+      // A full Euler step from the WebGPU port's kernels, on the same bytes.
+      const fullStep = (await page.evaluate(() =>
+        (window as unknown as { runFullStep: () => Promise<FullStepReport> }).runFullStep()
+      )) as FullStepReport;
+      process.stdout.write(`${formatFullStep(fullStep)}\n\n`);
+      expect(fullStep.error, 'full step did not start').toBeUndefined();
+      for (const row of fullStep.rows) {
+        expect(row.error, `${row.fixture} full step failed`).toBeUndefined();
+        expect(row.maxAbs, `${row.fixture} full step diverged from WebglSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
       }
     } finally {
       await browser?.close();

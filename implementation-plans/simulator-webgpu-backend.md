@@ -176,7 +176,33 @@ What it shows:
   caveat: both were timed with nothing queued, so neither includes waiting
   for a backlog of steps.
 
-### Decision (2026-10-28): no-go
+### A full step: the earlier WebGPU port
+
+An earlier WebGPU port of Origami Simulator
+(github.com/jamescarruthers/OrigamiSimulatorWebGPU) measured a large speed-up.
+Its baseline was the original simulator, whose WebGL `solve()` packs positions
+to bytes, blocks on `readPixels` and re-uploads the mesh to three.js on every
+call (`third_party/origami-simulator/js/dynamic/dynamicSolver.js:186-200`).
+Ori Studio's WebGL2 port already renders from the position texture and makes
+no such read. So the harness now runs that port's five Euler kernels
+(`bench/webgpuSpikeHarness/userPortKernels.ts`, copied verbatim) on the bytes
+a fresh `WebglSolver` holds, and times four ways to step the same model:
+
+- WebGL2: `WebglSolver` as Ori Studio runs it;
+- WebGL2 + readback: the same, reading every position back after each solve,
+  as the original does;
+- the port as written: a compute pass and a new bind group per dispatch;
+- the port, cached: bind groups built once, one compute pass per solve.
+
+Headless on SwiftShader the port matches `WebglSolver` to 1e-7 or better after
+100 steps on every fixture, so the kernels are equivalent. The timings need
+real hardware.
+
+### Decision (2026-10-28): no-go, provisional
+
+Provisional until the full-step comparison has run on the M1 Pro: a single
+pass is not a full step, and the earlier port's result is reason enough to
+check.
 
 On Apple silicon WebGL2 is not the bottleneck at any fixture size, and WebGPU
 is slower at the thing it was meant to do better. With the Tauri webviews
@@ -214,7 +240,10 @@ example).
       after the no-go; needed to reopen)
 - [x] Profile on real hardware: per-pass overhead dominates; the GPU is
       mostly idle even at 6561 vertices
-- [x] Go/no-go recorded here: no-go
+- [x] Go/no-go recorded here: no-go, provisional
+- [x] Full-step comparison against the earlier WebGPU port: parity 1e-7 on
+      SwiftShader
+- [ ] Full-step comparison on the M1 Pro; confirm or reverse the decision
 - [ ] If go: async readback in `SolverBackend` and `SimulationClock`
 - [ ] If go: remaining passes, both integrators, pull and pose, fixed nodes
 - [ ] If go: WGSL `MeshRenderer`, backend ladder, parity gate in CI
