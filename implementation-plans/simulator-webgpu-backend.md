@@ -130,6 +130,51 @@ npm run bench:webgpu-spike:serve -w @treemaker/origami-simulator
 # the harness page opens; press Run
 ```
 
+**Apple M1 Pro, ANGLE on Metal (2026-10-28).** Two runs by hand in a desktop
+browser, which agreed to within noise; the first is shown, with the second's
+figure in brackets where it moved by more than 0.1 ms. The WebGPU adapter line
+was not captured.
+
+| Fixture | Vertices | Normals Δ | Motion | Non-finite | `maxVelocity` gl / gpu (ms) | 1000 normal passes gl / gpu (ms) |
+| --- | ---: | ---: | --- | --- | ---: | ---: |
+| miura-8x8 | 81 | 0 | exact | caught | 0.055 / 0.305 | 1.3 / 4.1 |
+| miura-32x32 | 1089 | 0 | exact | caught | 0.100 / 0.280 | 1.5 (2.1) / 3.9 (4.3) |
+| boxpleat-24 | 625 | 0 | exact | caught | 0.065 / 0.295 | 1.6 / 4.4 (4.0) |
+| miura-56x56 | 3249 | 0 | exact | caught | 0.175 / 0.355 | 1.5 (1.8) / 4.9 |
+| miura-80x80 | 6561 | 0 | exact | caught | 0.275 / 0.280 | 1.6 / 5.7 |
+
+What it shows:
+
+- **Parity holds on a real GPU.** Exact normals and bit-identical motion on
+  Metal, as on SwiftShader.
+- **Both APIs are bound by per-pass overhead, not by GPU work.** The 1000-pass
+  times barely move from 81 to 6561 vertices, so even the largest fixture
+  leaves the GPU mostly idle.
+- **WebGPU costs more per pass here, not less.** About 4–6 µs a dispatch
+  against about 1.5 µs a WebGL2 draw (each batch includes one read to finish
+  it, about 0.3 ms on the WebGPU side). The solver runs five passes a step, so
+  at 100 steps a frame WebGL2 spends under 1 ms and WebGPU 2–3 ms. The
+  many-steps-per-submit gain the deferred plan counted on does not show up on
+  this machine.
+- **The readback WebGPU would remove costs little.** WebGL2's synchronous
+  `maxVelocity()` costs 0.04–0.28 ms and grows with size. WebGPU's async read
+  is a flat ~0.3 ms round trip. They meet only at the largest fixture. One
+  caveat: both were timed with nothing queued, so neither includes waiting
+  for a backlog of steps.
+
+### Decision (2026-10-28): no-go
+
+On Apple silicon WebGL2 is not the bottleneck at any fixture size, and WebGPU
+is slower at the thing it was meant to do better. With the Tauri webviews
+still unconfirmed, nothing here justifies a second GPU backend. **WebGL2 stays
+the only GPU backend.** The spike code stays in the tree as a measurement
+tool.
+
+What would reopen this: a Windows or Linux run where WebGPU's per-dispatch cost
+beats WebGL2's; a model size where GPU work, not overhead, dominates the tick;
+or a feature WebGL2 cannot do at all (more than 16 inputs to a pass, for
+example).
+
 ## Affected Areas
 
 - `packages/origami-simulator/src/webgpu/` — new, spike only, not exported
@@ -148,10 +193,13 @@ npm run bench:webgpu-spike:serve -w @treemaker/origami-simulator
 - [x] Spike harness: parity against WebGL2, NaN case, timings
 - [x] Run the harness headless here (SwiftShader); record results — parity
       exact, timings not meaningful
-- [ ] Run the harness on real hardware (Apple silicon, Windows dGPU, Linux)
-- [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux
-- [ ] Profile the WebGL2 tick on `miura-56x56` / `miura-80x80` on real hardware
-- [ ] Go/no-go recorded here
+- [x] Run the harness on real hardware: Apple M1 Pro, twice (Windows and Linux
+      not run; not needed for a no-go, needed to reopen)
+- [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux (moot
+      after the no-go; needed to reopen)
+- [x] Profile on real hardware: per-pass overhead dominates; the GPU is
+      mostly idle even at 6561 vertices
+- [x] Go/no-go recorded here: no-go
 - [ ] If go: async readback in `SolverBackend` and `SimulationClock`
 - [ ] If go: remaining passes, both integrators, pull and pose, fixed nodes
 - [ ] If go: WGSL `MeshRenderer`, backend ladder, parity gate in CI
