@@ -16,6 +16,7 @@
 // or infinity, so `abs`, `max` and `isNan` are no basis for the non-finite check
 // that `WebglSolver.maxVelocity` makes. Masking the sign bit is.
 import { GpuCore, workgroupsFor } from './gpuCore.js';
+import type { MotionSample } from '../solverBackend.js';
 
 const WORKGROUP_SIZE = 256;
 /** Staging buffers in flight at once; a request beyond this waits for one to land. */
@@ -71,13 +72,8 @@ fn main(@builtin(global_invocation_id) id: vec3u, @builtin(local_invocation_inde
 }
 `;
 
-/** One reduction's answer, with `WebglSolver.maxVelocity`'s NaN convention. */
-export interface MotionSample {
-  /** Largest absolute velocity component; NaN when any node is non-finite. */
-  maxVelocity: number;
-  /** Largest per-node mean axial strain; NaN when any node is non-finite. */
-  maxStrain: number;
-}
+/** One reduction's answer is a backend's motion sample, NaN convention included. */
+export type { MotionSample };
 
 const RESULT_BYTES = 12;
 
