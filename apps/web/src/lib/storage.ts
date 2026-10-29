@@ -130,6 +130,8 @@ export const STORAGE_KEYS = {
   cpDetectSuggestions: 'cp-detect-suggestions',
   /** Whether the simulator runs on WebGPU where the browser has it (opt-in; default false). */
   simulatorWebgpu: 'simulator-webgpu',
+  /** Whether the Simulate panel shows steps and frames per second (default false). */
+  simulatorShowRate: 'simulator-show-rate',
   analyticsEnabled: 'analytics-enabled',
   /** Anonymous, locally-generated stable id used to `identify()` in PostHog. */
   analyticsId: 'analytics-id',

@@ -3875,6 +3875,7 @@
     "pause": "Пауза",
     "percent": "{{value}}%",
     "play": "Воспроизвести",
+    "rateReadout": "{{steps}} шагов/с · {{fps}} к/с",
     "restart": "Перезапустить",
     "setUpright": "Задать верх",
     "stats": "{{vertices}} вершин | {{triangles}} треугольников",

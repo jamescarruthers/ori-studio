@@ -3303,6 +3303,7 @@
     "pause": "Pause",
     "percent": "{{value}} %",
     "play": "Abspielen",
+    "rateReadout": "{{steps}} Schritte/s · {{fps}} fps",
     "restart": "Neu starten",
     "setUpright": "Oben festlegen",
     "stats": "{{vertices}} Scheitelpunkte | {{triangles}} Dreiecke",

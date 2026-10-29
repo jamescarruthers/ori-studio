@@ -3589,6 +3589,7 @@
     "pause": "Pausar",
     "percent": "{{value}} %",
     "play": "Reproducir",
+    "rateReadout": "{{steps}} pasos/s · {{fps}} fps",
     "restart": "Reiniciar",
     "setUpright": "Definir vertical",
     "stats": "{{vertices}} vértices | {{triangles}} triángulos",

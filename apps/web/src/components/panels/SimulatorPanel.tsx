@@ -47,6 +47,8 @@ import { simulatorMaterialOptions } from "../../lib/simulatorSettings";
 import { useLayoutStore } from "../../store/layoutStore";
 import { useSimulatorPaperStyle } from "../../simulator/useSimulatorPaperStyle";
 import { useWorkspaceStore } from "../../store/workspaceStore";
+import { useSettingsStore } from "../../store/settingsStore";
+import { useSimulatorRate } from "../../simulator/useSimulatorRate";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { NextDocumentAction } from "./NextDocumentAction";
@@ -130,6 +132,9 @@ export function SimulatorPanel() {
   const simulationFold = source.fold;
   const simulationSourceKey = source.sourceKey;
 
+  const showRate = useSettingsStore((state) => state.simulatorShowRate);
+  const { rate, observe: observeRate } = useSimulatorRate(showRate);
+
   const handleFrame = useCallback(
     (frame: SimulatorFrameView) => {
       // Reported, not assigned: a frame carries the target as it was when the
@@ -141,6 +146,7 @@ export function SimulatorPanel() {
       // frame would starve the loop this is reporting on.
       viewportRef.current?.showFrame(frame);
       observeFrameRef.current(frame);
+      observeRate(frame.stepsThisTick);
 
       // Throttle the readout state to ~15Hz. These three setStates re-render the
       // whole panel, and at 60fps that re-render was starving the main-thread rAF
@@ -159,7 +165,7 @@ export function SimulatorPanel() {
         setFoldPercent(frame.foldPercent);
       }
     },
-    [],
+    [observeRate],
   );
 
   // The run profile sets the work budget (steps per frame and so on); the user's
@@ -681,6 +687,14 @@ export function SimulatorPanel() {
                   {backend !== "reference"
                     ? t("panels:simulator.backendGpu", "GPU")
                     : t("panels:simulator.backendCpu", "CPU")}
+                </span>
+              )}
+              {rate && (
+                <span data-readout="rate">
+                  {t("panels:simulator.rateReadout", "{{steps}} steps/s · {{fps}} fps", {
+                    steps: Math.round(rate.stepsPerSecond).toLocaleString(),
+                    fps: Math.round(rate.framesPerSecond),
+                  })}
                 </span>
               )}
             </div>
