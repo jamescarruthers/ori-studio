@@ -308,6 +308,49 @@ and narrow a run with the query string
 `npm run bench:backends` runs it headless, where both GPU APIs are SwiftShader
 and only the fact that each backend ran means anything.
 
+### Benchmark results: Chrome on the M1 Pro (2026-10-29)
+
+The first twelve rows of a default run, the four smallest fixtures. The browser
+reports itself as "Intel Mac OS X", as Chrome does on Apple silicon. Fold 60%,
+80 steps per tick, 2000ms live loop, 60 frames at 512px.
+
+| fixture | nodes | backend | steps/s | vs CPU | settle ms | steps | frame p50 | p95 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| book-fold | 4 | webgpu | 42k | 0.3x | 804 | 660 | 0.50 | 0.80 |
+| book-fold | 4 | webgl2 | 4944 | 0.0x | 160 | 660 | 0.60 | 0.70 |
+| book-fold | 4 | reference | 149k | 1.0x | 7 | 632 | - | - |
+| bird-base | 9 | webgpu | 28k | 0.4x | 172 | 1800 | 0.50 | 0.90 |
+| bird-base | 9 | webgl2 | 4833 | 0.1x | 432 | 1800 | 0.60 | 0.80 |
+| bird-base | 9 | reference | 69k | 1.0x | 25 | 1776 | - | - |
+| miura-8x8 | 81 | webgpu | 27k | 4.6x | 1315 | 20000! | 0.50 | 0.60 |
+| miura-8x8 | 81 | webgl2 | 4985 | 0.9x | 4845 | 20000! | 0.70 | 0.80 |
+| miura-8x8 | 81 | reference | 5835 | 1.0x | 3396 | 20000! | - | - |
+| miura-16x16 | 289 | webgpu | 27k | 17.0x | 2022 | 20000! | 0.60 | 0.80 |
+| miura-16x16 | 289 | webgl2 | 4796 | 3.1x | 4865 | 20000! | 0.60 | 1.00 |
+| miura-16x16 | 289 | reference | 1560 | 1.0x | 13274 | 20000! | - | - |
+
+`!`: hit the 20,000-step cap before settling, on every backend alike.
+
+What it shows:
+
+- **Live loop.** WebGPU runs about 27k steps/s from 9 to 289 nodes; WebGL2
+  holds at about 4.9k. Both rates are flat across model size, so neither is
+  bound by the solve at these sizes. WebGL2's ceiling is consistent with its
+  synchronous `readPixels` motion sample stalling every tick: 4.9k steps/s is
+  about 61 ticks of 80 steps. WebGPU pipelines its samples and does not stall.
+  At 289 nodes WebGPU is 5.6x WebGL2 and 17x the CPU.
+- **Settle.** For 20,000 steps on miura-16x16, WebGPU takes 2.0s, WebGL2 4.9s
+  and the CPU 13.3s. WebGPU still waits on one sample per 20-step chunk here,
+  so this is its worst case and it still leads.
+- **Small models.** Below about 80 nodes the CPU solver is fastest, as it was
+  before. The 804ms settle for book-fold on WebGPU is the first model run, so
+  it likely carries first-use costs; bird-base, run next, settles in 172ms.
+- **Frames.** Every GPU frame is 0.5 to 1.0ms on both APIs. Drawing is not
+  the bottleneck at these sizes.
+
+Still to record: the larger fixtures (miura-32x32 to miura-80x80,
+boxpleat-24), where the solve should start to dominate, and Safari.
+
 ## Affected Areas
 
 - `packages/origami-simulator/src/webgpu/` — `WebgpuSolver`, `WebgpuMeshRenderer`,
@@ -348,5 +391,6 @@ and only the fact that each backend ran means anything.
 - [x] Backend ladder and worker probe in `simulatorSession.ts`
 - [x] Folded figures and the welcome-screen figure on WebGPU
 - [x] Backend benchmark: WebGPU vs WebGL2 vs CPU (`bench/backendBench/`)
-- [ ] Run the backend benchmark on the M1 Pro, Chrome and Safari; record it here
+- [x] Run the backend benchmark on the M1 Pro in Chrome (small fixtures); record it here
+- [ ] The same for the larger fixtures, and in Safari
 - [ ] Parity gate for the WebGPU backend in CI
