@@ -24,6 +24,8 @@ import {
   recordSimulatorProbe,
 } from './simulatorPerfProbe';
 import { useSimulatorPerfLog } from './useSimulatorPerfLog';
+import { trackSimulatorBackendUsed } from '../analytics/trackSimulatorBackend';
+import { useSettingsStore } from '../store/settingsStore';
 import { simulatorDevicePixelRatio } from './simulatorDevicePixelRatio';
 import type { SimulatorFraming } from './framingFollow';
 import type { PaperScene } from '../lib/paper/paperScene';
@@ -596,6 +598,10 @@ export function useSimulatorRuntime(options: UseSimulatorRuntimeOptions): Simula
           return;
         }
 
+        trackSimulatorBackendUsed({
+          backend: info.backend,
+          webgpuEnabled: useSettingsStore.getState().simulatorWebgpu,
+        });
         const gpu = info.backend !== 'reference' && wantsGpu;
         gpuActiveRef.current = gpu;
         setGpuActive(gpu);

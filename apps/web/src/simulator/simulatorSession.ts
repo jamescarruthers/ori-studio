@@ -864,6 +864,12 @@ let presentMode: PresentMode = 'canvas';
  * ready, and the solver is built on it with no wait.
  */
 let webgpuCore: GpuCore | null = null;
+/**
+ * Whether WebGPU may be used at all: the user's opt-in (`simulatorWebgpu` in
+ * Settings), sent by the main thread as the worker starts. Off, every GPU
+ * surface is WebGL2 as before.
+ */
+let webgpuEnabled = false;
 let webgpuPreparing: Promise<GpuCore | null> | null = null;
 /**
  * `renderCanvas` configured for {@link webgpuCore}. A canvas holds one kind of
@@ -873,6 +879,7 @@ let webgpuPreparing: Promise<GpuCore | null> | null = null;
 let webgpuTarget: WebgpuCanvasTarget | null = null;
 
 function prepareWebgpu(): Promise<GpuCore | null> {
+  if (!webgpuEnabled) return Promise.resolve(null);
   if (webgpuCore && !webgpuCore.lost) return Promise.resolve(webgpuCore);
   webgpuPreparing ??= (async () => {
     try {
@@ -902,7 +909,7 @@ function prepareWebgpu(): Promise<GpuCore | null> {
 
 /** The render canvas as a WebGPU target, or null when it cannot be one. */
 function webgpuCanvas(): WebgpuCanvasTarget | null {
-  if (!renderCanvas || !webgpuCore || webgpuCore.lost) return null;
+  if (!webgpuEnabled || !renderCanvas || !webgpuCore || webgpuCore.lost) return null;
   if (webgpuTarget?.canvas === renderCanvas) return webgpuTarget;
   try {
     webgpuTarget = WebgpuCanvasTarget.create(renderCanvas, webgpuCore);
@@ -1341,6 +1348,18 @@ const api = {
    * whole budget, and a probe that kept one would evict a live session — the
    * same discipline `webglRenderSupported` follows on the main thread.
    */
+  /**
+   * Allow WebGPU, or not, and when allowed start acquiring the device and
+   * compiling every shader, so the synchronous `load` can build on it at
+   * once. Sent first, as the worker starts: a canvas commits to one kind of
+   * context with its first surface, so a later change applies to the next
+   * worker.
+   */
+  useWebgpu(enabled: boolean): void {
+    webgpuEnabled = enabled;
+    if (enabled) void prepareWebgpu();
+  },
+
   async probeGpuRender(): Promise<boolean> {
     if (typeof OffscreenCanvas === 'undefined') return false;
     // WebGPU first: a device with every shader compiled is the whole answer,
@@ -2725,8 +2744,5 @@ export { widestPenCssPx } from '../lib/paper/paperSvg';
  * runnable in Node.
  */
 export function createSimulatorSession(): SimulatorWorkerApi {
-  // Started here rather than at import: the main thread imports this module
-  // for its constants and has no use for a device.
-  void prepareWebgpu();
   return api;
 }

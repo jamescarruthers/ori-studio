@@ -65,21 +65,26 @@ export class StartFigureMesh {
   /**
    * Build a mesh, or `null` when this machine cannot draw one.
    *
-   * WebGPU first. A canvas holds one kind of context for life, so once it has
+   * WebGPU first, when asked for. A canvas holds one kind of context for life, so once it has
    * taken WebGPU a later failure cannot fall back to WebGL2 on it; it falls
    * back to the image instead. `GlCore.create` returns null without WebGL2 and
    * *throws* without `EXT_color_buffer_float`; `folded3dMesh` refuses a model
    * past its vertex budget. Every arm returns null: a start screen must never
    * take the page down over a decoration.
    */
-  static async create(canvas: HTMLCanvasElement, asset: StartFigureAsset): Promise<StartFigureMesh | null> {
+  static async create(
+    canvas: HTMLCanvasElement,
+    asset: StartFigureAsset,
+    /** WebGPU only when the user has opted in (`simulatorWebgpu`). */
+    options: { webgpu?: boolean } = {}
+  ): Promise<StartFigureMesh | null> {
     const built = folded3dMesh(asset.model);
     if (built.kind !== 'mesh') return null;
     const { topology } = built.mesh;
     const positions = orient(built.mesh.positions, asset.view.orient);
     const radius = screenFitRadius(positions, asset.view.pitch);
 
-    const webgpu = await webgpuDrawer(canvas, topology, positions, built.mesh.sheet);
+    const webgpu = options.webgpu ? await webgpuDrawer(canvas, topology, positions, built.mesh.sheet) : null;
     const drawer = webgpu === 'committed' ? null : webgpu ?? webglDrawer(canvas, topology, positions, built.mesh.sheet);
     if (!drawer) return null;
     return new StartFigureMesh(
