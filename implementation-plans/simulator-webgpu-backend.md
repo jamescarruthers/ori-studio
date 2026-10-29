@@ -294,6 +294,15 @@ In the app:
 - The welcome screen's figure (`StartFigureMesh`) draws on WebGPU where it
   can and WebGL2 where it cannot.
 
+### Opt-in first (2026-10-29)
+
+WebGPU is off by default until it has run on more machines. Settings → General
+→ Graphics → *Use WebGPU for 3D (experimental)* (`simulatorWebgpu`) turns it on
+for the simulator, folded figures and the welcome figure. The main thread sends
+it as the worker's first message (`useWebgpu`), so it takes effect after a
+reload. Two events say how it goes: `simulator webgpu changed` and `simulator
+backend used` (once per backend per page, with whether WebGPU was opted into).
+
 ### Benchmark
 
 `bench/backendBench/` times the three backends on the same models, the way the

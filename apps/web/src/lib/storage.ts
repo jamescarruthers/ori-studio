@@ -128,6 +128,8 @@ export const STORAGE_KEYS = {
   referencesShowAuxCreases: 'references-show-aux-creases',
   /** Whether product analytics is enabled (opt-out preference; default true). */
   cpDetectSuggestions: 'cp-detect-suggestions',
+  /** Whether the simulator runs on WebGPU where the browser has it (opt-in; default false). */
+  simulatorWebgpu: 'simulator-webgpu',
   analyticsEnabled: 'analytics-enabled',
   /** Anonymous, locally-generated stable id used to `identify()` in PostHog. */
   analyticsId: 'analytics-id',

@@ -6369,7 +6369,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12741,7 +12744,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19115,7 +19121,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25142,7 +25151,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31169,7 +31181,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37541,7 +37556,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43913,7 +43931,10 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49940,6 +49961,9 @@
     "dialogs:paperExport.zipUnavailable": "ac5f8181da74",
     "panels:diagram.actions.importFromFile": "c5243d675700",
     "panels:diagram.import.menuButton": "2cff9baabf56",
-    "panels:simulator.backendWebgpuTitle": "1534be50b467"
+    "panels:simulator.backendWebgpuTitle": "1534be50b467",
+    "dialogs:settings.general.graphics": "a874fca87cdd",
+    "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
   }
 }
