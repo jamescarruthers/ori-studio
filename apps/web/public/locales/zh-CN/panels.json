@@ -3021,6 +3021,7 @@
     "pause": "暂停",
     "percent": "{{value}}%",
     "play": "播放",
+    "rateReadout": "{{steps}} 步/秒 · {{fps}} fps",
     "restart": "重新开始",
     "setUpright": "设置向上方向",
     "stats": "{{vertices}} 个顶点 | {{triangles}} 个三角形",

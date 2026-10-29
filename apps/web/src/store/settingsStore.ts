@@ -91,6 +91,7 @@ export type SettingsTab = 'general' | 'appearance' | 'paper' | 'shortcuts' | 'wo
 const SHOW_WELCOME_ON_STARTUP_KEY = storageKey(STORAGE_KEYS.showWelcomeOnStartup);
 const CP_DETECT_SUGGESTIONS_KEY = storageKey(STORAGE_KEYS.cpDetectSuggestions);
 const SIMULATOR_WEBGPU_KEY = storageKey(STORAGE_KEYS.simulatorWebgpu);
+const SIMULATOR_SHOW_RATE_KEY = storageKey(STORAGE_KEYS.simulatorShowRate);
 const FOLD_WARNING_KEY = storageKey(STORAGE_KEYS.foldWarning);
 const ANALYTICS_ENABLED_KEY = storageKey(STORAGE_KEYS.analyticsEnabled);
 const CP_WHEEL_GESTURE_KEY = storageKey(STORAGE_KEYS.cpWheelGesture);
@@ -292,6 +293,11 @@ interface SettingsState {
    */
   simulatorWebgpu: boolean;
   /**
+   * Whether the Simulate panel's status bar shows solver steps and frames per
+   * second, so the backends can be compared on a real model. Default off.
+   */
+  simulatorShowRate: boolean;
+  /**
    * What an *unmodified* scroll or two-finger drag does on the crease-pattern
    * canvas. `'zoom'` is the default: it is what the canvas shipped with, what
    * upstream Oriedita's canvas does, and what users asked to have back. `'pan'`
@@ -399,6 +405,7 @@ interface SettingsState {
   setAnalyticsEnabled: (value: boolean) => void;
   setCpDetectSuggestions: (value: boolean) => void;
   setSimulatorWebgpu: (value: boolean) => void;
+  setSimulatorShowRate: (value: boolean) => void;
   setCpWheelGesture: (value: WheelGesturePreference) => void;
   setCpSnapRadius: (value: number) => void;
   setReferencesAutoPlayFolds: (value: boolean) => void;
@@ -469,6 +476,7 @@ export const useSettingsStore = create<SettingsState>()(
       analyticsEnabled: readBoolean(ANALYTICS_ENABLED_KEY, true),
       cpDetectSuggestions: readBoolean(CP_DETECT_SUGGESTIONS_KEY, true),
       simulatorWebgpu: readBoolean(SIMULATOR_WEBGPU_KEY, false),
+      simulatorShowRate: readBoolean(SIMULATOR_SHOW_RATE_KEY, false),
       cpWheelGesture: readCpWheelGesture(),
       cpSnapRadius: readCpSnapRadius(),
       referencesAutoPlayFolds: readBoolean(REFERENCES_AUTO_PLAY_FOLDS_KEY, false),
@@ -517,6 +525,10 @@ export const useSettingsStore = create<SettingsState>()(
         // No chokepoint sees a preference change. Who opts in, and who opts
         // back out, is the question before WebGPU becomes the default.
         track(ANALYTICS_EVENTS.simulatorWebgpuChanged, { enabled: value ? 'yes' : 'no' });
+      },
+      setSimulatorShowRate: (value) => {
+        writeBoolean(SIMULATOR_SHOW_RATE_KEY, value);
+        set({ simulatorShowRate: value });
       },
       setCpWheelGesture: (value) => {
         writeString(CP_WHEEL_GESTURE_KEY, value);

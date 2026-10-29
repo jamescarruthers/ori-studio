@@ -209,6 +209,8 @@ function GeneralTab() {
   const setAnalyticsEnabled = useSettingsStore((state) => state.setAnalyticsEnabled);
   const simulatorWebgpu = useSettingsStore((state) => state.simulatorWebgpu);
   const setSimulatorWebgpu = useSettingsStore((state) => state.setSimulatorWebgpu);
+  const simulatorShowRate = useSettingsStore((state) => state.simulatorShowRate);
+  const setSimulatorShowRate = useSettingsStore((state) => state.setSimulatorShowRate);
   const analytics = useAnalytics();
 
   return (
@@ -237,6 +239,15 @@ function GeneralTab() {
           )}
           checked={simulatorWebgpu}
           onChange={setSimulatorWebgpu}
+        />
+        <SettingsToggleRow
+          label={t('dialogs:settings.general.simulatorShowRate', 'Show simulator speed')}
+          description={t(
+            'dialogs:settings.general.simulatorShowRateDescription',
+            'Shows solver steps and frames per second in the Simulate status bar.'
+          )}
+          checked={simulatorShowRate}
+          onChange={setSimulatorShowRate}
         />
       </section>
       <section className="settings-section">

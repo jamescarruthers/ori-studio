@@ -6372,7 +6372,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12747,7 +12750,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19124,7 +19130,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25154,7 +25163,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31184,7 +31196,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37559,7 +37574,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43934,7 +43952,10 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49964,6 +49985,9 @@
     "panels:simulator.backendWebgpuTitle": "1534be50b467",
     "dialogs:settings.general.graphics": "a874fca87cdd",
     "dialogs:settings.general.simulatorWebgpu": "296c80c1194a",
-    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6"
+    "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
+    "panels:simulator.rateReadout": "223e0c9a2980",
+    "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
   }
 }
