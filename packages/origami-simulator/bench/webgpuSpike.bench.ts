@@ -19,9 +19,11 @@ import { describe, expect, it } from 'vitest';
 import {
   formatBackend,
   formatFullStep,
+  formatRender,
   formatReport,
   type BackendReport,
   type FullStepReport,
+  type RenderReport,
   type SpikeReport,
 } from './webgpuSpikeHarness/report.js';
 
@@ -30,6 +32,22 @@ const HARNESS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), 'webgpuSpi
 const NORMALS_TOLERANCE = 1e-5;
 /** The GPU parity gate's Tier C: float32 CPU-vs-GPU divergence of this algorithm, gpuParity.bench.ts. */
 const FULL_STEP_TOLERANCE = 1e-3;
+/**
+ * Share of pixels with nothing like them within a pixel in the other
+ * renderer's frame (render.ts differingShare). Most fixtures differ by well
+ * under 1%; the densest, miura-80x80 at 128 pixels, is nearly all overlapping
+ * sub-pixel crease ribbons and differs by about 2% in scattered speckle, the
+ * moire of two rasterizers' coverage. A shading, depth, dash or projection
+ * bug differs over whole regions, far past this.
+ */
+const RENDER_DIFFERS_LIMIT = 0.03;
+
+/**
+ * `ORI_BENCH_ONLY=render,solver` runs only those sections: spike, fullstep,
+ * solver, render. Unset runs everything.
+ */
+const ONLY = (process.env.ORI_BENCH_ONLY ?? '').split(',').map((part) => part.trim()).filter(Boolean);
+const runs = (section: string) => ONLY.length === 0 || ONLY.includes(section);
 
 const GL_ARGS = ['--use-gl=angle', '--use-angle=default', '--enable-unsafe-swiftshader', '--enable-unsafe-webgpu'];
 const SOFTWARE_WEBGPU_ARGS = ['--enable-features=Vulkan', '--use-webgpu-adapter=swiftshader'];
@@ -79,11 +97,17 @@ describe('WebGPU spike', () => {
         undefined,
         { timeout: 30_000 }
       );
+      // SwiftShader is a CPU emulation: its timings are not GPU timings, and it cannot present a WebGPU canvas.
+      const software = await page.evaluate(async () => {
+        const info = (await navigator.gpu?.requestAdapter())?.info;
+        return /swiftshader/i.test(`${info?.vendor ?? ''} ${info?.architecture ?? ''} ${info?.description ?? ''}`);
+      });
+
+      if (runs('spike')) {
       const report = (await page.evaluate(() =>
         (window as unknown as { runWebgpuSpike: () => Promise<SpikeReport> }).runWebgpuSpike()
       )) as SpikeReport;
 
-      const software = /swiftshader/i.test(report.adapter);
       process.stdout.write(
         `\n${software ? '(WebGPU is on SwiftShader, a CPU emulation: these timings are not GPU timings)\n' : ''}` +
           `${formatReport(report)}\n\n`
@@ -101,8 +125,10 @@ describe('WebGPU spike', () => {
         );
         expect(row.nonFiniteCaught, `${row.fixture} missed a non-finite node`).toBe(true);
       }
+      }
 
       // A full Euler step from the WebGPU port's kernels, on the same bytes.
+      if (runs('fullstep')) {
       const fullStep = (await page.evaluate(() =>
         (window as unknown as { runFullStep: () => Promise<FullStepReport> }).runFullStep()
       )) as FullStepReport;
@@ -112,8 +138,10 @@ describe('WebGPU spike', () => {
         expect(row.error, `${row.fixture} full step failed`).toBeUndefined();
         expect(row.maxAbs, `${row.fixture} full step diverged from WebglSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
       }
+      }
 
       // WebgpuSolver itself, held to the WebGL2 solver's own gate.
+      if (runs('solver')) {
       const backend = (await page.evaluate(() =>
         (window as unknown as { runWebgpuBackend: () => Promise<BackendReport | { error: string }> }).runWebgpuBackend()
       )) as BackendReport | { error: string };
@@ -151,6 +179,28 @@ describe('WebGPU spike', () => {
         expect(row.error, `${label} shape check failed`).toBeUndefined();
         expect(row.roundTrip, `${label} shape did not survive a round trip`).toBe(true);
         expect(row.positionsMatch, `${label} restored positions differ`).toBe(true);
+      }
+      }
+
+      // The WebGPU renderer, against the WebGL2 one's picture of the same fold.
+      if (runs('render')) {
+        const render = (await page.evaluate(() =>
+          (window as unknown as { runWebgpuRender: () => Promise<RenderReport | { error: string }> }).runWebgpuRender()
+        )) as RenderReport | { error: string };
+        if ('error' in render) throw new Error(`renderer checks did not start: ${render.error}`);
+        process.stdout.write(`${formatRender(render)}\n\n`);
+        for (const row of render.rows) {
+          expect(row.error, `${row.fixture} render failed`).toBeUndefined();
+          expect(row.coverage, `${row.fixture} drew an implausible frame`).toBeGreaterThan(0.02);
+          expect(row.coverage).toBeLessThan(0.99);
+          for (const [mode, share] of [['paper', row.differs], ['strain', row.differsStrain], ['x-ray', row.differsXray]] as const) {
+            expect(share, `${row.fixture} ${mode} frame differs from WebGL2's`).toBeLessThan(RENDER_DIFFERS_LIMIT);
+          }
+          expect(row.highlightTints, `${row.fixture} highlight tinted nothing`).toBe(true);
+          expect(row.highlightOnlyWhenAsked, `${row.fixture} highlight leaked into an unasked frame`).toBe(true);
+        }
+        // SwiftShader loses the device on presenting any WebGPU canvas, so this is held on real hardware only.
+        if (!software) expect(render.canvas.presents, `the canvas presented a blank frame: ${render.canvas.error ?? ''}`).toBe(true);
       }
     } finally {
       await browser?.close();

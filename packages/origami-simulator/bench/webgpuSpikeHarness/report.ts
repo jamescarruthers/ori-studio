@@ -221,3 +221,45 @@ export function formatBackend(report: BackendReport): string {
     ...shapes,
   ].join('\n');
 }
+
+/** One fixture drawn by both renderers; see render.ts. */
+export interface RenderRow {
+  fixture: string;
+  /** Share of the WebGPU frame that is not background. */
+  coverage: number;
+  /** Share of pixels where the two renderers differ past antialiasing noise: paper, strain, x-ray. */
+  differs: number;
+  differsStrain: number;
+  differsXray: number;
+  /** The highlight pass tints the frame that asks for it, and no other. */
+  highlightTints: boolean;
+  highlightOnlyWhenAsked: boolean;
+  error?: string;
+}
+
+/** A WebGPU context on an OffscreenCanvas presents through createImageBitmap, as the session uses it. */
+export interface CanvasRow {
+  presents: boolean;
+  /** The device was lost on presenting, which SwiftShader does. */
+  deviceLost: boolean;
+  error?: string;
+}
+
+export interface RenderReport {
+  rows: RenderRow[];
+  canvas: CanvasRow;
+}
+
+export function formatRender({ rows, canvas }: RenderReport): string {
+  const pct = (value: number) => `${(value * 100).toFixed(2)}%`.padStart(7);
+  const lines = rows.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} coverage ${pct(row.coverage)} | differs from WebGL2: paper ${pct(row.differs)} strain ${pct(row.differsStrain)} ` +
+        `x-ray ${pct(row.differsXray)} | highlight ${row.highlightTints ? 'tints' : 'NONE'}/${row.highlightOnlyWhenAsked ? 'clean' : 'LEAKS'}`
+  );
+  const presented = canvas.presents
+    ? 'presents'
+    : `BLANK${canvas.deviceLost ? ' (device lost on presenting)' : ''}${canvas.error ? `: ${canvas.error}` : ''}`;
+  return ['WebGPU renderer', ...lines, `OffscreenCanvas through createImageBitmap: ${presented}`].join('\n');
+}

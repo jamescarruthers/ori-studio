@@ -21,6 +21,10 @@ import {
 } from '../solverBackend.js';
 import type { FoldProfile, SimulatorDiagnostics, SimulatorOptions } from '../types.js';
 import { packBeamMeta, packModel, timeStepFor, type PackedModel, type SolverMaterial } from '../webgl/packing.js';
+import { sheetExtent, type CameraUniforms } from '../webgl/camera.js';
+import { meshTopologyFor, type MeshDrawOptions, type RenderSettings } from '../webgl/meshRenderer.js';
+import { WebgpuCanvasTarget } from './canvasTarget.js';
+import { WebgpuMeshRenderer, type WebgpuRenderTarget } from './meshRenderer.js';
 import { GpuCore, workgroupsFor } from './gpuCore.js';
 import { MotionReduction } from './motionReduction.js';
 import {
@@ -148,6 +152,10 @@ export class WebgpuSolver implements SolverBackend {
   private mirrorRequested = 0;
   private mirrorApplied = 0;
   private readonly groupCache = new Map<string, StepGroups>();
+  private meshRenderer: WebgpuMeshRenderer | null = null;
+  /** Held until the renderer exists; see {@link setHighlightTriangles}. */
+  private highlightTriangles: ArrayLike<number> | null = null;
+  private canvasTarget: WebgpuCanvasTarget | null = null;
   private readonly nodeCount: number;
   private readonly originalPositions: Float32Array;
   private readonly shortestRestLength: number;
@@ -306,6 +314,66 @@ export class WebgpuSolver implements SolverBackend {
   /** Each node's velocity, RGBA, with its strain in alpha: what a strain colouring draws from. */
   get velocityBuffer(): GPUBuffer {
     return this.buffers.vel[this.roles.lastVel];
+  }
+
+  /**
+   * Draw to `canvas` when `render` is given no target. Takes a canvas, which
+   * this solver then configures for its device, or a target already
+   * configured, which several solvers sharing a canvas and a device share.
+   *
+   * @throws {Error} when the canvas holds a context of another kind.
+   */
+  attachCanvas(canvas: HTMLCanvasElement | OffscreenCanvas | WebgpuCanvasTarget): void {
+    const target = canvas instanceof WebgpuCanvasTarget ? canvas : WebgpuCanvasTarget.create(canvas, this.core);
+    if (!target) throw new Error('The canvas already holds a context that is not WebGPU');
+    this.canvasTarget = target;
+  }
+
+  /** The canvas frames are drawn at, clamped to what the device can back; 0x0 with no canvas. */
+  get drawingBufferSize(): { width: number; height: number } {
+    return this.canvasTarget ? this.canvasTarget.drawingBufferSize(this.core) : { width: 0, height: 0 };
+  }
+
+  /**
+   * Draw the mesh straight from the position buffer into `target`, or the
+   * attached canvas when it is null: WebglSolver.render's counterpart, on the
+   * same settings and options.
+   */
+  render(
+    camera: CameraUniforms,
+    settings: RenderSettings,
+    target: WebgpuRenderTarget | null = null,
+    options: MeshDrawOptions = {}
+  ): void {
+    const drawTo = target ?? this.canvasTarget?.current();
+    if (!drawTo) throw new Error('WebgpuSolver.render needs a target or an attached canvas');
+    this.renderer().render(camera, settings, drawTo, options);
+  }
+
+  /** Render offscreen and read the pixels back, rows top to bottom. For tests, thumbnails and checks. */
+  renderToPixels(camera: CameraUniforms, settings: RenderSettings, options: MeshDrawOptions = {}): Promise<Uint8Array> {
+    return this.renderer().renderToPixels(camera, settings, options);
+  }
+
+  /** The triangles a frame drawn with `highlight` tints — the pinned faces. */
+  setHighlightTriangles(triangles: ArrayLike<number> | null): void {
+    this.highlightTriangles = triangles;
+    this.meshRenderer?.setHighlightTriangles(triangles);
+  }
+
+  private renderer(): WebgpuMeshRenderer {
+    if (!this.meshRenderer) {
+      const topology = meshTopologyFor(this.model.prepared, this.packed.dims.textureDim);
+      this.meshRenderer = new WebgpuMeshRenderer(
+        this.core,
+        topology,
+        this.packed.originalPosition,
+        { positions: () => this.positionBuffer, velocities: () => this.velocityBuffer },
+        { sheet: sheetExtent(this.originalPositions) }
+      );
+      this.meshRenderer.setHighlightTriangles(this.highlightTriangles);
+    }
+    return this.meshRenderer;
   }
 
   step(count: number): void {
@@ -543,6 +611,7 @@ export class WebgpuSolver implements SolverBackend {
     if (this.disposed) return;
     this.disposed = true;
     this.forgetReadbacks();
+    this.meshRenderer?.dispose();
     this.motion.dispose();
     const { pos, vel, theta, ...singles } = this.buffers;
     for (const buffer of [...Object.values(singles), ...pos, ...vel, ...theta]) this.core.release(buffer);

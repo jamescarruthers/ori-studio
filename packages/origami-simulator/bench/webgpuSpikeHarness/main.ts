@@ -21,12 +21,15 @@ import { NormalsPass } from '../../src/webgpu/normalsPass.js';
 import { MotionReduction } from '../../src/webgpu/motionReduction.js';
 import { FIXTURES } from '../fixtures.js';
 import { runBackendChecks } from './backend.js';
+import { runRenderChecks } from './render.js';
 import { FullStepSolver, type Encoding } from './fullStep.js';
 import {
   formatBackend,
   formatFullStep,
+  formatRender,
   formatReport,
   type BackendReport,
+  type RenderReport,
   type FullStepOptions,
   type FullStepReport,
   type FullStepRow,
@@ -40,6 +43,7 @@ declare global {
     runWebgpuSpike: (options?: Partial<SpikeOptions>) => Promise<SpikeReport>;
     runFullStep: (options?: Partial<FullStepOptions>) => Promise<FullStepReport>;
     runWebgpuBackend: () => Promise<BackendReport | { error: string }>;
+    runWebgpuRender: () => Promise<RenderReport | { error: string }>;
   }
 }
 
@@ -342,6 +346,20 @@ window.runWebgpuBackend = async () => {
   }
 };
 
+window.runWebgpuRender = async () => {
+  let core: GpuCore;
+  try {
+    core = await GpuCore.create();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+  try {
+    return await runRenderChecks(core);
+  } finally {
+    core.dispose();
+  }
+};
+
 const button = document.getElementById('run');
 const out = document.getElementById('out');
 if (button && out) {
@@ -352,6 +370,10 @@ if (button && out) {
     const fullStep = formatFullStep(await window.runFullStep());
     out.textContent = `${passes}\n\n${fullStep}\n\nrunning WebgpuSolver checks…`;
     const backend = await window.runWebgpuBackend();
-    out.textContent = `${passes}\n\n${fullStep}\n\n${'error' in backend ? `ERROR: ${backend.error}` : formatBackend(backend)}`;
+    const solverText = 'error' in backend ? `ERROR: ${backend.error}` : formatBackend(backend);
+    out.textContent = `${passes}\n\n${fullStep}\n\n${solverText}\n\nrunning renderer checks…`;
+    const render = await window.runWebgpuRender();
+    const renderText = 'error' in render ? `ERROR: ${render.error}` : formatRender(render);
+    out.textContent = `${passes}\n\n${fullStep}\n\n${solverText}\n\n${renderText}`;
   });
 }
