@@ -37,6 +37,8 @@ export class GpuCore {
   private lostDetail: string | null = null;
   private readonly buffers = new Set<GPUBuffer>();
   private readonly modules = new Map<string, GPUShaderModule>();
+  /** One check per module: a second `getCompilationInfo` on a module can never resolve (Chromium 153). */
+  private readonly validations = new Map<GPUShaderModule, Promise<void>>();
 
   private constructor(device: GPUDevice, adapterInfo: GPUAdapterInfo) {
     this.device = device;
@@ -145,14 +147,20 @@ export class GpuCore {
    * compiled once per core, so validating up front makes building from it
    * later free.
    */
-  async validate(code: string, label: string): Promise<void> {
+  validate(code: string, label: string): Promise<void> {
     const module = this.module(code, label);
-    const info = await module.getCompilationInfo();
-    const errors = info.messages.filter((message) => message.type === 'error');
-    if (errors.length) {
-      const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
-      throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
+    let validation = this.validations.get(module);
+    if (!validation) {
+      validation = module.getCompilationInfo().then((info) => {
+        const errors = info.messages.filter((message) => message.type === 'error');
+        if (errors.length) {
+          const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
+          throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
+        }
+      });
+      this.validations.set(module, validation);
     }
+    return validation;
   }
 
   /**
