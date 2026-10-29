@@ -18,6 +18,10 @@ export interface BackendBenchOptions {
   durationMs: number;
   /** Step cap for the settle. */
   settleMaxSteps: number;
+  /** Wall-time cap for the settle, so the CPU solver on a large model cannot hold up the run for minutes. */
+  settleBudgetMs: number;
+  /** Steps from the flat sheet at which each GPU backend's positions are compared with the CPU reference's. */
+  accuracySteps: number;
   /** Frames timed per backend, after a few to warm. */
   frames: number;
   /** Square frame size in pixels. */
@@ -31,6 +35,8 @@ export const BACKEND_BENCH_DEFAULTS: BackendBenchOptions = {
   stepsPerTick: 80,
   durationMs: 2000,
   settleMaxSteps: 20_000,
+  settleBudgetMs: 30_000,
+  accuracySteps: 500,
   frames: 60,
   frameSize: 512,
 };
@@ -45,6 +51,12 @@ export interface BackendBenchRow {
   settleMs: number;
   settleSteps: number;
   settled: boolean;
+  /**
+   * Largest distance of any node from where ReferenceSolver puts it after
+   * `accuracySteps` steps from the same flat sheet, in model units. Null for
+   * the reference itself. Above {@link ACCURACY_LIMIT} is a failure.
+   */
+  maxDeviation: number | null;
   /** Frame time, draw plus waiting for the GPU to finish it; null for the CPU backend, which does not draw. */
   frameMs: { p50: number; p95: number } | null;
   error?: string;
@@ -57,6 +69,19 @@ export interface BackendBenchReport {
   userAgent: string;
   options: BackendBenchOptions;
   rows: BackendBenchRow[];
+}
+
+/**
+ * The parity gate's Tier C: the float32 CPU-vs-GPU divergence of this
+ * algorithm (bench/gpuParity.bench.ts). A backend past it computes a
+ * different fold, however fast it is.
+ */
+export const ACCURACY_LIMIT = 1e-3;
+
+function deviation(value: number | null): string {
+  if (value === null) return '-';
+  if (!Number.isFinite(value)) return 'NaN!';
+  return `${value.toExponential(1)}${value > ACCURACY_LIMIT ? '!' : ''}`;
 }
 
 function pad(text: string, width: number): string {
@@ -83,7 +108,7 @@ export function formatBackendBench(report: BackendBenchReport): string {
     `WebGL2 renderer: ${report.webglRenderer}`,
     `Browser: ${report.userAgent}`,
     `Fold ${options.foldPercent}%, ${options.stepsPerTick} steps per tick, ${options.durationMs}ms live loop, ` +
-      `${options.frames} frames at ${options.frameSize}px`,
+      `${options.frames} frames at ${options.frameSize}px, accuracy after ${options.accuracySteps} steps`,
     '',
     [
       pad('fixture', 14),
@@ -93,6 +118,7 @@ export function formatBackendBench(report: BackendBenchReport): string {
       padStart('vs CPU', 8),
       padStart('settle ms', 11),
       padStart('steps', 7),
+      padStart('max dev', 10),
       padStart('frame p50', 11),
       padStart('p95', 7),
     ].join(''),
@@ -114,10 +140,15 @@ export function formatBackendBench(report: BackendBenchReport): string {
         padStart(speedup, 8) +
         padStart(ms(row.settleMs), 11) +
         padStart(`${row.settleSteps}${row.settled ? '' : '!'}`, 7) +
+        padStart(deviation(row.maxDeviation), 10) +
         padStart(row.frameMs ? ms(row.frameMs.p50) : '-', 11) +
         padStart(row.frameMs ? ms(row.frameMs.p95) : '-', 7)
     );
   }
-  lines.push('', '"!" after steps: hit the step cap before settling. Frame time includes waiting for the GPU.');
+  lines.push(
+    '',
+    '"!" after steps: hit the step or time cap before settling. Frame time includes waiting for the GPU.',
+    `max dev: furthest any node is from the CPU reference's position, model units; "!" past ${ACCURACY_LIMIT}.`
+  );
   return lines.join('\n');
 }

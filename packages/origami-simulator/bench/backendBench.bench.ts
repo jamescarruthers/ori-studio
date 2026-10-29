@@ -3,9 +3,10 @@
 //
 //   npm run bench:backends
 //
-// Prints the table and checks only that every backend ran: headless here, both
-// GPU APIs run on SwiftShader, a CPU emulation, so the timings say nothing about
-// a real GPU. For those, open the page on real hardware:
+// Prints the table and checks that every backend ran and that each GPU backend
+// lands where the CPU reference does, within the parity gate's 1e-3. Headless
+// here, both GPU APIs run on SwiftShader, a CPU emulation, so the timings say
+// nothing about a real GPU; the accuracy check still means what it says. For those, open the page on real hardware:
 //
 //   npm run bench:backends:serve
 //
@@ -19,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ACCURACY_LIMIT,
   formatBackendBench,
   type BackendBenchOptions,
   type BackendBenchReport,
@@ -100,7 +102,10 @@ describe('simulator backends', () => {
         const label = `${row.fixture} ${row.backend}`;
         expect(row.error, `${label} failed`).toBeUndefined();
         expect(row.stepsPerSecond, `${label} did not step`).toBeGreaterThan(0);
-        if (row.backend !== 'reference') expect(row.frameMs, `${label} drew no frames`).not.toBeNull();
+        if (row.backend !== 'reference') {
+          expect(row.frameMs, `${label} drew no frames`).not.toBeNull();
+          expect(row.maxDeviation, `${label} diverged from the CPU reference`).toBeLessThan(ACCURACY_LIMIT);
+        }
       }
     } finally {
       await browser?.close();
