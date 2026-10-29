@@ -3281,6 +3281,7 @@
     "backendCpuTitle": "Berechnung auf der CPU (WebGL2 nicht verfügbar)",
     "backendGpu": "GPU",
     "backendGpuTitle": "Berechnung auf der GPU (WebGL2)",
+    "backendWebgpuTitle": "Berechnung auf der GPU (WebGPU)",
     "backToPatterns": "Muster",
     "canvasAriaLabel": "Origami-Simulator für gefaltete Basen. Ziehen zum Drehen, Scrollen zum Zoomen, Doppelklick zum Zurücksetzen der Ansicht.",
     "canvasAriaLabelPin": "Origami-Simulator für gefaltete Basen. Rahmen aufziehen oder eine Fläche anklicken, um sie zu fixieren, Scrollen zum Zoomen.",

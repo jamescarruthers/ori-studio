@@ -3567,6 +3567,7 @@
     "backendCpuTitle": "Resolvendo na CPU (WebGL2 indisponível)",
     "backendGpu": "GPU",
     "backendGpuTitle": "Resolvendo na GPU (WebGL2)",
+    "backendWebgpuTitle": "Resolvendo na GPU (WebGPU)",
     "backToPatterns": "Padrões",
     "canvasAriaLabel": "Simulador de base dobrada de origami. Arraste para girar, role para aproximar, clique duplo para redefinir a visualização.",
     "canvasAriaLabelPin": "Simulador de base dobrada de origami. Arraste uma caixa ou clique em uma face para fixá-la, role para aproximar.",

@@ -24,9 +24,9 @@ import { packBeamMeta, packModel, timeStepFor, type PackedModel, type SolverMate
 import { sheetExtent, type CameraUniforms } from '../webgl/camera.js';
 import { meshTopologyFor, type MeshDrawOptions, type RenderSettings } from '../webgl/meshRenderer.js';
 import { WebgpuCanvasTarget } from './canvasTarget.js';
-import { WebgpuMeshRenderer, type WebgpuRenderTarget } from './meshRenderer.js';
+import { EDGE_SHADER, FACE_SHADER, WebgpuMeshRenderer, type WebgpuRenderTarget } from './meshRenderer.js';
 import { GpuCore, workgroupsFor } from './gpuCore.js';
-import { MotionReduction } from './motionReduction.js';
+import { MOTION_REDUCTION_WGSL, MotionReduction } from './motionReduction.js';
 import {
   APPLY_LENGTHS,
   CREASE_GEO_CALC,
@@ -162,7 +162,7 @@ export class WebgpuSolver implements SolverBackend {
 
   private constructor(
     private readonly core: GpuCore,
-    private readonly ownsCore: boolean,
+    private ownsCore: boolean,
     private readonly model: OrigamiModel,
     private readonly packed: PackedModel,
     private readonly layout: StaticLayout,
@@ -206,78 +206,117 @@ export class WebgpuSolver implements SolverBackend {
   static async create(model: OrigamiModel, options: SimulatorOptions = {}, core?: GpuCore): Promise<WebgpuSolver> {
     const device = core ?? (await GpuCore.create());
     try {
-      const material: SolverMaterial = {
-        axialStiffness: options.axialStiffness ?? 20,
-        creaseStiffness: options.creaseStiffness ?? 0.7,
-        panelStiffness: options.panelStiffness ?? 0.7,
-        faceStiffness: options.faceStiffness ?? 0.2,
-        damping: options.damping ?? 0.45,
-        timeStepScale: options.timeStepScale ?? 1,
-      };
-      const packed = packModel(model, material);
-      const layout = packStaticData(packed, material);
-      const dims = packed.dims;
-      const zeros = () => new Float32Array(dims.textureDim * dims.textureDim * 4);
-      const perCrease = () => new Float32Array(Math.max(1, dims.creases) * 4);
-      // The pull's baseline buffer: .y says whether a crease is a fold, which never changes.
-      const creasePull = perCrease();
-      for (let crease = 0; crease < dims.creases; crease += 1) {
-        creasePull[crease * 4 + 1] = packed.creaseIsFlat[crease] ? 0 : 1;
-      }
-      // The kept-shape kernels' inputs: each edge's ends and sheet length, and
-      // the edge each beam incidence belongs to.
-      const edgesVertices = model.prepared.edgesVertices;
-      const edges = new Float32Array(Math.max(1, edgesVertices.length) * 4);
-      edgesVertices.forEach(([a, b], edge) => edges.set([a, b, model.edgeRestLength(edge), 0], edge * 4));
-      const incidenceEdges = new Float32Array(Math.max(1, dims.edges) * 4);
-      for (let i = 0; i < dims.edges; i += 1) incidenceEdges[i * 4] = packed.beamEdge[i]!;
-      const uniform = (label: string, size: number) =>
-        device.buffer({ label, size, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-      const buffers = {
-        staticData: device.storageBuffer(layout.data, 'staticData'),
-        params: uniform('params', PARAMS_VEC4S * 16),
-        restMode: uniform('restMode', 16),
-        normals: device.storageBuffer(new Float32Array(Math.max(1, dims.faces) * 4), 'normals'),
-        creaseGeo: device.storageBuffer(perCrease(), 'creaseGeo'),
-        creasePull: device.storageBuffer(creasePull, 'creasePull'),
-        pressRest: device.storageBuffer(perCrease(), 'pressRest'),
-        edges: device.storageBuffer(edges, 'edges'),
-        incidenceEdges: device.storageBuffer(incidenceEdges, 'incidenceEdges'),
-        keptLengths: device.storageBuffer(new Float32Array(Math.max(4, edgesVertices.length)), 'keptLengths'),
-        pos: [
-          device.storageBuffer(zeros(), 'posA'),
-          device.storageBuffer(zeros(), 'posB'),
-          device.storageBuffer(zeros(), 'posC'),
-        ] as const,
-        vel: [device.storageBuffer(zeros(), 'velA'), device.storageBuffer(zeros(), 'velB')] as const,
-        theta: [device.storageBuffer(packed.thetaInit, 'thetaA'), device.storageBuffer(packed.thetaInit, 'thetaB')] as const,
-      };
-      const posed = { POSED: 1 };
-      const pipe: Pipelines = {
-        normalCalc: await device.computePipeline(NORMAL_CALC, 'normalCalc'),
-        thetaCalc: await device.computePipeline(THETA_CALC, 'thetaCalc'),
-        updateCreaseGeo: await device.computePipeline(CREASE_GEO_CALC, 'updateCreaseGeo'),
-        velocityCalc: await device.computePipeline(VELOCITY_CALC, 'velocityCalc'),
-        velocityCalcPosed: await device.computePipeline(VELOCITY_CALC, 'velocityCalcPosed', posed),
-        positionCalc: await device.computePipeline(POSITION_CALC, 'positionCalc'),
-        positionCalcVerlet: await device.computePipeline(POSITION_CALC_VERLET, 'positionCalcVerlet'),
-        positionCalcVerletPosed: await device.computePipeline(POSITION_CALC_VERLET, 'positionCalcVerletPosed', posed),
-        velocityCalcVerlet: await device.computePipeline(VELOCITY_CALC_VERLET, 'velocityCalcVerlet'),
-        restAngles: await device.computePipeline(REST_ANGLES, 'restAngles'),
-        keepLengths: await device.computePipeline(KEEP_LENGTHS, 'keepLengths'),
-        applyLengths: await device.computePipeline(APPLY_LENGTHS, 'applyLengths'),
-        keepAngles: await device.computePipeline(KEEP_ANGLES, 'keepAngles'),
-      };
-      const motion = await MotionReduction.create(device, buffers.vel, dims.nodes);
-      return new WebgpuSolver(device, core === undefined, model, packed, layout, buffers, pipe, motion, {
-        material,
-        foldPercent: clampPercent(options.foldPercent ?? 0),
-        integrationType: options.integrationType === 'verlet' ? 'verlet' : 'euler',
-      });
+      await WebgpuSolver.validateShaders(device);
+      const solver = WebgpuSolver.createNow(model, options, device);
+      if (core === undefined) solver.ownsCore = true;
+      return solver;
     } catch (error) {
       if (core === undefined) device.dispose();
       throw error;
     }
+  }
+
+  /**
+   * Compile and check every shader the solver and its renderer use, on `core`,
+   * so that {@link createNow} can build from them synchronously and a WGSL
+   * error is a throw here rather than a console warning later.
+   *
+   * @throws {Error} naming the shader and the error.
+   */
+  static async validateShaders(core: GpuCore): Promise<void> {
+    const sources: Array<[string, string]> = [
+      [NORMAL_CALC, 'normalCalc'],
+      [THETA_CALC, 'thetaCalc'],
+      [CREASE_GEO_CALC, 'updateCreaseGeo'],
+      [VELOCITY_CALC, 'velocityCalc'],
+      [POSITION_CALC, 'positionCalc'],
+      [POSITION_CALC_VERLET, 'positionCalcVerlet'],
+      [VELOCITY_CALC_VERLET, 'velocityCalcVerlet'],
+      [REST_ANGLES, 'restAngles'],
+      [KEEP_LENGTHS, 'keepLengths'],
+      [APPLY_LENGTHS, 'applyLengths'],
+      [KEEP_ANGLES, 'keepAngles'],
+      [MOTION_REDUCTION_WGSL, 'motionReduction'],
+      [FACE_SHADER, 'faces'],
+      [EDGE_SHADER, 'creases'],
+    ];
+    for (const [code, label] of sources) await core.validate(code, label);
+  }
+
+  /**
+   * {@link create}, synchronously, on a core that has run
+   * {@link validateShaders}: for a caller that cannot wait, such as a worker
+   * loading a model inside a synchronous call. The core stays the caller's.
+   */
+  static createNow(model: OrigamiModel, options: SimulatorOptions, device: GpuCore): WebgpuSolver {
+    const material: SolverMaterial = {
+      axialStiffness: options.axialStiffness ?? 20,
+      creaseStiffness: options.creaseStiffness ?? 0.7,
+      panelStiffness: options.panelStiffness ?? 0.7,
+      faceStiffness: options.faceStiffness ?? 0.2,
+      damping: options.damping ?? 0.45,
+      timeStepScale: options.timeStepScale ?? 1,
+    };
+    const packed = packModel(model, material);
+    const layout = packStaticData(packed, material);
+    const dims = packed.dims;
+    const zeros = () => new Float32Array(dims.textureDim * dims.textureDim * 4);
+    const perCrease = () => new Float32Array(Math.max(1, dims.creases) * 4);
+    // The pull's baseline buffer: .y says whether a crease is a fold, which never changes.
+    const creasePull = perCrease();
+    for (let crease = 0; crease < dims.creases; crease += 1) {
+      creasePull[crease * 4 + 1] = packed.creaseIsFlat[crease] ? 0 : 1;
+    }
+    // The kept-shape kernels' inputs: each edge's ends and sheet length, and
+    // the edge each beam incidence belongs to.
+    const edgesVertices = model.prepared.edgesVertices;
+    const edges = new Float32Array(Math.max(1, edgesVertices.length) * 4);
+    edgesVertices.forEach(([a, b], edge) => edges.set([a, b, model.edgeRestLength(edge), 0], edge * 4));
+    const incidenceEdges = new Float32Array(Math.max(1, dims.edges) * 4);
+    for (let i = 0; i < dims.edges; i += 1) incidenceEdges[i * 4] = packed.beamEdge[i]!;
+    const uniform = (label: string, size: number) =>
+      device.buffer({ label, size, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const buffers = {
+      staticData: device.storageBuffer(layout.data, 'staticData'),
+      params: uniform('params', PARAMS_VEC4S * 16),
+      restMode: uniform('restMode', 16),
+      normals: device.storageBuffer(new Float32Array(Math.max(1, dims.faces) * 4), 'normals'),
+      creaseGeo: device.storageBuffer(perCrease(), 'creaseGeo'),
+      creasePull: device.storageBuffer(creasePull, 'creasePull'),
+      pressRest: device.storageBuffer(perCrease(), 'pressRest'),
+      edges: device.storageBuffer(edges, 'edges'),
+      incidenceEdges: device.storageBuffer(incidenceEdges, 'incidenceEdges'),
+      keptLengths: device.storageBuffer(new Float32Array(Math.max(4, edgesVertices.length)), 'keptLengths'),
+      pos: [
+        device.storageBuffer(zeros(), 'posA'),
+        device.storageBuffer(zeros(), 'posB'),
+        device.storageBuffer(zeros(), 'posC'),
+      ] as const,
+      vel: [device.storageBuffer(zeros(), 'velA'), device.storageBuffer(zeros(), 'velB')] as const,
+      theta: [device.storageBuffer(packed.thetaInit, 'thetaA'), device.storageBuffer(packed.thetaInit, 'thetaB')] as const,
+    };
+    const posed = { POSED: 1 };
+    const pipe: Pipelines = {
+      normalCalc: device.computePipelineNow(NORMAL_CALC, 'normalCalc'),
+      thetaCalc: device.computePipelineNow(THETA_CALC, 'thetaCalc'),
+      updateCreaseGeo: device.computePipelineNow(CREASE_GEO_CALC, 'updateCreaseGeo'),
+      velocityCalc: device.computePipelineNow(VELOCITY_CALC, 'velocityCalc'),
+      velocityCalcPosed: device.computePipelineNow(VELOCITY_CALC, 'velocityCalcPosed', posed),
+      positionCalc: device.computePipelineNow(POSITION_CALC, 'positionCalc'),
+      positionCalcVerlet: device.computePipelineNow(POSITION_CALC_VERLET, 'positionCalcVerlet'),
+      positionCalcVerletPosed: device.computePipelineNow(POSITION_CALC_VERLET, 'positionCalcVerletPosed', posed),
+      velocityCalcVerlet: device.computePipelineNow(VELOCITY_CALC_VERLET, 'velocityCalcVerlet'),
+      restAngles: device.computePipelineNow(REST_ANGLES, 'restAngles'),
+      keepLengths: device.computePipelineNow(KEEP_LENGTHS, 'keepLengths'),
+      applyLengths: device.computePipelineNow(APPLY_LENGTHS, 'applyLengths'),
+      keepAngles: device.computePipelineNow(KEEP_ANGLES, 'keepAngles'),
+    };
+    const motion = MotionReduction.createNow(device, buffers.vel, dims.nodes);
+    return new WebgpuSolver(device, false, model, packed, layout, buffers, pipe, motion, {
+      material,
+      foldPercent: clampPercent(options.foldPercent ?? 0),
+      integrationType: options.integrationType === 'verlet' ? 'verlet' : 'euler',
+    });
   }
 
   get stepCount(): number {

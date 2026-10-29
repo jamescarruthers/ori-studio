@@ -107,7 +107,13 @@ export class MotionReduction {
     velocities: GPUBuffer | readonly GPUBuffer[],
     nodeCount: number
   ): Promise<MotionReduction> {
-    const pipeline = await core.computePipeline(MOTION_REDUCTION_WGSL, 'motionReduction');
+    await core.validate(MOTION_REDUCTION_WGSL, 'motionReduction');
+    return MotionReduction.createNow(core, velocities, nodeCount);
+  }
+
+  /** {@link create}, synchronously, for a core that has validated MOTION_REDUCTION_WGSL. */
+  static createNow(core: GpuCore, velocities: GPUBuffer | readonly GPUBuffer[], nodeCount: number): MotionReduction {
+    const pipeline = core.computePipelineNow(MOTION_REDUCTION_WGSL, 'motionReduction');
     const counts = core.uniformBuffer(new Uint32Array([nodeCount]), 'motionReduction counts');
     const result = core.buffer({
       label: 'motion result',

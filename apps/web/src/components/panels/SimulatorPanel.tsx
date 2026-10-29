@@ -20,6 +20,7 @@ import type { FoldDocument as SimulatorFoldDocument } from "@treemaker/origami-s
 import {
   useSimulatorRuntime,
   type SimulatorFrameView,
+  type SimulatorModelView,
 } from "../../simulator/useSimulatorRuntime";
 import { SimulatorSegmentsSidebar } from "./SimulatorSegmentsPanel";
 import { useSimulateSource } from "../../simulator/useSimulateSource";
@@ -109,7 +110,7 @@ export function SimulatorPanel() {
   const [step, setStep] = useState(0);
   const [strain, setStrain] = useState(0);
   const [modelStats, setModelStats] = useState({ vertices: 0, triangles: 0 });
-  const [backend, setBackend] = useState<"webgl2" | "reference" | null>(null);
+  const [backend, setBackend] = useState<SimulatorModelView["backend"] | null>(null);
   // Render/material/solver settings live in the store: the options pane is a
   // sibling panel, so this panel applies them but does not own them.
   const viewSettings = useWorkspaceStore((state) => state.simulatorSettings);
@@ -661,7 +662,12 @@ export function SimulatorPanel() {
               {backend && (
                 <span
                   title={
-                    backend === "webgl2"
+                    backend === "webgpu"
+                      ? t(
+                          "panels:simulator.backendWebgpuTitle",
+                          "Solving on the GPU (WebGPU)",
+                        )
+                      : backend === "webgl2"
                       ? t(
                           "panels:simulator.backendGpuTitle",
                           "Solving on the GPU (WebGL2)",
@@ -672,7 +678,7 @@ export function SimulatorPanel() {
                         )
                   }
                 >
-                  {backend === "webgl2"
+                  {backend !== "reference"
                     ? t("panels:simulator.backendGpu", "GPU")
                     : t("panels:simulator.backendCpu", "CPU")}
                 </span>

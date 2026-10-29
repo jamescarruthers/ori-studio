@@ -36,6 +36,7 @@ export class GpuCore {
   readonly adapterInfo: GPUAdapterInfo;
   private lostDetail: string | null = null;
   private readonly buffers = new Set<GPUBuffer>();
+  private readonly modules = new Map<string, GPUShaderModule>();
 
   private constructor(device: GPUDevice, adapterInfo: GPUAdapterInfo) {
     this.device = device;
@@ -134,19 +135,49 @@ export class GpuCore {
     /** Values for the module's `override` constants: a compile-time variant without a second source. */
     constants?: Record<string, number>
   ): Promise<GPUComputePipeline> {
-    this.assertLive();
-    const module = this.device.createShaderModule({ label, code });
+    await this.validate(code, label);
+    return this.computePipelineNow(code, label, constants);
+  }
+
+  /**
+   * Compile `code` and throw on any WGSL error, rather than leave the console
+   * warning and silently invalid pipeline WebGPU gives by default. A module is
+   * compiled once per core, so validating up front makes building from it
+   * later free.
+   */
+  async validate(code: string, label: string): Promise<void> {
+    const module = this.module(code, label);
     const info = await module.getCompilationInfo();
     const errors = info.messages.filter((message) => message.type === 'error');
     if (errors.length) {
       const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
       throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
     }
-    return this.device.createComputePipelineAsync({
+  }
+
+  /**
+   * A compute pipeline, built synchronously: for callers that cannot wait,
+   * having {@link validate}d the code first so an error is not left to a
+   * console warning.
+   */
+  computePipelineNow(code: string, label: string, constants?: Record<string, number>): GPUComputePipeline {
+    const module = this.module(code, label);
+    return this.device.createComputePipeline({
       label,
       layout: 'auto',
       compute: constants ? { module, entryPoint: 'main', constants } : { module, entryPoint: 'main' },
     });
+  }
+
+  /** One module per source, compiled once. */
+  module(code: string, label: string): GPUShaderModule {
+    this.assertLive();
+    let module = this.modules.get(code);
+    if (!module) {
+      module = this.device.createShaderModule({ label, code });
+      this.modules.set(code, module);
+    }
+    return module;
   }
 
   /** Read a whole storage buffer back. Slow and async; tests and exports only. */

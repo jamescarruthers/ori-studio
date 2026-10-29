@@ -3287,6 +3287,7 @@
     "backendCpuTitle": "Solving on the CPU (WebGL2 unavailable)",
     "backendGpu": "GPU",
     "backendGpuTitle": "Solving on the GPU (WebGL2)",
+    "backendWebgpuTitle": "Solving on the GPU (WebGPU)",
     "backToPatterns": "Patterns",
     "canvasAriaLabel": "Origami folded-base simulator. Drag to rotate, scroll to zoom, double-click to reset view.",
     "canvasAriaLabelPin": "Origami folded-base simulator. Drag a box or click a face to pin it, scroll to zoom.",

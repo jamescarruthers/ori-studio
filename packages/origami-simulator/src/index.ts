@@ -15,6 +15,10 @@ export {
   type PullSummary,
 } from './pull.js';
 export { WebglSolver } from './webgl/webglSolver.js';
+export { WebgpuSolver } from './webgpu/webgpuSolver.js';
+export { GpuCore, WebGpuDeviceLostError, WebGpuUnavailableError, type WebGpuUnavailableReason } from './webgpu/gpuCore.js';
+export { WebgpuCanvasTarget } from './webgpu/canvasTarget.js';
+export { WebgpuMeshRenderer, type WebgpuMeshSource, type WebgpuRenderTarget } from './webgpu/meshRenderer.js';
 export {
   GlCore,
   WebGlContextLostError,

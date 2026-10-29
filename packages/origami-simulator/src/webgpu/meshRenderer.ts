@@ -362,8 +362,9 @@ export class WebgpuMeshRenderer {
     this.faceUniform = uniform('face', 5 * 16);
     this.highlightUniform = uniform('highlight', 5 * 16);
     this.edgeUniform = uniform('edge', (8 + (DASH_KINDS * MAX_DASH_RUNS) / 4) * 16);
-    this.faceModule = device.createShaderModule({ label: 'faces', code: FACE_SHADER });
-    this.edgeModule = device.createShaderModule({ label: 'creases', code: EDGE_SHADER });
+    // From the core's cache, so a shader validated up front is not compiled twice.
+    this.faceModule = core.module(FACE_SHADER, 'faces');
+    this.edgeModule = core.module(EDGE_SHADER, 'creases');
   }
 
   /** As MeshRenderer.setHighlightTriangles: the triangles a highlighted frame redraws tinted. */
