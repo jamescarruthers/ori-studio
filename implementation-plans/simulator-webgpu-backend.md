@@ -374,14 +374,41 @@ in the live loop, 5.1x WebGL2 and 19x the CPU, and settles 20,000 steps in
 1.5s against 5.6s and 16.7s. The CPU still wins below about 80 nodes. The
 first-model settle cost shows again: 904ms for book-fold.
 
-### What is still missing
+### Benchmark results: large models, Chrome on the M1 Pro (2026-10-29)
 
-Both runs stopped showing rows after miura-16x16. The likely cause is the CPU
-reference solver's settle: 20,000 steps at roughly 1,000 to 6,400 nodes takes
-minutes per fixture on the CPU, so the larger rows arrive slowly rather than
-not at all. Leave the CPU out to get them quickly:
+WebGPU adapter apple / metal-3; WebGL2 on ANGLE Metal; Chrome 156. Fold 60%,
+80 steps per tick, 2000ms live loop, accuracy after 500 steps.
 
-    ?fixtures=miura-32x32,miura-56x56,miura-80x80,boxpleat-24&backends=webgpu,webgl2
+| fixture | nodes | backend | steps/s | vs CPU | settle ms | steps | max dev | frame p50 | p95 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| miura-32x32 | 1089 | webgpu | 24k | 68.5x | 1677 | 20000! | 6.0e-8 | 0.50 | 0.90 |
+| miura-32x32 | 1089 | webgl2 | 4311 | 12.4x | 5735 | 20000! | 6.0e-8 | 0.70 | 1.30 |
+| miura-32x32 | 1089 | reference | 349 | 1.0x | 31033 | 11000! | - | - | - |
+| miura-56x56 | 3249 | webgpu | 17k | 170.6x | 1996 | 20000! | 6.0e-8 | 0.60 | 1.00 |
+| miura-56x56 | 3249 | webgl2 | 3608 | 35.4x | 6159 | 20000! | 1.2e-7 | 0.80 | 2.00 |
+| miura-56x56 | 3249 | reference | 102 | 1.0x | 38766 | 4000! | - | - | - |
+| miura-80x80 | 6561 | webgpu | 9848 | 200.5x | 3264 | 20000! | 1.2e-7 | 0.70 | 1.40 |
+| miura-80x80 | 6561 | webgl2 | 2988 | 60.8x | 7615 | 20000! | 1.2e-7 | 1.10 | 1.70 |
+| miura-80x80 | 6561 | reference | 49 | 1.0x | 39422 | 2000! | - | - | - |
+| boxpleat-24 | 625 | webgpu | 22k | 34.8x | 1756 | 20000! | 6.7e-8 | 0.50 | 1.10 |
+| boxpleat-24 | 625 | webgl2 | 4299 | 6.8x | 5314 | 20000! | 6.0e-8 | 0.70 | 1.50 |
+| boxpleat-24 | 625 | reference | 628 | 1.0x | 31181 | 20000! | - | - | - |
+
+The CPU rows hit the 30-second settle cap before 20,000 steps on the three
+largest models, so their settle times are not comparable; their steps/s are.
+
+What it shows:
+
+- **The gap widens with size.** At 6,561 nodes WebGPU runs 9.8k steps/s: 3.3x
+  WebGL2 and 200x the CPU. From 625 to 1,089 nodes it holds about 22–24k,
+  5x WebGL2, which is still bound by its per-tick readback there.
+- **Settle.** WebGPU settles 20,000 steps on miura-80x80 in 3.3s, against
+  7.6s for WebGL2. The CPU managed 2,000 steps in 39s.
+- **Accuracy.** Every GPU row lands within 1.2e-7 of the CPU reference after
+  500 steps, four orders of magnitude inside the 1e-3 gate.
+- **Frames.** Still 0.5–1.4ms on WebGPU at every size.
+
+Still to record: the same large models in Safari.
 
 ### Accuracy against the original's WebGL solver (2026-10-29)
 
@@ -489,7 +516,8 @@ timing run on real hardware is also an accuracy check on that hardware.
 - [x] Backend benchmark: WebGPU vs WebGL2 vs CPU (`bench/backendBench/`)
 - [x] Run the backend benchmark on the M1 Pro in Chrome (small fixtures); record it here
 - [x] The same in Safari (small fixtures)
-- [ ] The larger fixtures, in both browsers
+- [x] The larger fixtures in Chrome
+- [ ] The larger fixtures in Safari
 - [x] Trajectory accuracy against upstream's WebGL solver (`bench:upstream-trajectory`)
 - [x] Find why book-fold leaves upstream's path in the port: a frame mismatch in the oracle, not the port
 - [x] Run `bench:upstream-trajectory` on the M1 Pro
