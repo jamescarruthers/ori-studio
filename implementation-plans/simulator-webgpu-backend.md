@@ -425,6 +425,24 @@ its neighbour across the turn. `UpstreamOracle` now turns upstream's output into
 our frame (`toOurFrame`), which also corrects `bench:upstream-parity`: book-fold
 there went from 1.4 to 2.7e-6 at 1,000 steps, and the others did not move.
 
+On the M1 Pro (Chrome's headless browser, Metal), 2026-10-29, at 2,000 steps:
+
+| fixture | webgpu | webgl2 | reference | webgpu vs our webgl2 |
+| --- | ---: | ---: | ---: | ---: |
+| bird-base | 1.8e-6 | 4.9e-6 | 3.2e-6 | 3.9e-6 |
+| miura-8x8 | 8.9e-6 | 8.7e-6 | 8.8e-6 | 5.4e-7 |
+| miura-16x16 | 8.5e-6 | 8.6e-6 | 8.7e-6 | 5.4e-7 |
+| miura-32x32 | 1.3e-5 | 1.3e-5 | 1.3e-5 | 1.5e-7 |
+| boxpleat-24 | 6.2e-6 | 6.3e-6 | 6.3e-6 | 1.8e-7 |
+| book-fold | 2.9e-1 | 2.9e-1 | 2.9e-1 | 3.7e-6 |
+
+On real hardware all three backends follow upstream about equally closely,
+within 1.3e-5 at every checkpoint: about 80 times inside the gate. The
+largest difference WebGPU adds over our WebGL2 solver at any checkpoint is
+3.9e-6. The book-fold row was measured before the oracle's frame fix above
+and shows the same comparison fault as the first headless run; it has not been
+re-run on the M1 Pro since.
+
 The backend benchmark also reports accuracy now: a `max dev` column, each GPU
 backend against the CPU reference after 500 steps, flagged past 1e-3, so every
 timing run on real hardware is also an accuracy check on that hardware.
@@ -474,5 +492,5 @@ timing run on real hardware is also an accuracy check on that hardware.
 - [ ] The larger fixtures, in both browsers
 - [x] Trajectory accuracy against upstream's WebGL solver (`bench:upstream-trajectory`)
 - [x] Find why book-fold leaves upstream's path in the port: a frame mismatch in the oracle, not the port
-- [ ] Run `bench:upstream-trajectory` on the M1 Pro
+- [x] Run `bench:upstream-trajectory` on the M1 Pro
 - [ ] Parity gate for the WebGPU backend in CI
