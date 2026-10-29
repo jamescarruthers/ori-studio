@@ -383,6 +383,45 @@ not at all. Leave the CPU out to get them quickly:
 
     ?fixtures=miura-32x32,miura-56x56,miura-80x80,boxpleat-24&backends=webgpu,webgl2
 
+### Accuracy against the original's WebGL solver (2026-10-29)
+
+Speed only counts if the fold is the same fold. `bench/upstreamTrajectory.bench.ts`
+(`npm run bench:upstream-trajectory`) runs the vendored upstream Origami
+Simulator's own WebGL solver (`UpstreamOracle`) and our three backends from the
+same flat sheet, and reads every node at 11 checkpoints from step 1 to step
+2,000: the path, not only where it ends. Nodes are paired by their place on the
+flat sheet, since the two meshes may number them differently. WebGPU must stay
+within Tier C (1e-3) of upstream at every checkpoint, and within it of our
+WebGL2 solver.
+
+Headless run (SwiftShader), furthest any node is from upstream at 2,000 steps:
+
+| fixture | webgpu | webgl2 | reference | webgpu vs our webgl2 |
+| --- | ---: | ---: | ---: | ---: |
+| bird-base | 1.0e-6 | 6.3e-7 | 1.8e-6 | 9.0e-7 |
+| miura-8x8 | 3.1e-7 | 1.2e-7 | 8.6e-6 | 2.5e-7 |
+| miura-16x16 | 1.6e-7 | 6.0e-8 | 8.7e-6 | 1.6e-7 |
+| miura-32x32 | 7.5e-8 | 8.2e-8 | 1.3e-5 | 8.9e-8 |
+| boxpleat-24 | 1.8e-7 | 1.8e-7 | 6.3e-6 | 1.2e-7 |
+| book-fold | 2.9e-1 | 2.9e-1 | 2.9e-1 | 1.1e-6 |
+
+On every fixture but one, WebGPU follows the original at least 1,000 times
+closer than the gate, at every checkpoint, and closer than our CPU reference
+does. WebGPU and upstream are both float32 GPU solvers running the same
+kernels, so they agree more closely than either does with the CPU.
+
+**book-fold differs from upstream in the port, not in WebGPU.** All three of
+our backends leave upstream's path together, from about step 5, and settle 0.29
+apart from it; WebGPU stays within 1.1e-6 of our WebGL2 solver throughout. The
+cause is in code the three share (model preparation or the solver as ported),
+and predates this work. It is a single diagonal mountain crease at −180°,
+with no other creases to constrain it. The bench reports it and holds WebGPU to
+our WebGL2 solver on that fixture.
+
+The backend benchmark also reports accuracy now: a `max dev` column, each GPU
+backend against the CPU reference after 500 steps, flagged past 1e-3, so every
+timing run on real hardware is also an accuracy check on that hardware.
+
 ## Affected Areas
 
 - `packages/origami-simulator/src/webgpu/` — `WebgpuSolver`, `WebgpuMeshRenderer`,
@@ -426,4 +465,7 @@ not at all. Leave the CPU out to get them quickly:
 - [x] Run the backend benchmark on the M1 Pro in Chrome (small fixtures); record it here
 - [x] The same in Safari (small fixtures)
 - [ ] The larger fixtures, in both browsers
+- [x] Trajectory accuracy against upstream's WebGL solver (`bench:upstream-trajectory`)
+- [ ] Find why book-fold leaves upstream's path in the port
+- [ ] Run `bench:upstream-trajectory` on the M1 Pro
 - [ ] Parity gate for the WebGPU backend in CI

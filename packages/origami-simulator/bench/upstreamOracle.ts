@@ -33,6 +33,15 @@ export interface UpstreamRunOptions {
   damping?: number;
 }
 
+/** Positions at each checkpoint of one run, plus the mesh it ran on. */
+export interface UpstreamTrajectory {
+  /** One per checkpoint, in the order asked. */
+  positions: Float32Array[];
+  nodeCount: number;
+  creaseCount: number;
+  faceCount: number;
+}
+
 export interface UpstreamRunResult {
   positions: Float32Array;
   nodeCount: number;
@@ -65,7 +74,9 @@ export class UpstreamOracle {
     const address = server.resolvedUrls?.local?.[0];
     if (!address) throw new Error('Upstream oracle: vite did not report a local URL');
 
-    const browser = await chromium.launch();
+    // `ORI_BENCH_CHROMIUM` points at a Chromium binary when Playwright's own is not installed.
+    const executablePath = process.env.ORI_BENCH_CHROMIUM;
+    const browser = await chromium.launch(executablePath ? { executablePath } : {});
     const page = await browser.newPage();
     // Upstream logs a lot; surface only genuine errors.
     page.on('pageerror', (error) => {
@@ -85,8 +96,28 @@ export class UpstreamOracle {
   }
 
   async run(fold: FoldDocument, options: UpstreamRunOptions): Promise<UpstreamRunResult> {
+    const result = await this.trajectory(fold, options, [options.steps]);
+    return {
+      positions: result.positions[0]!,
+      nodeCount: result.nodeCount,
+      creaseCount: result.creaseCount,
+      faceCount: result.faceCount,
+      maxStrain: result.maxStrain,
+    };
+  }
+
+  /**
+   * One run from the flat sheet, read at every checkpoint on the way: the
+   * path the solver takes, not only where it ends. `checkpoints` are step
+   * counts from reset, ascending; `options.steps` is ignored.
+   */
+  async trajectory(
+    fold: FoldDocument,
+    options: Omit<UpstreamRunOptions, 'steps'> & { steps?: number },
+    checkpoints: readonly number[]
+  ): Promise<UpstreamTrajectory & { maxStrain: number | null }> {
     const raw = await this.page.evaluate(
-      ({ fold: foldArg, options: optionsArg }) => {
+      ({ fold: foldArg, options: optionsArg, checkpoints: checkpointsArg }) => {
         const g = (window as never as UpstreamWindow).globals;
 
         // setFoldData -> processFold -> model.buildModel only stashes nextFold
@@ -114,22 +145,26 @@ export class UpstreamOracle {
         g.shouldChangeCreasePercent = true;
 
         g.model.reset();
-        g.model.step(optionsArg.steps);
-
-        const positions = g.model.getPositionsArray();
+        const positions: number[][] = [];
+        let done = 0;
+        for (const checkpoint of checkpointsArg) {
+          if (checkpoint > done) g.model.step(checkpoint - done);
+          done = Math.max(done, checkpoint);
+          positions.push(Array.from(g.model.getPositionsArray() as ArrayLike<number>));
+        }
         return {
-          positions: Array.from(positions as ArrayLike<number>),
+          positions,
           nodeCount: g.model.getNodes().length,
           creaseCount: g.model.getCreases().length,
           faceCount: g.model.getFaces().length,
           maxStrain: typeof g.maxStrain === 'number' ? g.maxStrain : null,
         };
       },
-      { fold, options }
+      { fold, options, checkpoints }
     );
 
     return {
-      positions: Float32Array.from(raw.positions),
+      positions: raw.positions.map((p) => Float32Array.from(p)),
       nodeCount: raw.nodeCount,
       creaseCount: raw.creaseCount,
       faceCount: raw.faceCount,

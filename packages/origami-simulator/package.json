@@ -38,6 +38,7 @@
     "bench:webgpu-spike:serve": "vite --open /bench/webgpuSpikeHarness/index.html",
     "bench:backends": "vitest run --config vitest.bench.config.ts bench/backendBench.bench.ts --disable-console-intercept",
     "bench:backends:serve": "vite --open /bench/backendBench/index.html",
+    "bench:upstream-trajectory": "vitest run --config vitest.bench.config.ts bench/upstreamTrajectory.bench.ts --disable-console-intercept",
     "bench:pull": "vitest run --config vitest.bench.config.ts bench/pull.bench.ts --disable-console-intercept"
   },
   "dependencies": {

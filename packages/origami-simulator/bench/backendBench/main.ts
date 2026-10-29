@@ -42,6 +42,7 @@ import {
 declare global {
   interface Window {
     runBackendBench: (options?: Partial<BackendBenchOptions>) => Promise<BackendBenchReport>;
+    runTrajectory: typeof runTrajectory;
   }
 }
 
@@ -177,11 +178,122 @@ async function frameTimes(frame: (size: number) => Promise<void>, options: Backe
   return { p50: at(0.5), p95: at(0.95) };
 }
 
+/** Where ReferenceSolver puts every node after `accuracySteps` steps from the flat sheet. */
+function referencePositions(fixture: (typeof FIXTURES)[number], options: BackendBenchOptions): Float32Array {
+  const model = modelFor(fixture);
+  const solver = new ReferenceSolver(model, { foldPercent: options.foldPercent });
+  try {
+    solver.step(options.accuracySteps);
+    const positions = new Float32Array(model.prepared.vertexCount * 3);
+    solver.readPositions(positions);
+    return positions;
+  } finally {
+    solver.dispose();
+  }
+}
+
+export interface TrajectoryRequest {
+  fixture: string;
+  backends: BackendName[];
+  foldPercent: number;
+  /** Step counts from the flat sheet, ascending. */
+  checkpoints: number[];
+}
+
+/**
+ * Every backend's positions at each checkpoint of one run from the flat
+ * sheet, for comparison with upstream's own trajectory
+ * (upstreamTrajectory.bench.ts). Plain arrays, so they cross to Node.
+ */
+async function runTrajectory(request: TrajectoryRequest): Promise<Record<string, number[][] | { error: string }>> {
+  const fixture = FIXTURES.find((candidate) => candidate.name === request.fixture);
+  if (!fixture) throw new Error(`no fixture ${request.fixture}`);
+  const options: BackendBenchOptions = { ...BACKEND_BENCH_DEFAULTS, foldPercent: request.foldPercent };
+  let core: GpuCore | null = null;
+  if (request.backends.includes('webgpu')) {
+    core = await GpuCore.create();
+    await WebgpuSolver.validateShaders(core);
+  }
+  const out: Record<string, number[][] | { error: string }> = {};
+  try {
+    for (const backend of request.backends) {
+      let built: Built | null = null;
+      try {
+        const model = modelFor(fixture);
+        built = await build(backend, model, options, core);
+        const positions = new Float32Array(model.prepared.vertexCount * 3);
+        const path: number[][] = [];
+        let done = 0;
+        for (const checkpoint of request.checkpoints) {
+          if (checkpoint > done) built.solver.step(checkpoint - done);
+          done = Math.max(done, checkpoint);
+          await built.solver.syncReads?.();
+          built.solver.readPositions(positions);
+          path.push(Array.from(positions));
+        }
+        out[backend] = path;
+      } catch (error) {
+        out[backend] = { error: error instanceof Error ? error.message : String(error) };
+      } finally {
+        built?.dispose();
+      }
+    }
+  } finally {
+    core?.dispose();
+  }
+  return out;
+}
+
+/** The same steps on `backend`, from its own flat sheet, against `reference`. */
+async function maxDeviation(
+  fixture: (typeof FIXTURES)[number],
+  backend: BackendName,
+  options: BackendBenchOptions,
+  core: GpuCore | null,
+  reference: Float32Array
+): Promise<number> {
+  const built = await build(backend, modelFor(fixture), options, core);
+  try {
+    built.solver.step(options.accuracySteps);
+    await built.solver.syncReads?.();
+    const positions = new Float32Array(reference.length);
+    built.solver.readPositions(positions);
+    let max = 0;
+    for (let i = 0; i < reference.length; i += 1) {
+      const delta = Math.abs(positions[i]! - reference[i]!);
+      // A NaN is a failure, not a zero.
+      if (!(delta <= max)) max = Number.isNaN(delta) ? Number.POSITIVE_INFINITY : delta;
+    }
+    return max;
+  } finally {
+    built.dispose();
+  }
+}
+
+/**
+ * SimulationClock.settle in chunks, stopping at the step cap, at
+ * convergence, or past the time budget.
+ */
+async function settleWithin(clock: SimulationClock, solver: SolverBackend, options: BackendBenchOptions) {
+  const started = performance.now();
+  const chunk = 1000;
+  let steps = 0;
+  let converged = false;
+  while (steps < options.settleMaxSteps && !converged && performance.now() - started < options.settleBudgetMs) {
+    const tick = await clock.settle(solver, Math.min(chunk, options.settleMaxSteps - steps));
+    steps += tick.steps;
+    converged = tick.converged;
+    if (tick.steps === 0) break;
+  }
+  return { steps, converged, ms: performance.now() - started };
+}
+
 async function runRow(
   fixture: (typeof FIXTURES)[number],
   backend: BackendName,
   options: BackendBenchOptions,
-  core: GpuCore | null
+  core: GpuCore | null,
+  reference: Float32Array
 ): Promise<BackendBenchRow> {
   const model = modelFor(fixture);
   const row: BackendBenchRow = {
@@ -192,6 +304,7 @@ async function runRow(
     settleMs: Number.NaN,
     settleSteps: 0,
     settled: false,
+    maxDeviation: null,
     frameMs: null,
   };
   let built: Built | null = null;
@@ -199,15 +312,17 @@ async function runRow(
     // Settle first, on a fresh solver from the flat sheet, so it is the app's load.
     built = await build(backend, model, options, core);
     const clock = clockFor(backend, options);
-    const started = performance.now();
-    const tick = await clock.settle(built.solver, options.settleMaxSteps);
-    row.settleMs = performance.now() - started;
-    row.settleSteps = tick.steps;
-    row.settled = tick.converged;
+    const settle = await settleWithin(clock, built.solver, options);
+    row.settleMs = settle.ms;
+    row.settleSteps = settle.steps;
+    row.settled = settle.converged;
     // Then the live loop and frames, on the folded model.
     row.stepsPerSecond = await liveStepsPerSecond(built.solver, options);
     await built.solver.syncReads?.();
     if (built.frame) row.frameMs = await frameTimes(built.frame, options);
+    built.dispose();
+    built = null;
+    if (backend !== 'reference') row.maxDeviation = await maxDeviation(fixture, backend, options, core, reference);
   } catch (error) {
     row.error = error instanceof Error ? error.message : String(error);
   } finally {
@@ -224,6 +339,8 @@ function webglRendererName(): string {
   gl.getExtension('WEBGL_lose_context')?.loseContext();
   return name;
 }
+
+window.runTrajectory = runTrajectory;
 
 window.runBackendBench = async (overrides = {}) => {
   const options: BackendBenchOptions = { ...BACKEND_BENCH_DEFAULTS, ...overrides };
@@ -246,8 +363,11 @@ window.runBackendBench = async (overrides = {}) => {
   const rows: BackendBenchRow[] = [];
   try {
     for (const fixture of fixtures) {
-      for (const backend of options.backends) rows.push(await runRow(fixture, backend, options, core));
-      progress?.(rows);
+      const reference = referencePositions(fixture, options);
+      for (const backend of options.backends) {
+        rows.push(await runRow(fixture, backend, options, core, reference));
+        progress?.(rows);
+      }
     }
   } finally {
     core?.dispose();
