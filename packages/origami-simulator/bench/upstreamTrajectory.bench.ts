@@ -44,9 +44,11 @@ function launchOptions(args: string[]): LaunchOptions {
 }
 
 /**
- * For each upstream node, ours at the same place on the flat sheet. The two
- * meshes can number the same nodes differently (book-fold does), so index i
- * is not the same node on both sides. Null when some node has no partner.
+ * For each upstream node, ours at the same place on the flat sheet. The oracle
+ * already turns upstream's sheet into our frame (`toOurFrame` in
+ * upstreamOracle.ts), so on every fixture so far this is the identity; pairing
+ * by place rather than by index guards against a mesh that numbers the same
+ * vertices differently. Null when some node has no partner.
  */
 function pairNodes(ours: ArrayLike<number>, theirs: ArrayLike<number>): Int32Array | null {
   if (ours.length !== theirs.length) return null;

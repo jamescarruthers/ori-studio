@@ -389,8 +389,9 @@ Speed only counts if the fold is the same fold. `bench/upstreamTrajectory.bench.
 (`npm run bench:upstream-trajectory`) runs the vendored upstream Origami
 Simulator's own WebGL solver (`UpstreamOracle`) and our three backends from the
 same flat sheet, and reads every node at 11 checkpoints from step 1 to step
-2,000: the path, not only where it ends. Nodes are paired by their place on the
-flat sheet, since the two meshes may number them differently. WebGPU must stay
+2,000: the path, not only where it ends. The oracle turns upstream's sheet into
+our frame first (see below), and nodes are paired by their place on the flat
+sheet. WebGPU must stay
 within Tier C (1e-3) of upstream at every checkpoint, and within it of our
 WebGL2 solver.
 
@@ -403,20 +404,26 @@ Headless run (SwiftShader), furthest any node is from upstream at 2,000 steps:
 | miura-16x16 | 1.6e-7 | 6.0e-8 | 8.7e-6 | 1.6e-7 |
 | miura-32x32 | 7.5e-8 | 8.2e-8 | 1.3e-5 | 8.9e-8 |
 | boxpleat-24 | 1.8e-7 | 1.8e-7 | 6.3e-6 | 1.2e-7 |
-| book-fold | 2.9e-1 | 2.9e-1 | 2.9e-1 | 1.1e-6 |
+| book-fold | 1.4e-6 | 6.6e-7 | 3.2e-6 | 1.1e-6 |
 
-On every fixture but one, WebGPU follows the original at least 1,000 times
-closer than the gate, at every checkpoint, and closer than our CPU reference
+On every fixture, WebGPU follows the original at least 500 times closer than
+the gate, at every checkpoint, and closer than our CPU reference
 does. WebGPU and upstream are both float32 GPU solvers running the same
 kernels, so they agree more closely than either does with the CPU.
 
-**book-fold differs from upstream in the port, not in WebGPU.** All three of
-our backends leave upstream's path together, from about step 5, and settle 0.29
-apart from it; WebGPU stays within 1.1e-6 of our WebGL2 solver throughout. The
-cause is in code the three share (model preparation or the solver as ported),
-and predates this work. It is a single diagonal mountain crease at −180°,
-with no other creases to constrain it. The bench reports it and holds WebGPU to
-our WebGL2 solver on that fixture.
+**book-fold looked as if it left upstream's path; the comparison was wrong,
+not the port.** The first run had all three backends 0.29 from upstream by step
+500. Node for node, ours was upstream's turned half over about the x axis,
+`(x, y, z) → (x, −y, −z)`, to five decimals at every checkpoint. Upstream lifts
+a 2D sheet to `[x, 0, y]`; we lift it to `[x, 0, −y]` on purpose
+(`normalizePoint` in `src/geometry.ts`). The two flat sheets are the same paper,
+one turned over, and the solver is indifferent to that, so the folds are the
+same fold in two frames. Pairing nodes by place hid this on the other fixtures,
+which are symmetric enough that the wrong partner sits where the right one
+would. book-fold's single diagonal is not, so the bench paired each node with
+its neighbour across the turn. `UpstreamOracle` now turns upstream's output into
+our frame (`toOurFrame`), which also corrects `bench:upstream-parity`: book-fold
+there went from 1.4 to 2.7e-6 at 1,000 steps, and the others did not move.
 
 The backend benchmark also reports accuracy now: a `max dev` column, each GPU
 backend against the CPU reference after 500 steps, flagged past 1e-3, so every
@@ -466,6 +473,6 @@ timing run on real hardware is also an accuracy check on that hardware.
 - [x] The same in Safari (small fixtures)
 - [ ] The larger fixtures, in both browsers
 - [x] Trajectory accuracy against upstream's WebGL solver (`bench:upstream-trajectory`)
-- [ ] Find why book-fold leaves upstream's path in the port
+- [x] Find why book-fold leaves upstream's path in the port: a frame mismatch in the oracle, not the port
 - [ ] Run `bench:upstream-trajectory` on the M1 Pro
 - [ ] Parity gate for the WebGPU backend in CI

@@ -163,8 +163,9 @@ export class UpstreamOracle {
       { fold, options, checkpoints }
     );
 
+    const lift = toOurFrame(fold);
     return {
-      positions: raw.positions.map((p) => Float32Array.from(p)),
+      positions: raw.positions.map((p) => lift(Float32Array.from(p))),
       nodeCount: raw.nodeCount,
       creaseCount: raw.creaseCount,
       faceCount: raw.faceCount,
@@ -176,6 +177,30 @@ export class UpstreamOracle {
     await this.browser.close();
     await this.server.close();
   }
+}
+
+/**
+ * Upstream lifts a 2D sheet to `[x, 0, y]`; we lift it to `[x, 0, −y]`
+ * (`normalizePoint` in src/geometry.ts says why). The two flat sheets differ by
+ * a half turn about the x axis, `(x, y, z) → (x, −y, −z)`: the same paper
+ * turned over, not a mirror image. The solver is indifferent to a rigid
+ * rotation, so applying that turn to upstream's output puts every node where
+ * ours is, step for step, and node `i` is then the same vertex on both sides.
+ *
+ * Upstream lifts only 2-component coordinates and passes 3-component ones
+ * through, as we do, so a sheet given in 3D needs no turn. A sheet mixing the
+ * two is lifted per vertex on both sides and is not a rigid motion apart;
+ * it is returned as upstream gave it.
+ */
+function toOurFrame(fold: FoldDocument): (positions: Float32Array) => Float32Array {
+  if (!fold.vertices_coords.every((coord) => coord.length === 2)) return (positions) => positions;
+  return (positions) => {
+    for (let index = 0; index < positions.length; index += 3) {
+      positions[index + 1] = -positions[index + 1]!;
+      positions[index + 2] = -positions[index + 2]!;
+    }
+    return positions;
+  };
 }
 
 interface UpstreamWindow {
