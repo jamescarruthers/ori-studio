@@ -348,8 +348,40 @@ What it shows:
 - **Frames.** Every GPU frame is 0.5 to 1.0ms on both APIs. Drawing is not
   the bottleneck at these sizes.
 
-Still to record: the larger fixtures (miura-32x32 to miura-80x80,
-boxpleat-24), where the solve should start to dominate, and Safari.
+### Benchmark results: Safari on the M1 Pro (2026-10-29)
+
+The same twelve rows (AppleWebKit/605.1.15). Safari rounds `performance.now()`
+to 1ms, so its frame times are whole milliseconds and say only that a frame
+takes a few at most.
+
+| fixture | nodes | backend | steps/s | vs CPU | settle ms | steps | frame p50 | p95 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| book-fold | 4 | webgpu | 41k | 0.3x | 904 | 660 | 3.00 | 4.00 |
+| book-fold | 4 | webgl2 | 3758 | 0.0x | 241 | 660 | 1.00 | 1.00 |
+| book-fold | 4 | reference | 154k | 1.0x | 10 | 632 | - | - |
+| bird-base | 9 | webgpu | 28k | 0.4x | 235 | 1800 | 3.00 | 4.00 |
+| bird-base | 9 | webgl2 | 2757 | 0.0x | 832 | 1800 | 3.00 | 4.00 |
+| bird-base | 9 | reference | 67k | 1.0x | 104 | 1776 | - | - |
+| miura-8x8 | 81 | webgpu | 23k | 4.9x | 1484 | 20000! | 1.00 | 1.00 |
+| miura-8x8 | 81 | webgl2 | 5050 | 1.1x | 5477 | 20000! | 1.00 | 1.00 |
+| miura-8x8 | 81 | reference | 4802 | 1.0x | 4279 | 20000! | - | - |
+| miura-16x16 | 289 | webgpu | 24k | 19.1x | 1533 | 20000! | 1.00 | 2.00 |
+| miura-16x16 | 289 | webgl2 | 4713 | 3.8x | 5553 | 20000! | 1.00 | 1.00 |
+| miura-16x16 | 289 | reference | 1236 | 1.0x | 16695 | 20000! | - | - |
+
+Safari tells the same story as Chrome. At 289 nodes WebGPU runs 24k steps/s
+in the live loop, 5.1x WebGL2 and 19x the CPU, and settles 20,000 steps in
+1.5s against 5.6s and 16.7s. The CPU still wins below about 80 nodes. The
+first-model settle cost shows again: 904ms for book-fold.
+
+### What is still missing
+
+Both runs stopped showing rows after miura-16x16. The likely cause is the CPU
+reference solver's settle: 20,000 steps at roughly 1,000 to 6,400 nodes takes
+minutes per fixture on the CPU, so the larger rows arrive slowly rather than
+not at all. Leave the CPU out to get them quickly:
+
+    ?fixtures=miura-32x32,miura-56x56,miura-80x80,boxpleat-24&backends=webgpu,webgl2
 
 ## Affected Areas
 
@@ -392,5 +424,6 @@ boxpleat-24), where the solve should start to dominate, and Safari.
 - [x] Folded figures and the welcome-screen figure on WebGPU
 - [x] Backend benchmark: WebGPU vs WebGL2 vs CPU (`bench/backendBench/`)
 - [x] Run the backend benchmark on the M1 Pro in Chrome (small fixtures); record it here
-- [ ] The same for the larger fixtures, and in Safari
+- [x] The same in Safari (small fixtures)
+- [ ] The larger fixtures, in both browsers
 - [ ] Parity gate for the WebGPU backend in CI
