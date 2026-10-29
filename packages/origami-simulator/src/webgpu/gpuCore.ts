@@ -36,6 +36,9 @@ export class GpuCore {
   readonly adapterInfo: GPUAdapterInfo;
   private lostDetail: string | null = null;
   private readonly buffers = new Set<GPUBuffer>();
+  private readonly modules = new Map<string, GPUShaderModule>();
+  /** One check per module: a second `getCompilationInfo` on a module can never resolve (Chromium 153). */
+  private readonly validations = new Map<GPUShaderModule, Promise<void>>();
 
   private constructor(device: GPUDevice, adapterInfo: GPUAdapterInfo) {
     this.device = device;
@@ -98,6 +101,20 @@ export class GpuCore {
     return buffer;
   }
 
+  /** Write `data` into `buffer` at `byteOffset`, ordered after everything already submitted. */
+  write(buffer: GPUBuffer, byteOffset: number, data: Float32Array): void {
+    this.assertLive();
+    this.device.queue.writeBuffer(buffer, byteOffset, uploadable(data));
+  }
+
+  /** Copy `size` bytes from `source` to `target` on the GPU, in queue order: exact, and no readback. */
+  copy(source: GPUBuffer, target: GPUBuffer, size: number): void {
+    this.assertLive();
+    const encoder = this.device.createCommandEncoder({ label: 'copy' });
+    encoder.copyBufferToBuffer(source, 0, target, 0, size);
+    this.device.queue.submit([encoder.finish()]);
+  }
+
   /** Any other buffer this core should free on dispose. */
   buffer(descriptor: GPUBufferDescriptor): GPUBuffer {
     this.assertLive();
@@ -114,16 +131,61 @@ export class GpuCore {
    * Compile a compute pipeline, surfacing WGSL errors as a throw rather than as
    * the console warning and silently invalid pipeline WebGPU gives by default.
    */
-  async computePipeline(code: string, label: string): Promise<GPUComputePipeline> {
-    this.assertLive();
-    const module = this.device.createShaderModule({ label, code });
-    const info = await module.getCompilationInfo();
-    const errors = info.messages.filter((message) => message.type === 'error');
-    if (errors.length) {
-      const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
-      throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
+  async computePipeline(
+    code: string,
+    label: string,
+    /** Values for the module's `override` constants: a compile-time variant without a second source. */
+    constants?: Record<string, number>
+  ): Promise<GPUComputePipeline> {
+    await this.validate(code, label);
+    return this.computePipelineNow(code, label, constants);
+  }
+
+  /**
+   * Compile `code` and throw on any WGSL error, rather than leave the console
+   * warning and silently invalid pipeline WebGPU gives by default. A module is
+   * compiled once per core, so validating up front makes building from it
+   * later free.
+   */
+  validate(code: string, label: string): Promise<void> {
+    const module = this.module(code, label);
+    let validation = this.validations.get(module);
+    if (!validation) {
+      validation = module.getCompilationInfo().then((info) => {
+        const errors = info.messages.filter((message) => message.type === 'error');
+        if (errors.length) {
+          const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
+          throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
+        }
+      });
+      this.validations.set(module, validation);
     }
-    return this.device.createComputePipelineAsync({ label, layout: 'auto', compute: { module, entryPoint: 'main' } });
+    return validation;
+  }
+
+  /**
+   * A compute pipeline, built synchronously: for callers that cannot wait,
+   * having {@link validate}d the code first so an error is not left to a
+   * console warning.
+   */
+  computePipelineNow(code: string, label: string, constants?: Record<string, number>): GPUComputePipeline {
+    const module = this.module(code, label);
+    return this.device.createComputePipeline({
+      label,
+      layout: 'auto',
+      compute: constants ? { module, entryPoint: 'main', constants } : { module, entryPoint: 'main' },
+    });
+  }
+
+  /** One module per source, compiled once. */
+  module(code: string, label: string): GPUShaderModule {
+    this.assertLive();
+    let module = this.modules.get(code);
+    if (!module) {
+      module = this.device.createShaderModule({ label, code });
+      this.modules.set(code, module);
+    }
+    return module;
   }
 
   /** Read a whole storage buffer back. Slow and async; tests and exports only. */
@@ -141,6 +203,35 @@ export class GpuCore {
     staging.unmap();
     staging.destroy();
     return out;
+  }
+
+  /**
+   * Read several storage buffers back as of one moment: one submit copies them
+   * all, so no work submitted later can land between them.
+   */
+  async readBuffers(sources: readonly GPUBuffer[]): Promise<Float32Array[]> {
+    this.assertLive();
+    const total = sources.reduce((sum, source) => sum + source.size, 0);
+    const staging = this.device.createBuffer({ size: total, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const encoder = this.device.createCommandEncoder();
+    let at = 0;
+    for (const source of sources) {
+      encoder.copyBufferToBuffer(source, 0, staging, at, source.size);
+      at += source.size;
+    }
+    this.device.queue.submit([encoder.finish()]);
+    try {
+      await staging.mapAsync(GPUMapMode.READ);
+      const all = staging.getMappedRange().slice(0);
+      at = 0;
+      return sources.map((source) => {
+        const out = new Float32Array(all, at, source.size / 4);
+        at += source.size;
+        return out;
+      });
+    } finally {
+      staging.destroy();
+    }
   }
 
   dispose(): void {

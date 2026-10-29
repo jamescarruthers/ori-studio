@@ -140,6 +140,15 @@ export interface SolverBackend {
    */
   sampleMotion(): MotionSample | Promise<MotionSample>;
 
+  /**
+   * Resolve once the synchronous reads (`readPositions`, `readShape`,
+   * `readStrain`) describe every step submitted so far. A backend whose reads
+   * are always current leaves it out; one that answers them from a copy it
+   * refreshes asynchronously (WebgpuSolver) has it, for a caller about to
+   * read after a settle.
+   */
+  syncReads?(): Promise<void>;
+
   /** Steps executed since construction or the last `reset`. */
   readonly stepCount: number;
 

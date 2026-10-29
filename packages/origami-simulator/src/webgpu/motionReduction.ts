@@ -85,8 +85,10 @@ export class MotionReduction {
   private constructor(
     private readonly core: GpuCore,
     private readonly pipeline: GPUComputePipeline,
-    private readonly bindGroup: GPUBindGroup,
+    /** One per velocity buffer the reduction can read. */
+    private readonly bindGroups: GPUBindGroup[],
     private readonly result: GPUBuffer,
+    private readonly counts: GPUBuffer,
     private readonly nodeCount: number
   ) {
     for (let i = 0; i < STAGING_RING; i += 1) {
@@ -96,39 +98,61 @@ export class MotionReduction {
     }
   }
 
-  static async create(core: GpuCore, velocity: GPUBuffer, nodeCount: number): Promise<MotionReduction> {
-    const pipeline = await core.computePipeline(MOTION_REDUCTION_WGSL, 'motionReduction');
+  /**
+   * `velocities` are the buffers a sample may read: a solver that ping-pongs
+   * velocity passes both, and names the current one on each {@link sample}.
+   */
+  static async create(
+    core: GpuCore,
+    velocities: GPUBuffer | readonly GPUBuffer[],
+    nodeCount: number
+  ): Promise<MotionReduction> {
+    await core.validate(MOTION_REDUCTION_WGSL, 'motionReduction');
+    return MotionReduction.createNow(core, velocities, nodeCount);
+  }
+
+  /** {@link create}, synchronously, for a core that has validated MOTION_REDUCTION_WGSL. */
+  static createNow(core: GpuCore, velocities: GPUBuffer | readonly GPUBuffer[], nodeCount: number): MotionReduction {
+    const pipeline = core.computePipelineNow(MOTION_REDUCTION_WGSL, 'motionReduction');
     const counts = core.uniformBuffer(new Uint32Array([nodeCount]), 'motionReduction counts');
     const result = core.buffer({
       label: 'motion result',
       size: 16,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
-    const bindGroup = core.device.createBindGroup({
-      label: 'motionReduction',
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: counts } },
-        { binding: 1, resource: { buffer: velocity } },
-        { binding: 2, resource: { buffer: result } },
-      ],
-    });
-    return new MotionReduction(core, pipeline, bindGroup, result, nodeCount);
+    const bindGroups = (Array.isArray(velocities) ? velocities : [velocities]).map((velocity) =>
+      core.device.createBindGroup({
+        label: 'motionReduction',
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: { buffer: counts } },
+          { binding: 1, resource: { buffer: velocity } },
+          { binding: 2, resource: { buffer: result } },
+        ],
+      })
+    );
+    return new MotionReduction(core, pipeline, bindGroups, result, counts, nodeCount);
   }
 
   /**
    * Queue a reduction of the velocity buffer as it will be once everything
    * already submitted has run, and resolve when its three words land. Does not
    * block the queue: steps submitted after this run on while it is in flight.
+   *
+   * `which` picks the velocity buffer, by its place in the list `create` took.
    */
-  async sample(): Promise<MotionSample> {
+  async sample(which = 0): Promise<MotionSample> {
     this.core.assertLive();
-    const staging = await this.takeStaging();
+    const bindGroup = this.bindGroups[which];
+    if (!bindGroup) throw new RangeError(`No velocity buffer ${which}; the reduction reads ${this.bindGroups.length}`);
+    // Encode now when a staging buffer is free, so the reduction sees exactly
+    // the steps submitted before this call; only a full ring waits.
+    const staging = this.idle.pop() ?? (await new Promise<GPUBuffer>((resolve) => this.waiting.push(resolve)));
     const encoder = this.core.device.createCommandEncoder({ label: 'motionReduction' });
     encoder.clearBuffer(this.result);
     const pass = encoder.beginComputePass();
     pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setBindGroup(0, bindGroup);
     pass.dispatchWorkgroups(workgroupsFor(this.nodeCount, WORKGROUP_SIZE));
     pass.end();
     encoder.copyBufferToBuffer(this.result, 0, staging, 0, 16);
@@ -150,10 +174,10 @@ export class MotionReduction {
     return this.scratch.getFloat32(0, true);
   }
 
-  private takeStaging(): Promise<GPUBuffer> {
-    const buffer = this.idle.pop();
-    if (buffer) return Promise.resolve(buffer);
-    return new Promise((resolve) => this.waiting.push(resolve));
+  /** Free the reduction's own buffers; the velocity buffers belong to the caller. */
+  dispose(): void {
+    for (const buffer of [this.result, this.counts, ...this.idle]) this.core.release(buffer);
+    this.idle.length = 0;
   }
 
   private giveStaging(buffer: GPUBuffer): void {

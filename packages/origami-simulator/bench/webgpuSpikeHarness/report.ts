@@ -112,3 +112,154 @@ export function formatFullStep(report: FullStepReport): string {
   );
   return [...head, ...lines].join('\n');
 }
+
+/** One fixture's checks of WebgpuSolver; see backend.ts. */
+export interface BackendRow {
+  fixture: string;
+  vertices: number;
+  /** Largest position difference from ReferenceSolver, by steps from flat. */
+  vsReference: Record<number, number>;
+  /** Largest position difference from WebglSolver after the most steps. */
+  vsWebgl: number;
+  /** From ReferenceSolver, through a fold and material change mid-run. */
+  retarget: number;
+  /** reset() put every node back on the flat sheet, exactly. */
+  resetExact: boolean;
+  /** arrestDynamics() left the paper with zero velocity. */
+  arrestStill: boolean;
+  /** Steps SimulationClock took to settle; -1 for no convergence, null if not run. */
+  settle: { gpu: number | null; webgl: number | null };
+  /** Steps a second, synced on a motion sample every 8 solves of 100 steps, as the clock does. */
+  stepsPerSecond: { gpu: number; webgl: number };
+  error?: string;
+}
+
+/** One integrator, pinned or not, against ReferenceSolver after `steps` from flat. */
+export interface IntegratorRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  pinned: boolean;
+  steps: number;
+  maxAbs: number;
+  /** Pinned rows: how far a node told to hold moved. */
+  heldDrift: number;
+  error?: string;
+}
+
+/** One phase of a scripted pull, against ReferenceSolver. */
+export interface PullRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  phase: 'pulling' | 'kept' | 'cancelled' | 'released';
+  maxAbs: number;
+  heldDrift: number;
+  movedCreases?: { reference: number; gpu: number };
+  error?: string;
+}
+
+/** A shape read back, written into a fresh solver, and read again. */
+export interface ShapeRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  /** Every byte of the shape the same after the trip. */
+  roundTrip: boolean;
+  /** The restored solver's positions are the source's, exactly. */
+  positionsMatch: boolean;
+  error?: string;
+}
+
+export interface BackendReport {
+  rows: BackendRow[];
+  integrators: IntegratorRow[];
+  pulls: PullRow[];
+  shapes: ShapeRow[];
+}
+
+export function formatBackend(report: BackendReport): string {
+  const exp = (value: number) => (Number.isFinite(value) ? value.toExponential(1) : String(value));
+  const lines = report.rows.map((row) => {
+    if (row.error) return `${row.fixture.padEnd(14)} ERROR: ${row.error}`;
+    const reference = Object.entries(row.vsReference)
+      .map(([steps, delta]) => `${steps}:${exp(delta)}`)
+      .join(' ');
+    const rate = row.stepsPerSecond;
+    return (
+      `${row.fixture.padEnd(14)} v=${String(row.vertices).padStart(5)} | vs reference ${reference} | ` +
+      `vs WebGL2 ${exp(row.vsWebgl)} | retarget ${exp(row.retarget)} | reset ${row.resetExact ? 'exact' : 'OFF'} | ` +
+      `arrest ${row.arrestStill ? 'still' : 'MOVING'} | settle gpu ${row.settle.gpu} gl ${row.settle.webgl} | ` +
+      `steps/s gpu ${Math.round(rate.gpu)} gl ${Math.round(rate.webgl)} ${(rate.gpu / rate.webgl).toFixed(2)}x`
+    );
+  });
+  const integrators = report.integrators.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ${row.pinned ? 'pinned' : '      '} steps=${String(row.steps).padStart(3)} | ` +
+        `max ${exp(row.maxAbs)}${row.pinned ? `  held drift ${exp(row.heldDrift)}` : ''}`
+  );
+  const pulls = report.pulls.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ${row.phase.padEnd(9)} | max ${exp(row.maxAbs)}  held drift ${exp(row.heldDrift)}` +
+        (row.movedCreases ? `  moved creases ${row.movedCreases.reference}/${row.movedCreases.gpu}` : '')
+  );
+  const shapes = report.shapes.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} | round trip ${row.roundTrip ? 'exact' : 'DIFFERS'}  positions ${row.positionsMatch ? 'exact' : 'DIFFER'}`
+  );
+  return [
+    'WebgpuSolver',
+    ...lines,
+    '',
+    'WebgpuSolver integrators',
+    ...integrators,
+    '',
+    'WebgpuSolver pull',
+    ...pulls,
+    '',
+    'WebgpuSolver shapes',
+    ...shapes,
+  ].join('\n');
+}
+
+/** One fixture drawn by both renderers; see render.ts. */
+export interface RenderRow {
+  fixture: string;
+  /** Share of the WebGPU frame that is not background. */
+  coverage: number;
+  /** Share of pixels where the two renderers differ past antialiasing noise: paper, strain, x-ray. */
+  differs: number;
+  differsStrain: number;
+  differsXray: number;
+  /** The highlight pass tints the frame that asks for it, and no other. */
+  highlightTints: boolean;
+  highlightOnlyWhenAsked: boolean;
+  error?: string;
+}
+
+/** A WebGPU context on an OffscreenCanvas presents through createImageBitmap, as the session uses it. */
+export interface CanvasRow {
+  presents: boolean;
+  /** The device was lost on presenting, which SwiftShader does. */
+  deviceLost: boolean;
+  error?: string;
+}
+
+export interface RenderReport {
+  rows: RenderRow[];
+  canvas: CanvasRow;
+}
+
+export function formatRender({ rows, canvas }: RenderReport): string {
+  const pct = (value: number) => `${(value * 100).toFixed(2)}%`.padStart(7);
+  const lines = rows.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} coverage ${pct(row.coverage)} | differs from WebGL2: paper ${pct(row.differs)} strain ${pct(row.differsStrain)} ` +
+        `x-ray ${pct(row.differsXray)} | highlight ${row.highlightTints ? 'tints' : 'NONE'}/${row.highlightOnlyWhenAsked ? 'clean' : 'LEAKS'}`
+  );
+  const presented = canvas.presents
+    ? 'presents'
+    : `BLANK${canvas.deviceLost ? ' (device lost on presenting)' : ''}${canvas.error ? `: ${canvas.error}` : ''}`;
+  return ['WebGPU renderer', ...lines, `OffscreenCanvas through createImageBitmap: ${presented}`].join('\n');
+}

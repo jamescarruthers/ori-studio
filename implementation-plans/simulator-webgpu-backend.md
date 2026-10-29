@@ -268,15 +268,59 @@ Order of work, each step gated by parity against `WebglSolver`:
 6. A `navigator.gpu` probe inside the Tauri app on macOS (WKWebView) and Linux
    (WebKitGTK), and a Windows run of this harness.
 
+### Where it stands (2026-10-29)
+
+Steps 2 to 5 are done. `WebgpuSolver` implements the whole `SolverBackend`
+and is held to `ReferenceSolver` within Tier C (1e-3) on every fixture, for
+Euler and Verlet, pinned and free, through every pull phase and a shape round
+trip (`ORI_BENCH_ONLY=solver npm run bench:webgpu-spike`). Its synchronous
+reads come from a mirror refreshed by each motion sample; `syncReads()` brings
+the mirror up to the queue. `WebgpuMeshRenderer` draws the same picture as
+`MeshRenderer` within 3% of pixels at one pixel of slack (`ORI_BENCH_ONLY=render`).
+
+In the app:
+
+- The worker asks for a device as it starts and compiles every shader on it
+  (`WebgpuSolver.validateShaders`), so the synchronous `load` builds the solver
+  at once (`WebgpuSolver.createNow`). `probeGpuRender` answers from that.
+- The ladder is WebGPU, then WebGL2, then the reference solver. A canvas holds
+  one kind of context for life, so once the render canvas takes WebGPU, the
+  folded figures on it draw through `WebgpuFoldedMeshSource`, and a WebGPU
+  failure falls to the reference solver, not to WebGL2.
+- A lost device fails the live sessions as a lost GL context does, and the
+  worker asks for a new device, which can configure the same canvas.
+- `settle` and `sessionScene` wait on `SimulationClock.settle` and
+  `syncReads()`.
+- The welcome screen's figure (`StartFigureMesh`) draws on WebGPU where it
+  can and WebGL2 where it cannot.
+
+### Benchmark
+
+`bench/backendBench/` times the three backends on the same models, the way the
+app runs them: steps per second in the live loop (80 steps and a motion sample
+per tick, samples pipelined), the load-time settle, and a 512px frame drawn and
+waited for. Open it on real hardware:
+
+    npm run bench:backends:serve -w @treemaker/origami-simulator
+
+and narrow a run with the query string
+(`?fixtures=miura-32x32,miura-80x80&backends=webgpu,webgl2&duration=4000`).
+`npm run bench:backends` runs it headless, where both GPU APIs are SwiftShader
+and only the fact that each backend ran means anything.
+
 ## Affected Areas
 
-- `packages/origami-simulator/src/webgpu/` — new, spike only, not exported
+- `packages/origami-simulator/src/webgpu/` — `WebgpuSolver`, `WebgpuMeshRenderer`,
+  `WebgpuCanvasTarget`, `GpuCore`, exported
 - `packages/origami-simulator/bench/webgpuSpikeHarness/`,
   `bench/webgpuSpike.bench.ts` — new
 - `packages/origami-simulator/package.json` — `@webgpu/types`, bench script
-- Later, if built: `SolverBackend` / `SimulationClock` (async readback),
-  `apps/web/src/simulator/simulatorSession.ts` (backend ladder),
-  `MeshRenderer` (WGSL port)
+- `packages/origami-simulator/bench/backendBench/`, `bench/backendBench.bench.ts`
+  — the backend benchmark
+- `SolverBackend` / `SimulationClock` (async readback)
+- `apps/web/src/simulator/simulatorSession.ts` (backend ladder),
+  `foldedMeshSource.ts`, `useSimulatorRuntime.ts`, `SimulatorPanel.tsx`
+- `apps/web/src/components/start/startFigureMesh.ts`
 
 ## Checklist
 
@@ -296,9 +340,13 @@ Order of work, each step gated by parity against `WebglSolver`:
 - [ ] Full-step comparison on Windows
 - [ ] Probe `navigator.gpu` inside the Tauri app on macOS and Linux
 - [x] Async motion samples in `SolverBackend` and `SimulationClock`
-- [ ] Async `readPositions`, `readShape`, `readStrain`; session onto `settle()`
-- [ ] Full Euler step on Ori Studio's packing, with `WebglSolver`'s NaN guards
-- [ ] Verlet, fixed nodes, pull and pose
-- [ ] WGSL `MeshRenderer`
-- [ ] Backend ladder and worker probe in `simulatorSession.ts`
+- [x] Synchronous `readPositions`, `readShape`, `readStrain` from a mirror
+  refreshed per sample, `syncReads()`; session onto `settle()`
+- [x] Full Euler step on Ori Studio's packing, with `WebglSolver`'s NaN guards
+- [x] Verlet, fixed nodes, pull and pose
+- [x] WGSL `MeshRenderer`
+- [x] Backend ladder and worker probe in `simulatorSession.ts`
+- [x] Folded figures and the welcome-screen figure on WebGPU
+- [x] Backend benchmark: WebGPU vs WebGL2 vs CPU (`bench/backendBench/`)
+- [ ] Run the backend benchmark on the M1 Pro, Chrome and Safari; record it here
 - [ ] Parity gate for the WebGPU backend in CI

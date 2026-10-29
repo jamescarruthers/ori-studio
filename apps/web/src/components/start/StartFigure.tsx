@@ -188,7 +188,11 @@ export function StartFigure() {
       const canvas = canvasRef.current;
       if (cancelled || !canvas) return;
 
-      const mesh = StartFigureMesh.create(canvas, asset);
+      const mesh = await StartFigureMesh.create(canvas, asset);
+      if (cancelled) {
+        mesh?.dispose();
+        return;
+      }
       if (!mesh) {
         track(ANALYTICS_EVENTS.startFigureFallback, { reason: 'no_webgl2' });
         setStatus('fallback');

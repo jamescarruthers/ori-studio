@@ -3569,6 +3569,7 @@
     "backendCpuTitle": "Résolution sur le CPU (WebGL2 indisponible)",
     "backendGpu": "GPU",
     "backendGpuTitle": "Résolution sur le GPU (WebGL2)",
+    "backendWebgpuTitle": "Résolution sur le GPU (WebGPU)",
     "backToPatterns": "Patrons",
     "canvasAriaLabel": "Simulateur de base pliée en origami. Faites glisser pour pivoter, défilez pour zoomer, double-cliquez pour réinitialiser la vue.",
     "canvasAriaLabelPin": "Simulateur de base pliée en origami. Tracez un cadre ou cliquez sur une face pour l’épingler, défilez pour zoomer.",

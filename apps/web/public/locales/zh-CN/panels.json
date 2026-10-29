@@ -2999,6 +2999,7 @@
     "backendCpuTitle": "在 CPU 上求解（WebGL2 不可用）",
     "backendGpu": "GPU",
     "backendGpuTitle": "在 GPU 上求解（WebGL2）",
+    "backendWebgpuTitle": "在 GPU 上求解（WebGPU）",
     "backToPatterns": "折痕图",
     "canvasAriaLabel": "折纸折叠基础模拟器。拖动以旋转，滚动以缩放，双击以重置视图。",
     "canvasAriaLabelPin": "折纸折叠基础模拟器。拖出方框或点击面以固定，滚动以缩放。",
