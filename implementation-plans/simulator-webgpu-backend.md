@@ -408,7 +408,38 @@ What it shows:
   500 steps, four orders of magnitude inside the 1e-3 gate.
 - **Frames.** Still 0.5–1.4ms on WebGPU at every size.
 
-Still to record: the same large models in Safari.
+### Benchmark results: large models, Safari on the M1 Pro (2026-10-29)
+
+Safari 26.3.1. Frame times are whole milliseconds, as Safari rounds its timer.
+
+| fixture | nodes | backend | steps/s | vs CPU | settle ms | steps | max dev | frame p50 | p95 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| miura-32x32 | 1089 | webgpu | 22k | 71.7x | 1468 | 20000! | 6.0e-8 | 1.00 | 1.00 |
+| miura-32x32 | 1089 | webgl2 | 4863 | 15.7x | 4842 | 20000! | 6.0e-8 | 1.00 | 1.00 |
+| miura-32x32 | 1089 | reference | 309 | 1.0x | 33014 | 10000! | - | - | - |
+| miura-56x56 | 3249 | webgpu | 17k | 188.8x | 1899 | 20000! | 8.9e-8 | 1.00 | 3.00 |
+| miura-56x56 | 3249 | webgl2 | 3798 | 41.6x | 5806 | 20000! | 1.2e-7 | 1.00 | 1.00 |
+| miura-56x56 | 3249 | reference | 91 | 1.0x | 32738 | 3000! | - | - | - |
+| miura-80x80 | 6561 | webgpu | 9841 | 229.2x | 3139 | 20000! | 6.0e-8 | 3.00 | 3.00 |
+| miura-80x80 | 6561 | webgl2 | 3081 | 71.8x | 7110 | 20000! | 1.2e-7 | 1.00 | 1.00 |
+| miura-80x80 | 6561 | reference | 43 | 1.0x | 47377 | 2000! | - | - | - |
+| boxpleat-24 | 625 | webgpu | 21k | 34.0x | 1595 | 20000! | 8.2e-8 | 1.00 | 3.00 |
+| boxpleat-24 | 625 | webgl2 | 4920 | 8.1x | 4856 | 20000! | 6.0e-8 | 0.00 | 1.00 |
+| boxpleat-24 | 625 | reference | 604 | 1.0x | 30956 | 19000! | - | - | - |
+
+Safari matches Chrome to within a few percent. At 6,561 nodes WebGPU runs
+9.8k steps/s, 3.2x WebGL2 and 229x the CPU, and settles 20,000 steps in 3.1s
+against 7.1s. Every GPU row lands within 1.2e-7 of the CPU reference. WebGPU
+frames read 3ms at the largest size against WebGL2's 1ms; at whole-millisecond
+resolution that is a hint, not a measurement, and worth a closer look in Safari
+if large models feel slow to draw.
+
+### Conclusion
+
+On the M1 Pro, in both browsers, the WebGPU backend computes the same fold as
+the CPU reference and the original's WebGL solver, and runs it 3 to 5 times
+faster than WebGL2 from 80 nodes up. The CPU solver stays fastest below about
+80 nodes.
 
 ### Accuracy against the original's WebGL solver (2026-10-29)
 
@@ -517,7 +548,7 @@ timing run on real hardware is also an accuracy check on that hardware.
 - [x] Run the backend benchmark on the M1 Pro in Chrome (small fixtures); record it here
 - [x] The same in Safari (small fixtures)
 - [x] The larger fixtures in Chrome
-- [ ] The larger fixtures in Safari
+- [x] The larger fixtures in Safari
 - [x] Trajectory accuracy against upstream's WebGL solver (`bench:upstream-trajectory`)
 - [x] Find why book-fold leaves upstream's path in the port: a frame mismatch in the oracle, not the port
 - [x] Run `bench:upstream-trajectory` on the M1 Pro
