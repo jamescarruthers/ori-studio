@@ -7,6 +7,7 @@
 // the container differs: thirteen textures there, one buffer here, because the
 // force pass would otherwise need more storage buffers than WebGPU guarantees.
 import { packBeamMeta, packCreaseMeta, type PackedModel, type SolverMaterial } from '../webgl/packing.js';
+import { PARAMS_VEC4S } from './passes.js';
 
 /**
  * staticData's arrays, in the order the kernels' `off0`..`off3` slots name
@@ -81,14 +82,41 @@ export interface SolverParams {
   dt: number;
   axialStiffness: number;
   faceStiffness: number;
+  /** Creases aim at the rest angles theta carries, not the fold target. */
+  posed: boolean;
+  /** How far a posed fold crease yields during a pull, in radians; 0 when not pulling. */
+  yieldRadians: number;
+  /** The pull's grip, or null when nothing is pulled. */
+  grip: GripUniform | null;
 }
 
-/** The `Params` uniform: seven vec4s, laid out as PARAMS in passes.ts declares them. */
+/** The pull as the force pass reads it: pull.ts's grip and its parameters. */
+export interface GripUniform {
+  nodes: readonly [number, number, number];
+  weights: readonly [number, number, number];
+  rayOrigin: readonly [number, number, number];
+  rayDirection: readonly [number, number, number];
+  stiffness: number;
+  damping: number;
+  maxForce: number;
+  bias: number;
+}
+
+/** The `Params` uniform: {@link PARAMS_VEC4S} vec4s, laid out as PARAMS in passes.ts declares them. */
 export function packParams(params: SolverParams, offsets: Record<StaticArray, number>): Float32Array {
-  const out = new Float32Array(28);
+  const out = new Float32Array(PARAMS_VEC4S * 4);
   out.set([params.nodes, params.faces, params.creases, 0], 0);
   out.set([params.creasePercent, params.dt, params.axialStiffness, params.faceStiffness], 4);
   // flags.x, calcFaceStrain: off, as WebglSolver runs it.
   out.set(STATIC_ARRAYS.map((name) => offsets[name]), 12);
+  const grip = params.grip;
+  out.set([params.posed ? 1 : 0, grip ? 1 : 0, params.yieldRadians, grip ? 1 : 0], 28);
+  if (grip) {
+    out.set(grip.nodes, 32);
+    out.set(grip.weights, 36);
+    out.set(grip.rayOrigin, 40);
+    out.set(grip.rayDirection, 44);
+    out.set([grip.stiffness, grip.damping, grip.maxForce, grip.bias], 48);
+  }
   return out;
 }

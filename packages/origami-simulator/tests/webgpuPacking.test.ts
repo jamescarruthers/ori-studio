@@ -3,7 +3,7 @@ import { makeMiura } from '../bench/fixtures.js';
 import { OrigamiModel } from '../src/model.js';
 import { prepareFoldModel } from '../src/prepare.js';
 import { packBeamMeta, packCreaseMeta, packModel, type SolverMaterial } from '../src/webgl/packing.js';
-import { NORMAL_CALC, VELOCITY_CALC } from '../src/webgpu/passes.js';
+import { NORMAL_CALC, PARAMS_VEC4S, VELOCITY_CALC } from '../src/webgpu/passes.js';
 import { STATIC_ARRAYS, packParams, packStaticData, type StaticLayout } from '../src/webgpu/packing.js';
 
 const MATERIAL: SolverMaterial = {
@@ -13,6 +13,19 @@ const MATERIAL: SolverMaterial = {
   faceStiffness: 0.2,
   damping: 0.45,
   timeStepScale: 1,
+};
+
+const BASE_PARAMS = {
+  nodes: 25,
+  faces: 32,
+  creases: 40,
+  creasePercent: 0.6,
+  dt: 0.01,
+  axialStiffness: 20,
+  faceStiffness: 0.2,
+  posed: false,
+  yieldRadians: 0,
+  grip: null,
 };
 
 function packed() {
@@ -81,16 +94,48 @@ describe('WebGPU static layout', () => {
 describe('WebGPU params uniform', () => {
   it('puts the counts, the simulation values and every offset where Params declares them', () => {
     const { offsets } = packStaticData(packed(), MATERIAL);
-    const params = packParams(
-      { nodes: 25, faces: 32, creases: 40, creasePercent: 0.6, dt: 0.01, axialStiffness: 20, faceStiffness: 0.2 },
-      offsets
-    );
-    expect(params.length).toBe(28);
+    const params = packParams(BASE_PARAMS, offsets);
+    expect(params.length).toBe(PARAMS_VEC4S * 4);
     expect(Array.from(params.subarray(0, 3))).toEqual([25, 32, 40]);
     expect(params[4]).toBeCloseTo(0.6);
     expect(params[5]).toBeCloseTo(0.01);
     expect(params[8]).toBe(0); // calcFaceStrain off
     expect(Array.from(params.subarray(12, 25))).toEqual(STATIC_ARRAYS.map((name) => offsets[name]));
+    // Not posed, nothing pulled.
+    expect(Array.from(params.subarray(28, 32))).toEqual([0, 0, 0, 0]);
+  });
+
+  it('carries a pose and a grip in the slots the kernels read them from', () => {
+    const { offsets } = packStaticData(packed(), MATERIAL);
+    const params = packParams(
+      {
+        ...BASE_PARAMS,
+        posed: true,
+        yieldRadians: 0.5,
+        grip: {
+          nodes: [3, 4, 5],
+          weights: [0.25, 0.25, 0.5],
+          rayOrigin: [1, 2, 3],
+          rayDirection: [0, 0, -1],
+          stiffness: 7,
+          damping: 8,
+          maxForce: 9,
+          bias: 0.3,
+        },
+      },
+      offsets
+    );
+    const vec4 = (index: number) => Array.from(params.subarray(index * 4, index * 4 + 4));
+    expect(vec4(7)).toEqual([1, 1, 0.5, 1]); // pose: posed, pulling, yield, gripActive
+    expect(vec4(8)).toEqual([3, 4, 5, 0]);
+    expect(vec4(9)).toEqual([0.25, 0.25, 0.5, 0]);
+    expect(vec4(10)).toEqual([1, 2, 3, 0]);
+    expect(vec4(11)).toEqual([0, 0, -1, 0]);
+    expect(vec4(12).map((value) => Math.fround(value))).toEqual([7, 8, 9, Math.fround(0.3)]);
+    // Each slot is named, in this order, in the WGSL struct.
+    const order = ['counts', 'sim', 'flags', 'off0', 'off1', 'off2', 'off3', 'pose', 'gripNodes', 'gripWeights', 'rayOrigin', 'rayDir', 'grip'];
+    const fields = [...NORMAL_CALC.matchAll(/^\s+(\w+)\s+: vec4<f32>,/gm)].map((match) => match[1]);
+    expect(fields).toEqual(order);
   });
 
   it('names the offsets in the kernels in the same order as STATIC_ARRAYS', () => {

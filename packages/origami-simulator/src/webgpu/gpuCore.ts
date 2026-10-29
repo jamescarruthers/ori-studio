@@ -104,6 +104,14 @@ export class GpuCore {
     this.device.queue.writeBuffer(buffer, byteOffset, uploadable(data));
   }
 
+  /** Copy `size` bytes from `source` to `target` on the GPU, in queue order: exact, and no readback. */
+  copy(source: GPUBuffer, target: GPUBuffer, size: number): void {
+    this.assertLive();
+    const encoder = this.device.createCommandEncoder({ label: 'copy' });
+    encoder.copyBufferToBuffer(source, 0, target, 0, size);
+    this.device.queue.submit([encoder.finish()]);
+  }
+
   /** Any other buffer this core should free on dispose. */
   buffer(descriptor: GPUBufferDescriptor): GPUBuffer {
     this.assertLive();
@@ -120,7 +128,12 @@ export class GpuCore {
    * Compile a compute pipeline, surfacing WGSL errors as a throw rather than as
    * the console warning and silently invalid pipeline WebGPU gives by default.
    */
-  async computePipeline(code: string, label: string): Promise<GPUComputePipeline> {
+  async computePipeline(
+    code: string,
+    label: string,
+    /** Values for the module's `override` constants: a compile-time variant without a second source. */
+    constants?: Record<string, number>
+  ): Promise<GPUComputePipeline> {
     this.assertLive();
     const module = this.device.createShaderModule({ label, code });
     const info = await module.getCompilationInfo();
@@ -129,7 +142,11 @@ export class GpuCore {
       const detail = errors.map((message) => `${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
       throw new Error(`WGSL ${label} failed to compile:\n${detail}`);
     }
-    return this.device.createComputePipelineAsync({ label, layout: 'auto', compute: { module, entryPoint: 'main' } });
+    return this.device.createComputePipelineAsync({
+      label,
+      layout: 'auto',
+      compute: constants ? { module, entryPoint: 'main', constants } : { module, entryPoint: 'main' },
+    });
   }
 
   /** Read a whole storage buffer back. Slow and async; tests and exports only. */
@@ -147,6 +164,35 @@ export class GpuCore {
     staging.unmap();
     staging.destroy();
     return out;
+  }
+
+  /**
+   * Read several storage buffers back as of one moment: one submit copies them
+   * all, so no work submitted later can land between them.
+   */
+  async readBuffers(sources: readonly GPUBuffer[]): Promise<Float32Array[]> {
+    this.assertLive();
+    const total = sources.reduce((sum, source) => sum + source.size, 0);
+    const staging = this.device.createBuffer({ size: total, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const encoder = this.device.createCommandEncoder();
+    let at = 0;
+    for (const source of sources) {
+      encoder.copyBufferToBuffer(source, 0, staging, at, source.size);
+      at += source.size;
+    }
+    this.device.queue.submit([encoder.finish()]);
+    try {
+      await staging.mapAsync(GPUMapMode.READ);
+      const all = staging.getMappedRange().slice(0);
+      at = 0;
+      return sources.map((source) => {
+        const out = new Float32Array(all, at, source.size / 4);
+        at += source.size;
+        return out;
+      });
+    } finally {
+      staging.destroy();
+    }
   }
 
   dispose(): void {

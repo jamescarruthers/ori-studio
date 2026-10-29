@@ -134,8 +134,45 @@ export interface BackendRow {
   error?: string;
 }
 
+/** One integrator, pinned or not, against ReferenceSolver after `steps` from flat. */
+export interface IntegratorRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  pinned: boolean;
+  steps: number;
+  maxAbs: number;
+  /** Pinned rows: how far a node told to hold moved. */
+  heldDrift: number;
+  error?: string;
+}
+
+/** One phase of a scripted pull, against ReferenceSolver. */
+export interface PullRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  phase: 'pulling' | 'kept' | 'cancelled' | 'released';
+  maxAbs: number;
+  heldDrift: number;
+  movedCreases?: { reference: number; gpu: number };
+  error?: string;
+}
+
+/** A shape read back, written into a fresh solver, and read again. */
+export interface ShapeRow {
+  fixture: string;
+  integrator: 'euler' | 'verlet';
+  /** Every byte of the shape the same after the trip. */
+  roundTrip: boolean;
+  /** The restored solver's positions are the source's, exactly. */
+  positionsMatch: boolean;
+  error?: string;
+}
+
 export interface BackendReport {
   rows: BackendRow[];
+  integrators: IntegratorRow[];
+  pulls: PullRow[];
+  shapes: ShapeRow[];
 }
 
 export function formatBackend(report: BackendReport): string {
@@ -153,5 +190,34 @@ export function formatBackend(report: BackendReport): string {
       `steps/s gpu ${Math.round(rate.gpu)} gl ${Math.round(rate.webgl)} ${(rate.gpu / rate.webgl).toFixed(2)}x`
     );
   });
-  return ['WebgpuSolver', ...lines].join('\n');
+  const integrators = report.integrators.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ${row.pinned ? 'pinned' : '      '} steps=${String(row.steps).padStart(3)} | ` +
+        `max ${exp(row.maxAbs)}${row.pinned ? `  held drift ${exp(row.heldDrift)}` : ''}`
+  );
+  const pulls = report.pulls.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ${row.phase.padEnd(9)} | max ${exp(row.maxAbs)}  held drift ${exp(row.heldDrift)}` +
+        (row.movedCreases ? `  moved creases ${row.movedCreases.reference}/${row.movedCreases.gpu}` : '')
+  );
+  const shapes = report.shapes.map((row) =>
+    row.error
+      ? `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} ERROR: ${row.error}`
+      : `${row.fixture.padEnd(14)} ${row.integrator.padEnd(6)} | round trip ${row.roundTrip ? 'exact' : 'DIFFERS'}  positions ${row.positionsMatch ? 'exact' : 'DIFFER'}`
+  );
+  return [
+    'WebgpuSolver',
+    ...lines,
+    '',
+    'WebgpuSolver integrators',
+    ...integrators,
+    '',
+    'WebgpuSolver pull',
+    ...pulls,
+    '',
+    'WebgpuSolver shapes',
+    ...shapes,
+  ].join('\n');
 }

@@ -133,6 +133,25 @@ describe('WebGPU spike', () => {
           expect(row.settle.gpu, `${row.fixture} never settled`).toBeGreaterThanOrEqual(0);
         }
       }
+      for (const row of backend.integrators) {
+        const label = `${row.fixture} ${row.integrator}${row.pinned ? ' pinned' : ''} @ ${row.steps} steps`;
+        expect(row.error, `${label} failed`).toBeUndefined();
+        expect(row.maxAbs, `${label} diverged from ReferenceSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
+        // A fixed node keeps its position bit for bit, on both integrators.
+        if (row.pinned) expect(row.heldDrift, `${label} moved a fixed node`).toBe(0);
+      }
+      for (const row of backend.pulls) {
+        const label = `${row.fixture} ${row.integrator} ${row.phase}`;
+        expect(row.error, `${label} failed`).toBeUndefined();
+        expect(row.maxAbs, `${label} diverged from ReferenceSolver`).toBeLessThan(FULL_STEP_TOLERANCE);
+        expect(row.heldDrift, `${label} moved a fixed node`).toBe(0);
+      }
+      for (const row of backend.shapes) {
+        const label = `${row.fixture} ${row.integrator}`;
+        expect(row.error, `${label} shape check failed`).toBeUndefined();
+        expect(row.roundTrip, `${label} shape did not survive a round trip`).toBe(true);
+        expect(row.positionsMatch, `${label} restored positions differ`).toBe(true);
+      }
     } finally {
       await browser?.close();
       await server.close();
