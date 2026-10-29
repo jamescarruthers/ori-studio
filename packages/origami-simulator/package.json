@@ -36,6 +36,8 @@
     "bench:gpu-stability": "vitest run --config vitest.bench.config.ts bench/gpuStability.bench.ts --disable-console-intercept",
     "bench:webgpu-spike": "vitest run --config vitest.bench.config.ts bench/webgpuSpike.bench.ts --disable-console-intercept",
     "bench:webgpu-spike:serve": "vite --open /bench/webgpuSpikeHarness/index.html",
+    "bench:backends": "vitest run --config vitest.bench.config.ts bench/backendBench.bench.ts --disable-console-intercept",
+    "bench:backends:serve": "vite --open /bench/backendBench/index.html",
     "bench:pull": "vitest run --config vitest.bench.config.ts bench/pull.bench.ts --disable-console-intercept"
   },
   "dependencies": {

@@ -329,6 +329,15 @@ export class WebgpuMeshRenderer {
   private depth: GPUTexture | null = null;
 
   /**
+   * Compile and check the renderer's shaders on `core`, so a renderer built
+   * on it afterwards needs no wait and a WGSL error is a throw, not a warning.
+   */
+  static async validateShaders(core: GpuCore): Promise<void> {
+    await core.validate(FACE_SHADER, 'faces');
+    await core.validate(EDGE_SHADER, 'creases');
+  }
+
+  /**
    * `originalPositions` is the flat sheet as the position buffer's companion,
    * RGBA per node (webgl/packing.ts's originalPosition).
    */
