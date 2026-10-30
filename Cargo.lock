@@ -3487,6 +3487,7 @@ name = "oristudio-fold-wasm"
 version = "0.7.1"
 dependencies = [
  "console_error_panic_hook",
+ "js-sys",
  "oristudio-cp",
  "oristudio-fold",
  "oristudio-geometry",
