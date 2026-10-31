@@ -2997,8 +2997,9 @@
   "simulator": {
     "backendCpu": "CPU",
     "backendCpuTitle": "CPU에서 계산 중 (WebGL2 사용 불가)",
-    "backendGpu": "GPU",
     "backendGpuTitle": "GPU에서 계산 중 (WebGL2)",
+    "backendWebgl": "WebGL2",
+    "backendWebgpu": "WebGPU",
     "backendWebgpuTitle": "GPU에서 계산 중 (WebGPU)",
     "backToPatterns": "패턴",
     "canvasAriaLabel": "종이접기 접힌 베이스 시뮬레이터. 드래그하여 회전, 스크롤하여 확대/축소, 더블 클릭하여 보기 초기화.",

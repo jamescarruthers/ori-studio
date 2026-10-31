@@ -898,13 +898,26 @@ function prepareWebgpu(): Promise<GpuCore | null> {
       });
       webgpuCore = core;
       return core;
-    } catch {
+    } catch (error) {
+      // Opted in and refused: say why, since the only other sign is a WebGL2 label.
+      console.warn('[simulator] WebGPU unavailable; using WebGL2.', error);
       return null;
     } finally {
       webgpuPreparing = null;
     }
   })();
   return webgpuPreparing;
+}
+
+/**
+ * Wait for the WebGPU device when it is wanted and still coming. Every caller
+ * attaches a surface before it loads, so the attach waits here: otherwise a
+ * load that follows at once, from a worker started after the main thread
+ * cached its GPU probe (the probe's own worker is gone by then), finds no
+ * device and commits the canvas to WebGL2 for good.
+ */
+async function webgpuSettled(): Promise<void> {
+  if (webgpuEnabled) await prepareWebgpu();
 }
 
 /** The render canvas as a WebGPU target, or null when it cannot be one. */
@@ -1178,8 +1191,9 @@ function createBackend(
         const solver = WebgpuSolver.createNow(model, solverOptions, webgpuCore);
         solver.attachCanvas(webgpuTarget);
         return { backend: solver, backendId: 'webgpu', gpuSolver: solver };
-      } catch {
+      } catch (error) {
         // As below: a setup failure falls through to the reference solver.
+        console.warn('[simulator] WebGPU solver setup failed; using the CPU solver.', error);
       }
     }
     try {
@@ -1380,10 +1394,11 @@ const api = {
    * Transfer a caller-owned canvas to the worker, once. The solver renders
    * straight to it and no pixels cross back.
    */
-  attachCanvas(canvas: OffscreenCanvas): void {
+  async attachCanvas(canvas: OffscreenCanvas): Promise<void> {
     renderCanvas = canvas;
     webgpuTarget = null;
     presentMode = 'canvas';
+    await webgpuSettled();
   },
 
   /**
@@ -1395,17 +1410,18 @@ const api = {
    * against the four WebGL contexts a worker is allowed. Resizing reuses the
    * same canvas, so switching size does not churn the context.
    */
-  attachBitmapOutput(width: number, height: number): void {
+  async attachBitmapOutput(width: number, height: number): Promise<void> {
     if (renderCanvas && presentMode === 'bitmap') {
       // Grow-only, like every other size request in this mode — see
       // {@link sizeRenderCanvas}. Shrinking here would hand the reallocation
       // back on the next window that wants the larger size.
       sizeRenderCanvas(width, height);
-      return;
+    } else {
+      renderCanvas = new OffscreenCanvas(Math.max(1, width), Math.max(1, height));
+      webgpuTarget = null;
+      presentMode = 'bitmap';
     }
-    renderCanvas = new OffscreenCanvas(Math.max(1, width), Math.max(1, height));
-    webgpuTarget = null;
-    presentMode = 'bitmap';
+    await webgpuSettled();
   },
 
   load(fold: FoldDocument, options: SimulatorLoadOptions = {}): SimulatorModelInfo {
