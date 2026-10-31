@@ -684,8 +684,10 @@ export function SimulatorPanel() {
                         )
                   }
                 >
-                  {backend !== "reference"
-                    ? t("panels:simulator.backendGpu", "GPU")
+                  {backend === "webgpu"
+                    ? t("panels:simulator.backendWebgpu", "WebGPU")
+                    : backend === "webgl2"
+                    ? t("panels:simulator.backendWebgl", "WebGL2")
                     : t("panels:simulator.backendCpu", "CPU")}
                 </span>
               )}

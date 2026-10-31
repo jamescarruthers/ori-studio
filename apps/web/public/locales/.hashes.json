@@ -3188,7 +3188,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -6375,7 +6374,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9566,7 +9567,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -12753,7 +12753,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15946,7 +15948,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -19133,7 +19134,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -22270,7 +22273,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -25166,7 +25168,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -28303,7 +28307,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -31199,7 +31202,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -34390,7 +34395,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -37577,7 +37581,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -40768,7 +40774,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -43955,7 +43960,9 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -47092,7 +47099,6 @@
     "panels:simulator.backToPatterns": "160a13d94fb0",
     "panels:simulator.backendCpu": "db9a4c7d4c19",
     "panels:simulator.backendCpuTitle": "38405bf0c65b",
-    "panels:simulator.backendGpu": "ea49523d744c",
     "panels:simulator.backendGpuTitle": "09c1c468f2b9",
     "panels:simulator.canvasAriaLabel": "73f0f3d88dec",
     "panels:simulator.canvasTitle": "0aed3ae7dbd5",
@@ -49988,6 +49994,8 @@
     "dialogs:settings.general.simulatorWebgpuDescription": "25bfe99f67b6",
     "panels:simulator.rateReadout": "223e0c9a2980",
     "dialogs:settings.general.simulatorShowRate": "a8a39d98ad1c",
-    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975"
+    "dialogs:settings.general.simulatorShowRateDescription": "45b2bdc8a975",
+    "panels:simulator.backendWebgl": "e3c8419ff08f",
+    "panels:simulator.backendWebgpu": "1b166e2a7fb0"
   }
 }
